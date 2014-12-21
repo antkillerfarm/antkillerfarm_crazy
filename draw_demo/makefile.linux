@@ -1,0 +1,11 @@
+CFLAGS = `pkg-config --cflags gtk+-3.0 gmodule-export-2.0 libxml-2.0`
+LDFLAGS = `pkg-config --libs gtk+-3.0 gmodule-export-2.0 libxml-2.0`
+
+draw_demo:main.o
+	gcc $^ -o $@ $(LDFLAGS)
+
+%.o: %.c
+	gcc -g $(CFLAGS) -o $@ -c $^
+
+clean:
+	rm draw_demo *.o
