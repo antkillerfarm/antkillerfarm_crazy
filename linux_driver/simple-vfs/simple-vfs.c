@@ -1,20 +1,27 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/seq_file.h>
 #include <linux/proc_fs.h>
 /* Defines the license for this LKM */
 MODULE_LICENSE("GPL");
 
 static struct proc_dir_entry *proc_entry;
 static int cnt = 0;
-static ssize_t proc_file_read(struct file *file, char __user *buf,
-		  size_t count, loff_t *ppos)
+
+static int proc_simple_vfs_read(struct seq_file *m, void *v)
 {
   printk(KERN_INFO "simple-vfs read:%d\n", cnt);
+  seq_printf(m, "simple-vfs read:%d\n", cnt);
   return 0;
 }
 
-static ssize_t proc_file_write(struct file *file, const char __user *buf,
+static int proc_simple_vfs_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, proc_simple_vfs_read, NULL);
+}
+
+static ssize_t proc_simple_vfs_write(struct file *file, const char __user *buf,
 		   size_t count, loff_t *ppos)
 {
   printk(KERN_INFO "simple-vfs write:%d\n", cnt);
@@ -23,8 +30,11 @@ static ssize_t proc_file_write(struct file *file, const char __user *buf,
 }
 
 static const struct file_operations proc_file_operations = {
-  .read  = proc_file_read,
-  .write  = proc_file_write,
+  .open = proc_simple_vfs_open,
+  .read = seq_read,
+  .llseek = seq_lseek,
+  .release = single_release,
+  .write  = proc_simple_vfs_write,
 };
 
 /* Init function called on module entry */
