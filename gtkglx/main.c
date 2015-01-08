@@ -1,4 +1,4 @@
-#include "gtkglx.h"
+#include "gtkgl.h"
 
 gboolean init_flag = FALSE;
 static void opengl_scene_init (void)
@@ -64,18 +64,10 @@ opengl_scene_display (void)
 static void 
 glwidget_show (GtkWidget *widget, gpointer userdata)
 {
-	gint attributes[] ={GLX_RGBA,
-                            GLX_RED_SIZE, 8,
-                            GLX_GREEN_SIZE, 8,
-                            GLX_BLUE_SIZE, 8,
-                            GLX_DEPTH_SIZE,24,
-                            GLX_DOUBLEBUFFER,
-                            None};
-        
-        gtk_glx_enable (widget, attributes);
-	gtk_glx_make_current (widget);
+	gtk_gl_enable (widget);
+	gtk_gl_make_current (widget);
 
-        opengl_scene_init ();
+	opengl_scene_init ();
 	init_flag = TRUE;
 }
 
@@ -88,7 +80,7 @@ static gboolean glwidget_configure (GtkWidget *widget, GdkEventConfigure *event,
 	}
         gtk_widget_get_allocation (widget, &alc);
        
-        gtk_glx_make_current (widget);
+        gtk_gl_make_current (widget);
 
         glViewport (0, 0, alc.height, alc.height);
 	opengl_scene_configure ();
@@ -99,18 +91,18 @@ static gboolean glwidget_configure (GtkWidget *widget, GdkEventConfigure *event,
 static int
 glwidget_draw (GtkWidget *widget, cairo_t *cr, gpointer userdata)
 {       
-        gtk_glx_make_current (widget);
+        gtk_gl_make_current (widget);
 
         opengl_scene_display ();
 
-        gtk_glx_swap_buffers (widget);
+        gtk_gl_swap_buffers (widget);
  
         return TRUE;
 }
 
 static void glwidget_destory (GtkWidget *widget,  gpointer userdata)
 {
-        gtk_glx_disable (widget);
+        gtk_gl_disable (widget);
 }
 
 int main (int argc, char **argv)
@@ -134,7 +126,8 @@ int main (int argc, char **argv)
         g_signal_connect (window, "configure-event", G_CALLBACK (glwidget_configure), NULL);
         g_signal_connect (window, "draw", G_CALLBACK (glwidget_draw), NULL);
         g_signal_connect (window, "destroy", G_CALLBACK (glwidget_destory), NULL);
-
+	
+	g_object_unref(G_OBJECT(builder));
         gtk_widget_show_all(main_window);
 
         gtk_main ();

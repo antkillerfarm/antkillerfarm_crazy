@@ -1,0 +1,11 @@
+CFLAGS = -mms-bitfields -IF:/gtk/gtk+bundle_3.6.4-20130921_win32/include/gtk-3.0 -IF:/gtk/gtk+bundle_3.6.4-20130921_win32/include/cairo -IF:/gtk/gtk+bundle_3.6.4-20130921_win32/include/pango-1.0 -IF:/gtk/gtk+bundle_3.6.4-20130921_win32/include/atk-1.0 -IF:/gtk/gtk+bundle_3.6.4-20130921_win32/include/cairo -IF:/gtk/gtk+bundle_3.6.4-20130921_win32/include/pixman-1 -IF:/gtk/gtk+bundle_3.6.4-20130921_win32/include -IF:/gtk/gtk+bundle_3.6.4-20130921_win32/include/freetype2 -IF:/gtk/gtk+bundle_3.6.4-20130921_win32/include -IF:/gtk/gtk+bundle_3.6.4-20130921_win32/include/libpng15 -IF:/gtk/gtk+bundle_3.6.4-20130921_win32/include/gdk-pixbuf-2.0 -IF:/gtk/gtk+bundle_3.6.4-20130921_win32/include/libpng15 -IF:/gtk/gtk+bundle_3.6.4-20130921_win32/include/glib-2.0 -IF:/gtk/gtk+bundle_3.6.4-20130921_win32/lib/glib-2.0/include -IF:/gtk/gtk+bundle_3.6.4-20130921_win32/include/libxml2
+LDFLAGS = -LF:/gtk/gtk+bundle_3.6.4-20130921_win32/lib -LF:/Qt/Qt5.4.0/Tools/mingw491_32/i686-w64-mingw32/lib -lgtk-3 -lgdk-3 -lgdi32 -limm32 -lshell32 -lole32 -Wl,-luuid -lpangocairo-1.0 -lpangoft2-1.0 -lfreetype -lfontconfig -lpangowin32-1.0 -lgdi32 -lpango-1.0 -lm -latk-1.0 -lcairo-gobject -lcairo -lgdk_pixbuf-2.0 -lgio-2.0 -lgobject-2.0 -lgmodule-2.0 -lglib-2.0 -lintl -lxml2 -lglu32 -lglaux -lopengl32
+
+demo: main.o gtkwgl.o
+	gcc $^ -o $@ $(LDFLAGS)
+
+%.o: %.c
+	gcc -g $(CFLAGS) -o $@ -c $^
+
+clean:
+	rm demo *.o

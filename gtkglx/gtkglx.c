@@ -2,7 +2,7 @@
 #include <GL/glx.h>
 #include <gdk/gdkx.h>
 
-#include "gtkglx.h"
+#include "gtkgl.h"
 
 static GSList *gtk_glx_context_list    = NULL;
 
@@ -36,15 +36,21 @@ gtk_glx_get_context (GtkWidget *widget)
 }
 
 void
-gtk_glx_enable (GtkWidget *widget, gint *attributes)
+gtk_gl_enable (GtkWidget *widget)
 {
         GdkScreen *screen;
         GdkVisual *visual;
         Display *xdisplay;
         XVisualInfo *xvi;
         gint xscreen;
-        
         GtkGLContext *gtkgc;
+	gint attributes[] ={GLX_RGBA,
+                            GLX_RED_SIZE, 8,
+                            GLX_GREEN_SIZE, 8,
+                            GLX_BLUE_SIZE, 8,
+                            GLX_DEPTH_SIZE,24,
+                            GLX_DOUBLEBUFFER,
+                            None};
         
         gtk_widget_set_app_paintable (widget, TRUE);
         gtk_widget_set_double_buffered (widget, FALSE);
@@ -66,7 +72,7 @@ gtk_glx_enable (GtkWidget *widget, gint *attributes)
 }
 
 void
-gtk_glx_make_current (GtkWidget *widget)
+gtk_gl_make_current (GtkWidget *widget)
 {
         Display *display = gdk_x11_get_default_xdisplay ();
         Window window = gdk_x11_window_get_xid (gtk_widget_get_window (widget));
@@ -77,7 +83,7 @@ gtk_glx_make_current (GtkWidget *widget)
 
 
 void
-gtk_glx_swap_buffers (GtkWidget *widget)
+gtk_gl_swap_buffers (GtkWidget *widget)
 {
         Display *display = gdk_x11_get_default_xdisplay ();
         Window window = gdk_x11_window_get_xid (gtk_widget_get_window (widget));
@@ -85,7 +91,7 @@ gtk_glx_swap_buffers (GtkWidget *widget)
 }
 
 void
-gtk_glx_disable (GtkWidget *widget)
+gtk_gl_disable (GtkWidget *widget)
 {
         Display *display = gdk_x11_get_default_xdisplay ();
         g_return_if_fail (True == glXMakeCurrent (display, None, NULL));
