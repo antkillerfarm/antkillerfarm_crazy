@@ -1,6 +1,7 @@
 #include <windows.h> 
 #include <GL/gl.h>
 #include "gtkgl.h"
+#include <gdk/gdkwin32.h>
 
 static GSList *gtk_wgl_context_list    = NULL;
 
