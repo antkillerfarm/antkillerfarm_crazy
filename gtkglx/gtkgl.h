@@ -2,7 +2,6 @@
 #define GTK_GL_H
 
 #include <gtk/gtk.h>
-#include <gdk/gdkwin32.h>
 #include <GL/glu.h>
 
 void gtk_gl_enable (GtkWidget *widget);
