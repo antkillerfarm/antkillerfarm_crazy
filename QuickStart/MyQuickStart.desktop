@@ -1,0 +1,95 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=MyQuickStart
+Exec=/usr/bin/emacs23 %F
+Icon=warrior
+Terminal=false
+X-Ayatana-Desktop-Shortcuts=Calc;StarDict;Devhelp;SystemMonitor;SystemSettings;Glade;LibreOffice;ScreenshotWS;ScreenshotCW;ScreenshotSA;Thunderbird;PythonIdle;MultiGet;AS;Blender;
+
+[Calc Shortcut Group]
+Name=Calc
+Name[zh_CN]=计算器
+Exec=gnome-calculator
+TargetEnvironment=Unity
+
+[StarDict Shortcut Group]
+Name=StarDict
+Name[zh_CN]=星际译王
+Exec=stardict
+TargetEnvironment=Unity
+
+[Devhelp Shortcut Group]
+Name=Devhelp
+Exec=devhelp
+TargetEnvironment=Unity
+
+[SystemMonitor Shortcut Group]
+Name=SystemMonitor
+Name[zh_CN]=系统监视器
+Exec=gnome-system-monitor
+TargetEnvironment=Unity
+
+[SystemSettings Shortcut Group]
+Name=SystemSettings
+Name[zh_CN]=系统设置
+Exec=gnome-control-center --overview
+TargetEnvironment=Unity
+
+[Glade Shortcut Group]
+Name=Glade
+Exec=glade
+TargetEnvironment=Unity
+
+[LibreOffice Shortcut Group]
+Name=LibreOffice
+Exec=libreoffice
+TargetEnvironment=Unity
+
+[ScreenshotWS Shortcut Group]
+Name=Take a Screenshot of the Whole Screen
+Name[zh_CN]=对整个屏幕截图
+Exec=gnome-screenshot
+TargetEnvironment=Unity
+
+[ScreenshotCW Shortcut Group]
+Name=Take a Screenshot of the Current Window
+Name[zh_CN]=对当前窗口截图
+Exec=gnome-screenshot -w
+TargetEnvironment=Unity
+
+[ScreenshotSA Shortcut Group]
+Name=Take a Screenshot of a Selected Area
+Name[zh_CN]=对选中区域截图
+Exec=gnome-screenshot -a
+TargetEnvironment=Unity
+
+[Thunderbird Shortcut Group]
+Name=Thunderbird
+Name[zh_CN]=Thunderbird
+Exec=thunderbird
+TargetEnvironment=Unity
+
+[PythonIdle Shortcut Group]
+Name=Python IDLE
+Name[zh_CN]=Python IDLE
+Exec=idle
+TargetEnvironment=Unity
+
+[MultiGet Shortcut Group]
+Name=MultiGet
+Name[zh_CN]=MultiGet
+Exec=multiget
+TargetEnvironment=Unity
+
+[AS Shortcut Group]
+Name=Android Studio
+Name[zh_CN]=Android Studio
+Exec=/home/tj/android_sdk/android-studio/bin/studio.sh
+TargetEnvironment=Unity
+
+[Blender Shortcut Group]
+Name=Blender
+Name[zh_CN]=Blender
+Exec=blender
+TargetEnvironment=Unity
