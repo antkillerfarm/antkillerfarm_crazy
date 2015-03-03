@@ -18,14 +18,14 @@ static void do_drawing(cairo_t *cr, gint _t)
 static gboolean on_draw_event(GtkWidget *widget, cairo_t *cr, 
     gpointer user_data)
 {
-	if (flag)
+  /*if (flag)
 	{
 		do_drawing1(cr);
 	}
 	else
 	{
 		do_drawing2(cr);
-	}
+		}*/
 	return FALSE;
 }
 
