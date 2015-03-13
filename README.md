@@ -1,7 +1,9 @@
 antkillerfarm_crazy
 ===================
 
-antkillerfarm's crazy magic
+This repositories licensed under GPL v3.
+
+# antkillerfarm's crazy magic
 
 draw_demo: A demo of gtk + cario.
 
