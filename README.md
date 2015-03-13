@@ -16,3 +16,5 @@ simple-vfs: a simple Virtul File System sample.
 QuickStart: add a shortcut to Taskbar of Ubuntu Unity desktop.
 
 hiOpenWRT: the Hello World demo for OpenWrt.
+
+HelloBox2d: the demo of Cocos2d-x v3 + Box2d.
