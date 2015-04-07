@@ -1,7 +1,7 @@
 antkillerfarm_crazy
 ===================
 
-This repositories licensed under GPL v3.
+This repositories is licensed under GPL v3.
 
 # antkillerfarm's crazy magic
 
@@ -11,9 +11,9 @@ gtkglx: add OpenGL support for GTK 3.
 
 linux_driver
 
-simple-lkm: a simple Linux Kernel Module sample.
+\-\-simple-lkm: a simple Linux Kernel Module sample.
 
-simple-vfs: a simple Virtul File System sample.
+\-\-simple-vfs: a simple Virtul File System sample.
 
 QuickStart: add a shortcut to Taskbar of Ubuntu Unity desktop.
 
