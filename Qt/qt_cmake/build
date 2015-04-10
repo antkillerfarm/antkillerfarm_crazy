@@ -1,0 +1,12 @@
+#!/bin/sh
+
+if [ ! -e bin ]
+then
+  mkdir bin
+fi
+
+cd bin
+cmake ..
+make
+
+./qt_cmake
