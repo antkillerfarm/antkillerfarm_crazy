@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.8)
-project(hello-world)
+project(qt_cmake)
 
 # Tell CMake to run moc when necessary:
 set(CMAKE_AUTOMOC ON)
