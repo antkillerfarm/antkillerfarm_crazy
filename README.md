@@ -20,3 +20,6 @@ QuickStart: add a shortcut to Taskbar of Ubuntu Unity desktop.
 hiOpenWRT: the Hello World demo for OpenWrt.
 
 HelloBox2d: the demo of Cocos2d-x v3 + Box2d.
+
+HelloSDL: the demo for LibSDL v2.0
+
