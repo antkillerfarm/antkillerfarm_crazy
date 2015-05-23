@@ -1,0 +1,11 @@
+CFLAGS = -I/usr/include/SDL2
+LDFLAGS = -lSDL2
+
+HelloSDL: hello.o
+	gcc $^ -o $@ $(LDFLAGS)
+
+%.o: %.c
+	gcc $(CFLAGS) -o $@ -c $^
+
+clean:
+	rm HelloSDL *.o
