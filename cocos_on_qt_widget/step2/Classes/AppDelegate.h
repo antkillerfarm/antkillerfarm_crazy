@@ -2,6 +2,7 @@
 #define  _APP_DELEGATE_H_
 
 #include "cocos2d.h"
+#include "glwidget.h"
 
 /**
 @brief    The cocos2d Application.
@@ -13,6 +14,8 @@ class  AppDelegate : private cocos2d::Application
 public:
     AppDelegate();
     virtual ~AppDelegate();
+
+    void initWidget(GLWidget* glwidget);
 
     virtual void initGLContextAttrs();
 
@@ -34,6 +37,10 @@ public:
     @param  the pointer of the application
     */
     virtual void applicationWillEnterForeground();
+
+ protected:
+    GLWidget* m_glwidget;
+
 };
 
 #endif // _APP_DELEGATE_H_

@@ -128,6 +128,7 @@ set(GAME_SRC
   Classes/HelloWorldScene.cpp
   Classes/mainwindow.cpp
   Classes/glwidget.cpp
+  Classes/CCGLViewImpl-qt.cpp
   ${PLATFORM_SPECIFIC_SRC}
 )
 
@@ -136,6 +137,7 @@ set(GAME_HEADERS
   Classes/HelloWorldScene.h
   Classes/mainwindow.h
   Classes/glwidget.h
+  Classes/CCGLViewImpl-qt.h
   ${PLATFORM_SPECIFIC_HEADERS}
 )
 

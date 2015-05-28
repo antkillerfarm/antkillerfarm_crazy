@@ -15,9 +15,11 @@ int main(int argc, char **argv)
     // create the application instance
     QApplication a(argc, argv);
     MainWindow w;
-    w.show();
     AppDelegate app;
-    return Application::getInstance()->run();
+    w.setCocosAppDelegate(&app);
+    w.initGLWidget();
+    w.show();
+    return a.exec();
 }
 #else
 #include "mainwindow.h"

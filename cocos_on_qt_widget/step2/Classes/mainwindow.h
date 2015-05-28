@@ -17,6 +17,8 @@ public:
     ~MainWindow();
 
     void setCocosAppDelegate(AppDelegate *appDelegate);
+    void initGLWidget();
+
 protected:
     void closeEvent(QCloseEvent *);
 

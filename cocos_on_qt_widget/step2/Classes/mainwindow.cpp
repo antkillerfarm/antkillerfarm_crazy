@@ -27,3 +27,8 @@ void MainWindow::setCocosAppDelegate(AppDelegate *appDelegate)
 {
     m_appDelegate = appDelegate;
 }
+
+void MainWindow::initGLWidget()
+{
+  ui->cocos_widget->initWidget(m_appDelegate);
+}

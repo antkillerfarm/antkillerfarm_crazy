@@ -1,5 +1,7 @@
 #include "AppDelegate.h"
 #include "HelloWorldScene.h"
+#include "CCGLViewImpl-qt.h"
+
 
 USING_NS_CC;
 
@@ -9,6 +11,11 @@ AppDelegate::AppDelegate() {
 
 AppDelegate::~AppDelegate() 
 {
+}
+
+void AppDelegate::initWidget(GLWidget* glwidget)
+{
+  m_glwidget = glwidget;
 }
 
 //if you want a different context,just modify the value of glContextAttrs
@@ -27,10 +34,12 @@ bool AppDelegate::applicationDidFinishLaunching() {
     auto director = Director::getInstance();
     auto glview = director->getOpenGLView();
     if(!glview) {
-        glview = GLViewImpl::create("My Game");
-        director->setOpenGLView(glview);
+      glview = QtGLViewImpl::create(this->m_glwidget);
+      director->setOpenGLView(glview);
+      //glview->setDesignResolutionSize(960, 640, ResolutionPolicy::SHOW_ALL);
     }
 
+#if 1
     // turn on display FPS
     director->setDisplayStats(true);
 
@@ -42,7 +51,7 @@ bool AppDelegate::applicationDidFinishLaunching() {
 
     // run
     director->runWithScene(scene);
-
+#endif
     return true;
 }
 
