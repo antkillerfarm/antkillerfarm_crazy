@@ -1,0 +1,11 @@
+--- a/src/worker-vpn.c	2015-07-16 22:53:15.758044824 +0800
++++ b/src/worker-vpn.c	2015-07-16 22:46:29.714055468 +0800
+@@ -48,7 +48,7 @@
+ 
+ #ifdef __linux__
+ /* for IPV6_PATHMTU */
+-# include <linux/in6.h>
++//# include <linux/in6.h>
+ #endif
+ 
+ #include <vpn.h>
