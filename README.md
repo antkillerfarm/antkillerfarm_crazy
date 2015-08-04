@@ -23,7 +23,7 @@ HelloBox2d: the demo of Cocos2d-x v3 + Box2d.
 
 HelloSDL: the demo for LibSDL v2.0
 
-cocos_on_qt_widget£ºthe demo for my blog to introduce add cocos2d-x window on a qt widget
+cocos_on_qt_widget: the demo for my blog to introduce add cocos2d-x window on a qt widget
 
 Qt
 
@@ -34,3 +34,5 @@ Qt
 \-\-qt_cmake2: another demo of Qt + Cmake.
 
 \-\-MyGlTest: only for my blog usage, some errors exist.
+
+openwrt_feeds: my openwrt feeds
