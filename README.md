@@ -36,3 +36,8 @@ Qt
 \-\-MyGlTest: only for my blog usage, some errors exist.
 
 openwrt_feeds: my openwrt feeds
+
+gstreamer
+
+\-\-helloworld: the demo for testing gstreamer program environment.
+
