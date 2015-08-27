@@ -9,7 +9,7 @@ class PlaybackInterface:
         self.playing = False
 
         # A free example sound track
-        self.uri = "./2012.mp3"
+        self.uri = "2012.mp3"
 
         # GTK window and widgets
         self.window = Gtk.Window()
@@ -41,14 +41,13 @@ class PlaybackInterface:
         self.label.set_margin_right(6)
         Gtk.Box.pack_start(vbox, self.label, False, False, 0)
 
+        self.window.connect("destroy", Gtk.main_quit)
         self.window.show_all()
 
         # GStreamer Setup
         Gst.init_check(None)
         self.IS_GST010 = Gst.version()[0] == 0
-        print Gst.version()
         self.player = Gst.ElementFactory.make("playbin", "player")
-        print self.player
         fakesink = Gst.ElementFactory.make("fakesink", "fakesink")
         self.player.set_property("video-sink", fakesink)
         bus = self.player.get_bus()
