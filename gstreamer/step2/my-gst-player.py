@@ -9,9 +9,11 @@ class PlaybackInterface:
     def __init__(self):
         self.playing = False
         self.ispaused = False
+        self.isforward = False
 
         # A free example sound track
-        self.uri = "file:///home/tj/my/antkillerfarm_rubbish/python/2012.mp3"
+        self.src = "/home/tj/my/antkillerfarm_rubbish/python/2012.mp3"
+        self.uri = "file://" + self.src
 
         # GTK window and widgets
         self.window = Gtk.Window()
@@ -42,7 +44,7 @@ class PlaybackInterface:
         self.forwardButtonImage.set_from_icon_name("media-seek-forward", Gtk.IconSize.BUTTON)
         self.forwardButton = Gtk.Button()
         self.forwardButton.add(self.forwardButtonImage)
-        self.forwardButton.connect("clicked", self.pauseToggled)
+        self.forwardButton.connect("clicked", self.forwardToggled)
         self.forwardButton.set_sensitive(False)
         Gtk.Box.pack_start(vbox, self.forwardButton, False, False, 0)
 
@@ -67,9 +69,14 @@ class PlaybackInterface:
         # GStreamer Setup
         Gst.init_check(None)
         self.IS_GST010 = Gst.version()[0] == 0
+
         self.player = Gst.ElementFactory.make("playbin", "player")
         fakesink = Gst.ElementFactory.make("fakesink", "fakesink")
         self.player.set_property("video-sink", fakesink)
+
+        #self.pipeline = Gst.Pipeline.new("my_pippeline")
+        #source = gst_element_factory_make ("filesrc", "source");
+        
         bus = self.player.get_bus()
         #bus.add_signal_watch_full()
         bus.connect("message", self.on_message)
@@ -121,6 +128,20 @@ class PlaybackInterface:
            self.player.set_state(Gst.State.PLAYING)
         self.ispaused = not(self.ispaused)
 
+    def forwardToggled(self, w):
+        if self.IS_GST010:
+            nanosecs = self.player.query_position(Gst.Format.TIME)[2]
+        else:
+            nanosecs = self.player.query_position(Gst.Format.TIME)[1]
+
+        if(self.isforward == False):
+           self.player.seek(0.5, Gst.Format.TIME, Gst.SeekFlags.FLUSH, Gst.SeekType.SET,\
+                         nanosecs, Gst.SeekType.NONE, c_long(Gst.CLOCK_TIME_NONE).value)
+        else:
+           self.player.seek(2.0, Gst.Format.TIME, Gst.SeekFlags.FLUSH, Gst.SeekType.SET,\
+                         nanosecs, Gst.SeekType.NONE, c_long(Gst.CLOCK_TIME_NONE).value)
+        self.isforward = not(self.isforward)
+
     def sliderValueChanged(self, w):
         print w.get_value()
 
@@ -163,9 +184,11 @@ class PlaybackInterface:
         if(self.playing == False):
            self.playButtonImage.set_from_icon_name("media-playback-start", Gtk.IconSize.BUTTON)
            self.pauseButton.set_sensitive(False)
+           self.forwardButton.set_sensitive(False)
         else:
            self.playButtonImage.set_from_icon_name("media-playback-stop", Gtk.IconSize.BUTTON)
            self.pauseButton.set_sensitive(True)
+           self.forwardButton.set_sensitive(True)
 
     def playerQuit(self, w):
         myplayer.player.set_state(Gst.State.NULL)
