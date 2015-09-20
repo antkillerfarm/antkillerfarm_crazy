@@ -74,11 +74,47 @@ class PlaybackInterface:
 ##        fakesink = Gst.ElementFactory.make("fakesink", "fakesink")
 ##        self.player.set_property("video-sink", fakesink)
 
-        self.player = Gst.parse_launch("filesrc location="+self.src+\
-                                       " ! decodebin name=dmux dmux. ! \
-                                       queue ! audioconvert ! autoaudiosink \
-                                       dmux. ! queue ! videoconvert ! \
-                                       ximagesink")
+##        self.player = Gst.parse_launch("filesrc location="+self.src+\
+##                                       " ! decodebin name=dmux dmux. ! \
+##                                       queue ! audioconvert ! autoaudiosink \
+##                                       dmux. ! queue ! videoconvert ! \
+##                                       ximagesink")
+
+        self.player = Gst.Pipeline.new("my_pippeline")
+        source = Gst.ElementFactory.make("filesrc", "source");
+        decoder = Gst.ElementFactory.make("decodebin", "decoder");
+        audio_queue = Gst.ElementFactory.make("queue", "audio_queue")
+        audio_convert = Gst.ElementFactory.make("audioconvert", "audio_convert")
+        audio_sink = Gst.ElementFactory.make("autoaudiosink", "audio_sink")
+        video_queue = Gst.ElementFactory.make("queue", "video_queue")
+        video_convert = Gst.ElementFactory.make("videoconvert", "video_convert")
+        video_sink = Gst.ElementFactory.make("ximagesink", "video_sink")
+        if (not self.player or not source or not decoder or not audio_queue\
+            or not audio_convert or not audio_sink or not video_queue \
+            or not video_convert or not video_sink):
+            print "Not all elements could be created."
+            exit(-1)
+
+        self.player.add(source, decoder, audio_queue, audio_convert, \
+                          audio_sink, video_queue, video_convert, video_sink)
+        res0 = source.link(decoder)
+        res1 = audio_queue.link(audio_convert)
+        res2 = audio_convert.link(audio_sink)
+        res3 = video_queue.link(video_convert)
+        res4 = video_convert.link(video_sink)
+        if (not res0 or not res1 or not res2 or not res3 or not res4):
+            print "Elements could not be linked."
+            exit(-1)
+
+##        audio_pad = decoder.get_request_pad("src_%u")
+##        queue_audio_pad = audio_queue.get_static_pad("sink")
+##        video_pad = decoder.get_request_pad("src_%u")
+##        queue_video_pad = video_queue.get_static_pad("sink")
+##        if (audio_pad.link(queue_audio_pad) != Gst.PadLinkReturn.OK or
+##            video_pad.link(queue_video_pad) != Gst.PadLinkReturn.OK):
+##            print "Decoder could not be linked."
+##            exit(-1)
+        decoder.connect("pad-added", self.pad_added_handler, 0)
         
         bus = self.player.get_bus()
         #bus.add_signal_watch_full()
@@ -103,6 +139,10 @@ class PlaybackInterface:
         self.slider.set_value(0)
         self.label.set_text("0:00")
         self.updateButtons()
+
+    def pad_added_handler(src, new_pad, data):
+        print "Received new pad '%s' from '%s':"%( new_pad.get_name(), \
+                                                   src.get_name())
 
     def play(self):
 ##        self.player.set_property("uri", self.uri)
@@ -151,8 +191,10 @@ class PlaybackInterface:
 
     def sliderChangeValue(self, w, scroll, value):
         print value
-        self.player.seek(1.0, Gst.Format.TIME, Gst.SeekFlags.FLUSH, Gst.SeekType.SET,\
-                         value * Gst.SECOND, Gst.SeekType.NONE, c_long(Gst.CLOCK_TIME_NONE).value)
+        if value>=0:
+            self.player.seek(1.0, Gst.Format.TIME, Gst.SeekFlags.FLUSH, Gst.SeekType.SET,\
+                             value * Gst.SECOND, Gst.SeekType.NONE, \
+                             c_long(Gst.CLOCK_TIME_NONE).value)
 
     def updateSlider(self):
         if(self.playing == False):
