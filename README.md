@@ -41,3 +41,16 @@ gstreamer
 
 \-\-helloworld: the demo for testing gstreamer program environment.
 
+python
+
+\-\-pygtk-helloworld.py: the pygtk demo
+
+\-\-pysqlite-helloworld.py: the pysqlite demo
+
+\-\-python-gst-player-example.py: the python gstreamer demo
+
+helloworld
+
+\-\-linux_so: the Linux Share Object demo
+
+gtk_browser: the gtk webkit demo
