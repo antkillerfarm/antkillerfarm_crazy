@@ -54,3 +54,5 @@ helloworld
 \-\-linux_so: the Linux Share Object demo
 
 gtk_browser: the gtk webkit demo
+
+mylex: the demo of lex & yacc

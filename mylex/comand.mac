@@ -1,0 +1,3 @@
+SetBaud 9600;
+SetPort 0;
+Send "AK47";
