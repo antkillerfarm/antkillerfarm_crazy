@@ -17,7 +17,11 @@ linux_driver
 
 QuickStart: add a shortcut to Taskbar of Ubuntu Unity desktop.
 
-hiOpenWRT: the Hello World demo for OpenWrt.
+hiOpenWRT
+
+\-\-normal: the Hello World demo for OpenWrt.
+
+\-\-autotool: the Hello World demo for OpenWrt(use autotool).
 
 HelloBox2d: the demo of Cocos2d-x v3 + Box2d.
 
