@@ -45,6 +45,20 @@ gstreamer
 
 \-\-helloworld: the demo for testing gstreamer program environment.
 
+\-\-step1: the helloworld for python + gtk 3 + gstreamer.
+
+\-\-step2: add forward play on step1.
+
+\-\-step3: make pipeline by mannul on step2.
+
+\-\-tutorials: the tutorials for c + gtk 3 + gstreamer.
+
+\-\-\-\-cmdline: the helloworld for cmdline version.
+
+\-\-\-\-cmdline: the helloworld for cmdline version(use aototool).
+
+\-\-\-\-gtk: the helloworld for gtk version.
+
 python
 
 \-\-pygtk-helloworld.py: the pygtk demo
