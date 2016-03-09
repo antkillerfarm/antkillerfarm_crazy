@@ -15,6 +15,7 @@ AC_PROG_CC
 PKG_CHECK_MODULES(GSTREAMER1, gstreamer-1.0, , )
 PKG_CHECK_MODULES(GTK3, gtk+-3.0, , )
 PKG_CHECK_MODULES(GMODULE, gmodule-export-2.0, , )
+PKG_CHECK_MODULES(TOTEM_PL_PARSER, totem-plparser, , )
 
 # Checks for header files.
 

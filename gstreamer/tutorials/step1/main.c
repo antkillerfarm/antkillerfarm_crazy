@@ -1,8 +1,10 @@
 #include <gtk/gtk.h>
 #include <gst/gst.h>
 #include <string.h>
+#include <totem-pl-parser.h>
 
 #define MAX_PATH 256
+#define MAX_TITLE_LENGTH 128
 
 typedef struct{
   GtkStatusbar *statusbar;
@@ -13,6 +15,10 @@ typedef struct{
   GstElement *playbin;
   guint bus_watch_id;
 }GstData;
+
+typedef struct{
+  gchar title[MAX_TITLE_LENGTH];
+}MediaInfo;
 
 char g_filename[MAX_PATH];
 
@@ -77,9 +83,13 @@ G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
 {
   gchar *uri;
   if (gst_uri_is_valid (g_filename))
-    uri = g_strdup (g_filename);
+    {
+      uri = g_strdup (g_filename);
+    }
   else
-    uri = gst_filename_to_uri (g_filename, NULL);
+    {
+      uri = gst_filename_to_uri (g_filename, NULL);
+    }
   g_object_set (gst_data.playbin, "uri", uri, NULL);
   g_free (uri);
 
@@ -89,11 +99,46 @@ G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
 G_MODULE_EXPORT void do_button_test_clicked(GtkButton *button, gpointer data)
 {
   gchar *p = g_strrstr(g_filename, ".");
-  g_print ("Test: %s\n", p + 1);
+  g_print ("%s: %s\n", __func__, p + 1);
   if (g_strcmp0(p + 1, "m3u") == 0)
     {
-      g_print ("Test: OK\n");
+      g_print ("%s: OK\n", __func__);
     }
+}
+
+static void playlist_entry_parsed (TotemPlParser *parser, const gchar *uri, GHashTable *metadata, gpointer user_data)
+{
+  gchar *title = g_hash_table_lookup (metadata, TOTEM_PL_PARSER_FIELD_TITLE);
+  if (title != NULL)
+    g_print ("Entry title: %s\n", title);
+  else
+    g_print ("Entry (URI: %s) has no title.\n", uri);
+}
+
+G_MODULE_EXPORT void do_button_test2_clicked(GtkButton *button, gpointer data)
+{
+  gchar *uri;
+  if (gst_uri_is_valid (g_filename))
+    {
+      uri = g_strdup (g_filename);
+    }
+  else
+    {
+      uri = gst_filename_to_uri (g_filename, NULL);
+    }
+  g_print ("%s: %s\n", __func__, uri);
+  TotemPlParser *pl = totem_pl_parser_new ();
+  g_object_set (pl, "recurse", FALSE, "disable-unsafe", TRUE, NULL);
+  //g_signal_connect (G_OBJECT (pl), "playlist-started", G_CALLBACK (playlist_started), NULL);
+  g_signal_connect (G_OBJECT (pl), "entry-parsed", G_CALLBACK (playlist_entry_parsed), NULL);
+
+  if (totem_pl_parser_parse (pl, uri, FALSE) != TOTEM_PL_PARSER_RESULT_SUCCESS)
+    {
+      g_print ("Playlist parsing failed.");
+    }
+
+  g_print ("Playlist parsing finished.");
+  g_object_unref (pl);
 }
 
 void ui_init()
