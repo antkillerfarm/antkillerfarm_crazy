@@ -4,7 +4,7 @@
 #include <totem-pl-parser.h>
 
 #define MAX_PATH 256
-#define MAX_TITLE_LENGTH 128
+#define MAX_TITLE_LENGTH 64
 
 typedef struct{
   GtkStatusbar *statusbar;
@@ -18,12 +18,13 @@ typedef struct{
 
 typedef struct{
   gchar title[MAX_TITLE_LENGTH];
+  gchar uri[MAX_PATH];
 }MediaInfo;
 
 char g_filename[MAX_PATH];
-
 MainWindowSubWidget main_window_sub_widget;
 GstData gst_data;
+GSList* play_list = NULL;
 
 static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 {
@@ -109,10 +110,27 @@ G_MODULE_EXPORT void do_button_test_clicked(GtkButton *button, gpointer data)
 static void playlist_entry_parsed (TotemPlParser *parser, const gchar *uri, GHashTable *metadata, gpointer user_data)
 {
   gchar *title = g_hash_table_lookup (metadata, TOTEM_PL_PARSER_FIELD_TITLE);
-  if (title != NULL)
-    g_print ("Entry title: %s\n", title);
+  gchar *uri0;
+  MediaInfo *p_media_info = (MediaInfo*)g_malloc0(sizeof(MediaInfo));
+  if (gst_uri_is_valid (uri))
+    {
+      uri0 = g_strdup (uri);
+    }
   else
-    g_print ("Entry (URI: %s) has no title.\n", uri);
+    {
+      uri0 = gst_filename_to_uri (uri, NULL);
+    }
+  g_strlcpy(p_media_info->uri, uri0, MAX_PATH);
+  if (title != NULL)
+    {
+      g_print ("Entry title: %s\n%s\n", title,uri0);
+      g_strlcpy(p_media_info->title, title, MAX_TITLE_LENGTH);
+    }
+  else
+    {
+      g_print ("Entry (URI: %s) has no title.\n", uri0);
+    }
+  play_list = g_slist_append(play_list, p_media_info);
 }
 
 G_MODULE_EXPORT void do_button_test2_clicked(GtkButton *button, gpointer data)
@@ -134,10 +152,10 @@ G_MODULE_EXPORT void do_button_test2_clicked(GtkButton *button, gpointer data)
 
   if (totem_pl_parser_parse (pl, uri, FALSE) != TOTEM_PL_PARSER_RESULT_SUCCESS)
     {
-      g_print ("Playlist parsing failed.");
+      g_print ("Playlist parsing failed.\n");
     }
 
-  g_print ("Playlist parsing finished.");
+  g_print ("Playlist parsing finished.\n");
   g_object_unref (pl);
 }
 
@@ -185,11 +203,17 @@ void media_init()
   g_object_unref (bus);
 }
 
+void free_media_info (gpointer data)
+{
+  g_free(data);
+}
+
 void media_cleanup()
 {
   gst_element_set_state (gst_data.playbin, GST_STATE_NULL);
   g_object_unref (gst_data.playbin);
   g_source_remove (gst_data.bus_watch_id);
+  g_slist_free_full(play_list, );
 }
 
 gint main (gint argc, gchar * argv[])
