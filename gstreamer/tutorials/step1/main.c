@@ -21,10 +21,22 @@ typedef struct{
   gchar uri[MAX_PATH];
 }MediaInfo;
 
-char g_filename[MAX_PATH];
-MainWindowSubWidget main_window_sub_widget;
-GstData gst_data;
-GSList* play_list = NULL;
+typedef struct{
+  GSList* play_list;
+  gint current_idx;
+  gint play_mode;
+}PlayListInfo;
+
+typedef struct{
+  gboolean is_play_list;
+}AppState;
+
+char g_filename[MAX_PATH] = {0};
+MainWindowSubWidget main_window_sub_widget = {0};
+GstData gst_data = {0};
+PlayListInfo play_list_info = {0};
+const gchar play_list_suffix[] = ".m3u .pls .xspf";
+AppState app_state = {0};
 
 static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 {
@@ -53,60 +65,6 @@ static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
   return TRUE;
 }
 
-G_MODULE_EXPORT void do_button_open_clicked(GtkButton *button, gpointer data)
-{
-  GtkWidget *dialog;
-  GtkWindow *window = (GtkWindow *)data;
-
-  dialog = gtk_file_chooser_dialog_new ("Open File",
-					window,
-					GTK_FILE_CHOOSER_ACTION_OPEN,
-				        "Cancel", GTK_RESPONSE_CANCEL,
-				        "Open", GTK_RESPONSE_ACCEPT,
-					NULL);
-
-  if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT)
-    {
-      gchar *filename;
-
-      filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER (dialog));
-      g_strlcpy(g_filename, filename, MAX_PATH);
-      gtk_statusbar_push(GTK_STATUSBAR(main_window_sub_widget.statusbar), 
-		     main_window_sub_widget.contextId, g_filename);
-      g_free (filename);
-    }
-
-  gtk_widget_destroy (dialog);
-
-}
-
-G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
-{
-  gchar *uri;
-  if (gst_uri_is_valid (g_filename))
-    {
-      uri = g_strdup (g_filename);
-    }
-  else
-    {
-      uri = gst_filename_to_uri (g_filename, NULL);
-    }
-  g_object_set (gst_data.playbin, "uri", uri, NULL);
-  g_free (uri);
-
-  gst_element_set_state (gst_data.playbin, GST_STATE_PLAYING);
-}
-
-G_MODULE_EXPORT void do_button_test_clicked(GtkButton *button, gpointer data)
-{
-  gchar *p = g_strrstr(g_filename, ".");
-  g_print ("%s: %s\n", __func__, p + 1);
-  if (g_strcmp0(p + 1, "m3u") == 0)
-    {
-      g_print ("%s: OK\n", __func__);
-    }
-}
-
 static void playlist_entry_parsed (TotemPlParser *parser, const gchar *uri, GHashTable *metadata, gpointer user_data)
 {
   gchar *title = g_hash_table_lookup (metadata, TOTEM_PL_PARSER_FIELD_TITLE);
@@ -130,19 +88,20 @@ static void playlist_entry_parsed (TotemPlParser *parser, const gchar *uri, GHas
     {
       g_print ("Entry (URI: %s) has no title.\n", uri0);
     }
-  play_list = g_slist_append(play_list, p_media_info);
+  play_list_info.play_list = g_slist_append(play_list_info.play_list, p_media_info);
+  
 }
 
-G_MODULE_EXPORT void do_button_test2_clicked(GtkButton *button, gpointer data)
+void load_playlist(gchar* file_name)
 {
   gchar *uri;
-  if (gst_uri_is_valid (g_filename))
+  if (gst_uri_is_valid (file_name))
     {
-      uri = g_strdup (g_filename);
+      uri = g_strdup (file_name);
     }
   else
     {
-      uri = gst_filename_to_uri (g_filename, NULL);
+      uri = gst_filename_to_uri (file_name, NULL);
     }
   g_print ("%s: %s\n", __func__, uri);
   TotemPlParser *pl = totem_pl_parser_new ();
@@ -157,6 +116,102 @@ G_MODULE_EXPORT void do_button_test2_clicked(GtkButton *button, gpointer data)
 
   g_print ("Playlist parsing finished.\n");
   g_object_unref (pl);
+}
+
+void load_file(gchar* file_name)
+{
+  gchar *p = g_strrstr(file_name, ".");
+  if (g_strstr_len(play_list_suffix, sizeof(play_list_suffix), p) != NULL)
+    {
+      app_state.is_play_list = TRUE;
+      load_playlist(file_name);
+    }
+  else
+    {
+      app_state.is_play_list = FALSE;
+    }
+}
+
+G_MODULE_EXPORT void do_button_open_clicked(GtkButton *button, gpointer data)
+{
+  GtkWidget *dialog;
+  GtkWindow *window = (GtkWindow *)data;
+
+  dialog = gtk_file_chooser_dialog_new ("Open File",
+					window,
+					GTK_FILE_CHOOSER_ACTION_OPEN,
+				        "Cancel", GTK_RESPONSE_CANCEL,
+				        "Open", GTK_RESPONSE_ACCEPT,
+					NULL);
+
+  if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT)
+    {
+      gchar *filename;
+
+      filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER (dialog));
+      g_strlcpy(g_filename, filename, MAX_PATH);
+      gtk_statusbar_push(GTK_STATUSBAR(main_window_sub_widget.statusbar), 
+		     main_window_sub_widget.contextId, g_filename);
+      load_file(g_filename);
+      g_free (filename);
+    }
+
+  gtk_widget_destroy (dialog);
+
+}
+
+G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
+{
+  gchar *uri;
+  gchar *filename;
+  if (app_state.is_play_list)
+    {
+      MediaInfo *p_media_info = g_slist_nth_data(play_list_info.play_list, play_list_info.current_idx);
+      filename = p_media_info->uri;
+    }
+  else
+    {
+      filename = g_filename;
+    }
+  g_print ("%s: %s\n", __func__, filename);
+
+  if (gst_uri_is_valid (filename))
+    {
+      uri = g_strdup (filename);
+    }
+  else
+    {
+      uri = gst_filename_to_uri (filename, NULL);
+    }
+  g_object_set (gst_data.playbin, "uri", uri, NULL);
+  g_free (uri);
+
+  gst_element_set_state (gst_data.playbin, GST_STATE_PLAYING);
+}
+
+G_MODULE_EXPORT void do_button_next_clicked(GtkButton *button, gpointer data)
+{
+  gint play_list_num = g_slist_length(play_list_info.play_list);
+  gst_element_set_state (gst_data.playbin, GST_STATE_NULL);
+  play_list_info.current_idx = (play_list_info.current_idx + 1) % play_list_num;
+  MediaInfo *p_media_info = g_slist_nth_data(play_list_info.play_list, play_list_info.current_idx);
+  g_object_set (gst_data.playbin, "uri", p_media_info->uri, NULL);
+  gst_element_set_state (gst_data.playbin, GST_STATE_PLAYING);
+}
+
+G_MODULE_EXPORT void do_button_test_clicked(GtkButton *button, gpointer data)
+{
+  gchar *p = g_strrstr(g_filename, ".");
+  g_print ("%s: %s\n", __func__, p + 1);
+  if (g_strstr_len(play_list_suffix, sizeof(play_list_suffix), p) != NULL)
+    {
+      g_print ("%s: OK\n", __func__);
+    }
+}
+
+G_MODULE_EXPORT void do_button_test2_clicked(GtkButton *button, gpointer data)
+{
+  load_playlist(g_filename);
 }
 
 void ui_init()
@@ -205,6 +260,8 @@ void media_init()
 
 void free_media_info (gpointer data)
 {
+  MediaInfo *p_media_info = (MediaInfo *)data;
+  g_print ("%s: %s %s\n", __func__, p_media_info->title, p_media_info->uri);
   g_free(data);
 }
 
@@ -213,7 +270,7 @@ void media_cleanup()
   gst_element_set_state (gst_data.playbin, GST_STATE_NULL);
   g_object_unref (gst_data.playbin);
   g_source_remove (gst_data.bus_watch_id);
-  g_slist_free_full(play_list, );
+  g_slist_free_full(play_list_info.play_list, free_media_info);
 }
 
 gint main (gint argc, gchar * argv[])
