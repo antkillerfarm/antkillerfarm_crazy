@@ -59,6 +59,10 @@ gstreamer
 
 \-\-\-\-gtk: the helloworld for gtk version.
 
+\-\-\-\-step1: the demo for totem playlist parser.
+
+\-\-\-\-cs: the demo for remote gstreamer player.
+
 python
 
 \-\-pygtk-helloworld.py: the pygtk demo
