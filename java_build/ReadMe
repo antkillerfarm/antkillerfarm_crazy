@@ -1,0 +1,13 @@
+# Ant
+
+`ant compile jar run`
+
+# Maven
+
+`mvn package`
+
+`mvn exec:java`
+
+# Gradle
+
+``
