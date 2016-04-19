@@ -93,16 +93,19 @@ void ui_init()
   GError *err = NULL;
   gchar *exec_name = NULL;
   gchar *tmp = NULL;
+  gchar exe_path[MAX_PATH];
 
   gtk_init(NULL, NULL);
 
   builder = gtk_builder_new();
   exec_name = g_file_read_link("/proc/self/exe", NULL);
-  g_print("exec_name0: %s\n", exec_name);
-  tmp = g_strrstr("/", exec_name);
-  
-  g_print("exec_name1: %s\n", exec_name);
-  gtk_builder_add_from_file(builder, "audio_player.glade", &err);
+  tmp = g_strrstr(exec_name, "/");
+  *tmp = 0;
+  g_strlcpy(exe_path, exec_name, MAX_PATH);
+  g_strlcat(exe_path, "/audio_player.glade", MAX_PATH);
+  g_free(exec_name);
+
+  gtk_builder_add_from_file(builder, exe_path, &err);
 
   gtk_builder_connect_signals(builder, NULL);
   window = GTK_WIDGET(gtk_builder_get_object(builder, "main_window"));
@@ -123,14 +126,31 @@ void ui_init()
 void media_init()
 {
   GstBus *bus;
+  GstElement *source, *tcp_sink;
 
   gst_init (NULL, NULL);
 
-  gst_data.playbin = gst_element_factory_make ("playbin", NULL);
+  gst_data.playbin = gst_pipeline_new("audio_player_client");
+  source = gst_element_factory_make ("filesrc", "source");
+  tcp_sink = gst_element_factory_make ("tcpclientsink", "tcp_sink");
+
+  if (!player_client || !source || !tcp_sink)
+    {
+      g_print ("Not all elements could be created.\n");
+    }
+
+  gst_bin_add_many (GST_BIN (gst_data.playbin), source, tcp_sink, NULL);
+
+  if (gst_element_link_many (source, tcp_sink, NULL) != TRUE)
+    {
+      g_print ("Elements could not be linked.\n");
+      gst_object_unref (gst_data.playbin);
+    }
+
+  /*gst_data.playbin = gst_element_factory_make ("playbin", NULL);
   if (!gst_data.playbin) {
     g_print ("'playbin' gstreamer plugin missing\n");
-    return 1;
-  }
+    }*/
 
   bus = gst_element_get_bus (gst_data.playbin);
   gst_data.bus_watch_id = gst_bus_add_watch (bus, bus_call, NULL);
