@@ -11,7 +11,6 @@ typedef struct{
 
 typedef struct{
   GstElement *playbin;
-  guint bus_watch_id;
 }GstData;
 
 char g_filename[MAX_PATH];
@@ -126,7 +125,7 @@ void media_init()
   }
 
   bus = gst_element_get_bus (gst_data.playbin);
-  gst_data.bus_watch_id = gst_bus_add_watch (bus, bus_call, NULL);
+  gst_bus_add_watch (bus, bus_call, NULL);
   g_object_unref (bus);
 }
 
@@ -134,7 +133,6 @@ void media_cleanup()
 {
   gst_element_set_state (gst_data.playbin, GST_STATE_NULL);
   g_object_unref (gst_data.playbin);
-  g_source_remove (gst_data.bus_watch_id);
 }
 
 gint main (gint argc, gchar * argv[])

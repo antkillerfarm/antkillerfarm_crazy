@@ -4,6 +4,7 @@
 AC_PREREQ([2.60])
 AC_INIT(audio_remote_player 1.0, antkillerfarm@sohu.com)
 AC_CONFIG_SRCDIR(client/main.c)
+AC_CONFIG_SRCDIR(server/main.c)
 AC_CONFIG_HEADERS(config.h)
 AM_INIT_AUTOMAKE([1.8 dist-bzip2 no-dist-gzip check-news])
 
@@ -22,5 +23,6 @@ PKG_CHECK_MODULES(GMODULE, gmodule-export-2.0, , )
 
 # Checks for library functions.
 AC_CONFIG_FILES([Makefile
-		client/Makefile])
+		client/Makefile
+		server/Makefile])
 AC_OUTPUT

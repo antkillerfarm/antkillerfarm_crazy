@@ -11,7 +11,8 @@ typedef struct{
 
 typedef struct{
   GstElement *playbin;
-  guint bus_watch_id;
+  GstElement *source;
+  GstElement *tcp_sink;
 }GstData;
 
 char g_filename[MAX_PATH];
@@ -80,7 +81,9 @@ G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
     uri = g_strdup (g_filename);
   else
     uri = gst_filename_to_uri (g_filename, NULL);
-  g_object_set (gst_data.playbin, "uri", uri, NULL);
+  //g_object_set (gst_data.playbin, "uri", uri, NULL);
+  g_object_set (gst_data.source, "location", uri, NULL);
+  g_object_set (gst_data.tcp_sink, "port", 3000, NULL);
   g_free (uri);
 
   gst_element_set_state (gst_data.playbin, GST_STATE_PLAYING);
@@ -126,34 +129,28 @@ void ui_init()
 void media_init()
 {
   GstBus *bus;
-  GstElement *source, *tcp_sink;
 
   gst_init (NULL, NULL);
 
   gst_data.playbin = gst_pipeline_new("audio_player_client");
-  source = gst_element_factory_make ("filesrc", "source");
-  tcp_sink = gst_element_factory_make ("tcpclientsink", "tcp_sink");
+  gst_data.source = gst_element_factory_make ("filesrc", "source");
+  gst_data.tcp_sink = gst_element_factory_make ("tcpclientsink", "tcp_sink");
 
-  if (!player_client || !source || !tcp_sink)
+  if (!gst_data.playbin || !gst_data.source || !gst_data.tcp_sink)
     {
       g_print ("Not all elements could be created.\n");
     }
 
-  gst_bin_add_many (GST_BIN (gst_data.playbin), source, tcp_sink, NULL);
+  gst_bin_add_many (GST_BIN (gst_data.playbin), gst_data.source, gst_data.tcp_sink, NULL);
 
-  if (gst_element_link_many (source, tcp_sink, NULL) != TRUE)
+  if (gst_element_link_many (gst_data.source, gst_data.tcp_sink, NULL) != TRUE)
     {
       g_print ("Elements could not be linked.\n");
       gst_object_unref (gst_data.playbin);
     }
 
-  /*gst_data.playbin = gst_element_factory_make ("playbin", NULL);
-  if (!gst_data.playbin) {
-    g_print ("'playbin' gstreamer plugin missing\n");
-    }*/
-
   bus = gst_element_get_bus (gst_data.playbin);
-  gst_data.bus_watch_id = gst_bus_add_watch (bus, bus_call, NULL);
+  gst_bus_add_watch (bus, bus_call, NULL);
   g_object_unref (bus);
 }
 
@@ -161,7 +158,6 @@ void media_cleanup()
 {
   gst_element_set_state (gst_data.playbin, GST_STATE_NULL);
   g_object_unref (gst_data.playbin);
-  g_source_remove (gst_data.bus_watch_id);
 }
 
 gint main (gint argc, gchar * argv[])
