@@ -77,10 +77,11 @@ G_MODULE_EXPORT void do_button_open_clicked(GtkButton *button, gpointer data)
 G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
 {
   gchar *uri;
-  if (gst_uri_is_valid (g_filename))
+  /*if (gst_uri_is_valid (g_filename))
     uri = g_strdup (g_filename);
   else
-    uri = gst_filename_to_uri (g_filename, NULL);
+  uri = gst_filename_to_uri (g_filename, NULL);*/
+  uri = g_strdup (g_filename);
   //g_object_set (gst_data.playbin, "uri", uri, NULL);
   g_object_set (gst_data.source, "location", uri, NULL);
   g_object_set (gst_data.tcp_sink, "port", 3000, NULL);
