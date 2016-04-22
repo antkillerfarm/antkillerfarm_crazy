@@ -2,8 +2,7 @@
 #include <gio/gio.h>
 
 /* this function will get called everytime a client attempts to connect */
-gboolean
-incoming_callback  (GSocketService *service,
+gboolean incoming_callback  (GSocketService *service,
                     GSocketConnection *connection,
                     GObject *source_object,
                     gpointer user_data)
@@ -20,12 +19,8 @@ incoming_callback  (GSocketService *service,
   return FALSE;
 }
 
-int
-main (int argc, char **argv)
+int main (int argc, char **argv)
 {
-  /* initialize glib */
-  g_type_init();
-
   GError * error = NULL;
 
   /* create the new socketservice */
@@ -40,7 +35,7 @@ main (int argc, char **argv)
   /* don't forget to check for errors */
   if (error != NULL)
   {
-      g_error (error->message);
+    g_error ("%s", error->message);
   }
 
   /* listen to the 'incoming' signal */

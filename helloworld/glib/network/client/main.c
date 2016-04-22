@@ -1,13 +1,11 @@
+#include <string.h>
 #include <glib.h>
 #include <gio/gio.h>
 
-int
-main (int argc, char *argv[])
+int main (int argc, char *argv[])
 {
-   /* initialize glib */
-  g_type_init ();
-
   GError * error = NULL;
+  gchar *str = "Hello server!";
 
   /* create a new connection */
   GSocketConnection * connection = NULL;
@@ -23,25 +21,25 @@ main (int argc, char *argv[])
   /* don't forget to check for errors */
   if (error != NULL)
   {
-      g_error (error->message);
+    g_error ("%s", error->message);
   }
   else
   {
-      g_print ("Connection successful!\n");
+    g_print ("Connection successful!\n");
   }
 
   /* use the connection */
   GInputStream * istream = g_io_stream_get_input_stream (G_IO_STREAM (connection));
   GOutputStream * ostream = g_io_stream_get_output_stream (G_IO_STREAM (connection));
   g_output_stream_write  (ostream,
-                          "Hello server!", /* your message goes here */
-                          13, /* length of your message */
+                          str, /* your message goes here */
+                          strlen(str) + 1, /* length of your message */
                           NULL,
                           &error);
   /* don't forget to check for errors */
   if (error != NULL)
   {
-      g_error (error->message);
+    g_error ("%s", error->message);
   }
   return 0;
 }
