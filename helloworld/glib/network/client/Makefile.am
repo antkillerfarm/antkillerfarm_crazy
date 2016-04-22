@@ -1,0 +1,7 @@
+bin_PROGRAMS = client
+
+client_SOURCES = main.c
+
+AM_CPPFLAGS = $(GLIB_CFLAGS) $(GMODULE_CFLAGS)
+client_LDADD = $(GLIB_LIBS) $(GMODULE_LIBS)
+
