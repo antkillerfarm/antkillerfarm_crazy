@@ -3,6 +3,8 @@
 #include <string.h>
 
 #define MAX_PATH 256
+#define MEDIA_PORT 1500
+#define CONTROL_PORT 1501
 
 typedef struct{
   GtkStatusbar *statusbar;
@@ -84,7 +86,7 @@ G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
   uri = g_strdup (g_filename);
   //g_object_set (gst_data.playbin, "uri", uri, NULL);
   g_object_set (gst_data.source, "location", uri, NULL);
-  g_object_set (gst_data.tcp_sink, "port", 3000, NULL);
+  g_object_set (gst_data.tcp_sink, "port", MEDIA_PORT, NULL);
   g_free (uri);
 
   gst_element_set_state (gst_data.playbin, GST_STATE_PLAYING);
