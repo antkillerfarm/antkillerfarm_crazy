@@ -166,18 +166,32 @@ int server_main_loop()
   return 0;
 }
 
-void cmd_handler(GString *cmd_buf)
+#define NUM_OF_PIECES 4
+
+void cmd_handler()
 {
   gchar **cmd_strv;
   gint strv_len, i;
   g_print ("%s\n", __func__);
-  
-  cmd_strv = g_strsplit(cmd_buf->str, "\n", 8);
-  strv_len = g_strv_length(cmd_strv);
-  for (i = 0; i < strv_len; i++)
+
+  do
     {
-      g_print("Cmd was %d: \"%s\"\n", i, cmd_strv[i]);
-    }
+      cmd_strv = g_strsplit(control_service_data.cmd_buf->str, "\n", NUM_OF_PIECES);
+      strv_len = g_strv_length(cmd_strv);
+      if (strv_len == 0)
+	{
+	  g_strfreev(cmd_strv);
+	  return;
+	}
+      for (i = 0; i < strv_len; i++)
+	{
+	  g_print("Cmd was %d: \"%s\"\n", i, cmd_strv[i]);
+	}
+      g_string_free(control_service_data.cmd_buf, TRUE);
+      control_service_data.cmd_buf = g_string_new_len(cmd_strv[strv_len - 1], strlen(cmd_strv[strv_len -1]));
+      g_print("cmd_buf X: \"%s\"\n", control_service_data.cmd_buf->str);
+      g_strfreev(cmd_strv);
+    } while (strv_len == NUM_OF_PIECES);
 }
 
 /* this function will get called everytime a client attempts to connect */
@@ -186,11 +200,11 @@ gboolean incoming_callback  (GSocketService *service,
                     GObject *source_object,
                     gpointer user_data)
 {
-  gint read_cnt = 1;
+  gint read_cnt;
   g_print("Received Connection from client!\n");
   GInputStream * istream = g_io_stream_get_input_stream (G_IO_STREAM (connection));
   gchar message[1024];
-  while (1)
+  do
     {
       memset(message, 0, sizeof(message));
       read_cnt = g_input_stream_read  (istream,
@@ -207,18 +221,19 @@ gboolean incoming_callback  (GSocketService *service,
 	    }
 	  else
 	    {
+	      g_print("cmd_buf 0: \"%s\"\n", control_service_data.cmd_buf->str);
 	      control_service_data.cmd_buf = g_string_append_len(control_service_data.cmd_buf, message, read_cnt);
+	      g_print("cmd_buf 1: \"%s\"\n", control_service_data.cmd_buf->str);
 	    }
-	  cmd_handler(control_service_data.cmd_buf);
+	  cmd_handler();
 	}
-      else
-	{
-	  break;
-	}
-    }
+    } while (read_cnt > 0);
   g_print("Client disconnection!\n");
-  g_string_free(control_service_data.cmd_buf, TRUE);
-  control_service_data.cmd_buf = NULL;
+  if (control_service_data.cmd_buf != NULL)
+    {
+      g_string_free(control_service_data.cmd_buf, TRUE);
+      control_service_data.cmd_buf = NULL;
+    }
   return FALSE;
 }
 

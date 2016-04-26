@@ -101,14 +101,14 @@ G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
 G_MODULE_EXPORT void do_button_next_clicked(GtkButton *button, gpointer data)
 {
   GError * error = NULL;
-  gchar *str = "Hello server!";
+  gchar *str = "Play\nPause\nNext\nVolume Up\n";
 
   /* use the connection */
   //GInputStream * istream = g_io_stream_get_input_stream (G_IO_STREAM (control_service_data.connection));
   GOutputStream * ostream = g_io_stream_get_output_stream (G_IO_STREAM (control_service_data.connection));
   g_output_stream_write  (ostream,
                           str, /* your message goes here */
-                          strlen(str) + 1, /* length of your message */
+                          strlen(str), /* length of your message */
                           NULL,
                           &error);
   g_print ("%s\n", __func__);
