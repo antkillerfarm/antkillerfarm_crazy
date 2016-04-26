@@ -41,5 +41,11 @@ int main (int argc, char *argv[])
   {
     g_error ("%s", error->message);
   }
+
+  g_object_unref(client);
+  if (connection != NULL)
+  {
+    g_object_unref(connection);
+  }
   return 0;
 }

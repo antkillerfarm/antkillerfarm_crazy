@@ -1,3 +1,4 @@
+#include <string.h>
 #include <glib.h>
 #include <gio/gio.h>
 
@@ -10,6 +11,7 @@ gboolean incoming_callback  (GSocketService *service,
   g_print("Received Connection from client!\n");
   GInputStream * istream = g_io_stream_get_input_stream (G_IO_STREAM (connection));
   gchar message[1024];
+  memset(message, 0, sizeof(message));
   g_input_stream_read  (istream,
                         message,
                         1024,

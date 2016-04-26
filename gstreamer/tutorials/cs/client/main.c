@@ -17,10 +17,16 @@ typedef struct{
   GstElement *tcp_sink;
 }GstData;
 
+typedef struct{
+  GSocketConnection *connection;
+  GSocketClient *client;
+}ControlServiceData;
+
 char g_filename[MAX_PATH];
 
 MainWindowSubWidget main_window_sub_widget;
 GstData gst_data;
+ControlServiceData control_service_data;
 
 static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 {
@@ -90,6 +96,28 @@ G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
   g_free (uri);
 
   gst_element_set_state (gst_data.playbin, GST_STATE_PLAYING);
+}
+
+G_MODULE_EXPORT void do_button_next_clicked(GtkButton *button, gpointer data)
+{
+  GError * error = NULL;
+  gchar *str = "Hello server!";
+
+  /* use the connection */
+  //GInputStream * istream = g_io_stream_get_input_stream (G_IO_STREAM (control_service_data.connection));
+  GOutputStream * ostream = g_io_stream_get_output_stream (G_IO_STREAM (control_service_data.connection));
+  g_output_stream_write  (ostream,
+                          str, /* your message goes here */
+                          strlen(str) + 1, /* length of your message */
+                          NULL,
+                          &error);
+  g_print ("%s\n", __func__);
+  /* don't forget to check for errors */
+  if (error != NULL)
+  {
+    g_print ("%s", error->message);
+  }
+  
 }
 
 void ui_init()
@@ -163,14 +191,50 @@ void media_cleanup()
   g_object_unref (gst_data.playbin);
 }
 
+
+void cortrol_service_init()
+{
+  GError * error = NULL;
+  
+  /* create a new connection */
+  control_service_data.client = g_socket_client_new();
+
+    /* connect to the host */
+  control_service_data.connection = g_socket_client_connect_to_host (control_service_data.client,
+                                               (gchar*)"localhost",
+                                                CONTROL_PORT,
+                                                NULL,
+                                                &error);
+    /* don't forget to check for errors */
+  if (error != NULL)
+  {
+    g_print ("%s", error->message);
+  }
+  else
+  {
+    g_print ("Connection successful!\n");
+  }
+}
+
+void cortrol_service_cleanup()
+{
+  g_object_unref(control_service_data.client);
+  if (control_service_data.connection != NULL)
+  {
+    g_object_unref(control_service_data.connection);
+  }
+}
+
 gint main (gint argc, gchar * argv[])
 {
   ui_init();
   media_init();
+  cortrol_service_init();
 
   gtk_main();
 
   media_cleanup();
+  cortrol_service_cleanup();
 
   return 0;
 }

@@ -75,6 +75,12 @@ helloworld
 
 \-\-linux_so: the Linux Share Object demo
 
+\-\-glib: the Glib demo
+
+\-\-\-\-the demo for GSocketClient & GSocketService
+
+\-\-pipe: the demo for name pipe & file lock & message queue On Linux platform
+
 gtk_browser: the gtk webkit demo
 
 mylex: the demo of lex & yacc

@@ -13,6 +13,7 @@ AC_PROG_CC
 
 # Checks for libraries.
 
+PKG_CHECK_MODULES(GLIB, glib-2.0 gio-2.0, , )
 PKG_CHECK_MODULES(GSTREAMER1, gstreamer-1.0, , )
 PKG_CHECK_MODULES(GTK3, gtk+-3.0, , )
 PKG_CHECK_MODULES(GMODULE, gmodule-export-2.0, , )

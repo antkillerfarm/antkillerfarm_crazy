@@ -14,9 +14,15 @@ typedef struct{
   GstElement *audio_sink;
 }GstData;
 
+typedef struct{
+  GSocketService *service;
+  GString *cmd_buf;
+}ControlServiceData;
+
 char g_filename[MAX_PATH];
 
 GstData gst_data;
+ControlServiceData control_service_data;
 
 static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 {
@@ -131,9 +137,16 @@ void media_cleanup()
   g_object_unref (gst_data.playbin);
 }
 
+void cortrol_service_cleanup()
+{
+  g_object_unref (control_service_data.service);
+}
+
 static GMainLoop *main_loop_ = NULL;
 static void exit_loop_sighandler(int sig)
 {
+  media_cleanup();
+  
   if (main_loop_)
     {
       g_main_loop_quit(main_loop_);
@@ -153,34 +166,73 @@ int server_main_loop()
   return 0;
 }
 
+void cmd_handler(GString *cmd_buf)
+{
+  gchar **cmd_strv;
+  gint strv_len, i;
+  g_print ("%s\n", __func__);
+  
+  cmd_strv = g_strsplit(cmd_buf->str, "\n", 8);
+  strv_len = g_strv_length(cmd_strv);
+  for (i = 0; i < strv_len; i++)
+    {
+      g_print("Cmd was %d: \"%s\"\n", i, cmd_strv[i]);
+    }
+}
+
 /* this function will get called everytime a client attempts to connect */
 gboolean incoming_callback  (GSocketService *service,
                     GSocketConnection *connection,
                     GObject *source_object,
                     gpointer user_data)
 {
+  gint read_cnt = 1;
   g_print("Received Connection from client!\n");
   GInputStream * istream = g_io_stream_get_input_stream (G_IO_STREAM (connection));
   gchar message[1024];
-  g_input_stream_read  (istream,
-                        message,
-                        1024,
-                        NULL,
-                        NULL);
-  g_print("Message was: \"%s\"\n", message);
+  while (1)
+    {
+      memset(message, 0, sizeof(message));
+      read_cnt = g_input_stream_read  (istream,
+			    message,
+			    1024,
+			    NULL,
+			    NULL);
+      g_print("Message was %d: \"%s\"\n", read_cnt, message);
+      if (read_cnt > 0)
+	{
+	  if (control_service_data.cmd_buf == NULL)
+	    {
+	      control_service_data.cmd_buf = g_string_new_len(message, read_cnt);
+	    }
+	  else
+	    {
+	      control_service_data.cmd_buf = g_string_append_len(control_service_data.cmd_buf, message, read_cnt);
+	    }
+	  cmd_handler(control_service_data.cmd_buf);
+	}
+      else
+	{
+	  break;
+	}
+    }
+  g_print("Client disconnection!\n");
+  g_string_free(control_service_data.cmd_buf, TRUE);
+  control_service_data.cmd_buf = NULL;
   return FALSE;
 }
 
 void cortrol_service_init()
 {
   GError * error = NULL;
+  control_service_data.cmd_buf = NULL;
 
   /* create the new socketservice */
-  GSocketService * service = g_socket_service_new ();
+  control_service_data.service = g_socket_service_new ();
 
   /* connect to the port */
-  g_socket_listener_add_inet_port ((GSocketListener*)service,
-                                    CONTROL_PORT, /* your port goes here */
+  g_socket_listener_add_inet_port ((GSocketListener*)control_service_data.service,
+                                    CONTROL_PORT,
                                     NULL,
                                     &error);
 
@@ -191,13 +243,13 @@ void cortrol_service_init()
   }
 
   /* listen to the 'incoming' signal */
-  g_signal_connect (service,
+  g_signal_connect (control_service_data.service,
                     "incoming",
                     G_CALLBACK (incoming_callback),
                     NULL);
 
   /* start the socket service */
-  g_socket_service_start (service);
+  g_socket_service_start (control_service_data.service);
 
   /* enter mainloop */
   g_print ("Waiting for client!\n");
