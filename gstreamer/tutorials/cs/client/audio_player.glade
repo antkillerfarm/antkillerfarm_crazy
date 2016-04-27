@@ -68,11 +68,12 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="button4">
-                <property name="label" translatable="yes">button</property>
+              <object class="GtkButton" id="button_pause">
+                <property name="label" translatable="yes">Pause</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <signal name="clicked" handler="do_button_pause_clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -81,11 +82,12 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="button5">
-                <property name="label" translatable="yes">button</property>
+              <object class="GtkButton" id="button_continue">
+                <property name="label" translatable="yes">Continue</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <signal name="clicked" handler="do_button_continue_clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>

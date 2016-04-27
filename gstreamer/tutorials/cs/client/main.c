@@ -55,6 +55,25 @@ static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
   return TRUE;
 }
 
+void send_cmd_to_server(gchar *cmd)
+{
+  GError * error = NULL;
+
+  /* use the connection */
+  //GInputStream * istream = g_io_stream_get_input_stream (G_IO_STREAM (control_service_data.connection));
+  GOutputStream * ostream = g_io_stream_get_output_stream (G_IO_STREAM (control_service_data.connection));
+  g_output_stream_write  (ostream,
+                          cmd, /* your message goes here */
+                          strlen(cmd), /* length of your message */
+                          NULL,
+                          &error);
+  /* don't forget to check for errors */
+  if (error != NULL)
+  {
+    g_print ("%s", error->message);
+  }
+}
+
 G_MODULE_EXPORT void do_button_open_clicked(GtkButton *button, gpointer data)
 {
   GtkWidget *dialog;
@@ -100,24 +119,20 @@ G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
 
 G_MODULE_EXPORT void do_button_next_clicked(GtkButton *button, gpointer data)
 {
-  GError * error = NULL;
-  gchar *str = "Play\nPause\nNext\nVolume Up\n";
+  //gchar *cmd = "Pause\n";
+  //send_cmd_to_server(cmd);
+}
 
-  /* use the connection */
-  //GInputStream * istream = g_io_stream_get_input_stream (G_IO_STREAM (control_service_data.connection));
-  GOutputStream * ostream = g_io_stream_get_output_stream (G_IO_STREAM (control_service_data.connection));
-  g_output_stream_write  (ostream,
-                          str, /* your message goes here */
-                          strlen(str), /* length of your message */
-                          NULL,
-                          &error);
-  g_print ("%s\n", __func__);
-  /* don't forget to check for errors */
-  if (error != NULL)
-  {
-    g_print ("%s", error->message);
-  }
-  
+G_MODULE_EXPORT void do_button_pause_clicked(GtkButton *button, gpointer data)
+{
+  gchar *cmd = "Pause\n";
+  send_cmd_to_server(cmd);
+}
+
+G_MODULE_EXPORT void do_button_continue_clicked(GtkButton *button, gpointer data)
+{
+  gchar *cmd = "Play\n";
+  send_cmd_to_server(cmd);
 }
 
 void ui_init()
@@ -238,3 +253,4 @@ gint main (gint argc, gchar * argv[])
 
   return 0;
 }
+

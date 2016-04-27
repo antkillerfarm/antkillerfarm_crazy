@@ -19,7 +19,11 @@ typedef struct{
   GString *cmd_buf;
 }ControlServiceData;
 
-char g_filename[MAX_PATH];
+typedef struct{
+  gchar cmd_name[10];
+  gint arg_num;
+  void (*cmd_handler)(gchar **arg_strv, gint arg_num);
+}CommandFormat;
 
 GstData gst_data;
 ControlServiceData control_service_data;
@@ -37,7 +41,7 @@ static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
       GError *err;
       gst_element_set_state (gst_data.playbin, GST_STATE_NULL);
       gst_message_parse_error (msg, &err, &debug);
-      g_printerr ("Debugging info: %s\n", (debug) ? debug : "none");
+      g_print ("Debugging info: %s\n", (debug) ? debug : "none");
       g_free (debug);
 
       g_print ("Error: %s\n", err->message);
@@ -166,32 +170,105 @@ int server_main_loop()
   return 0;
 }
 
-#define NUM_OF_PIECES 4
+void cmd_do_play(gchar **arg_strv, gint arg_num)
+{
+  g_print ("%s\n", __func__);
+  if (gst_element_set_state(gst_data.playbin, GST_STATE_PLAYING) ==
+      GST_STATE_CHANGE_FAILURE) {
+    g_print("gstreamer", "setting play state failed (2)");
+  }
+}
 
-void cmd_handler()
+void cmd_do_pause(gchar **arg_strv, gint arg_num)
+{
+  g_print ("%s\n", __func__);
+  if (gst_element_set_state(gst_data.playbin, GST_STATE_PAUSED) ==
+      GST_STATE_CHANGE_FAILURE) {
+    g_print("gstreamer", "setting play state failed (3)");
+  }
+}
+
+void cmd_do_stop(gchar **arg_strv, gint arg_num)
+{
+  g_print ("%s\n", __func__);
+}
+
+CommandFormat cmd_format[] =
+  {
+    {"Play", 1, cmd_do_play},
+    {"Pause", 1, cmd_do_pause},
+    {"Stop", 1, cmd_do_stop}
+  };
+
+gboolean are_cmd_args_valid(gchar **arg_strv, gint arg_num)
+{
+  gint i;
+  for (i = 0; i < arg_num; i++)
+    {
+      if (strlen(arg_strv[i]) == 0)
+	{
+	  return FALSE;
+	}
+    }
+  return TRUE;
+}
+
+#define ARG_PIECES 4
+
+void cmd_handler(gchar* cmd_str)
+{
+  gchar **arg_strv;
+  gint strv_len, i, cmd_format_size;
+  arg_strv = g_strsplit(cmd_str, "#", ARG_PIECES);
+  strv_len = g_strv_length(arg_strv);
+  if (strv_len == 0)
+    {
+      g_strfreev(arg_strv);
+      return;
+    }
+  cmd_format_size = sizeof(cmd_format);
+  for (i = 0; i < cmd_format_size; i++)
+    {
+      if (g_strcmp0(arg_strv[0], cmd_format[i].cmd_name) == 0)
+	{
+	  if (are_cmd_args_valid(arg_strv, cmd_format[i].arg_num))
+	    {
+	      cmd_format[i].cmd_handler(arg_strv, cmd_format[i].arg_num);
+	    }
+	}
+    }
+
+  g_strfreev(arg_strv);
+}
+
+#define CMD_BUF_PIECES 4
+
+void cmd_buf_handler()
 {
   gchar **cmd_strv;
   gint strv_len, i;
-  g_print ("%s\n", __func__);
 
   do
     {
-      cmd_strv = g_strsplit(control_service_data.cmd_buf->str, "\n", NUM_OF_PIECES);
+      cmd_strv = g_strsplit(control_service_data.cmd_buf->str, "\n", CMD_BUF_PIECES);
       strv_len = g_strv_length(cmd_strv);
       if (strv_len == 0)
 	{
 	  g_strfreev(cmd_strv);
 	  return;
 	}
-      for (i = 0; i < strv_len; i++)
+      for (i = 0; i < strv_len - 1; i++)
 	{
-	  g_print("Cmd was %d: \"%s\"\n", i, cmd_strv[i]);
+	  if (strlen(cmd_strv[i]) > 0)
+	    {
+	      g_print("Cmd was : \"%s\"\n", cmd_strv[i]);
+	      cmd_handler(cmd_strv[i]);
+	    }
 	}
       g_string_free(control_service_data.cmd_buf, TRUE);
       control_service_data.cmd_buf = g_string_new_len(cmd_strv[strv_len - 1], strlen(cmd_strv[strv_len -1]));
-      g_print("cmd_buf X: \"%s\"\n", control_service_data.cmd_buf->str);
       g_strfreev(cmd_strv);
-    } while (strv_len == NUM_OF_PIECES);
+    } while (strv_len == CMD_BUF_PIECES);
 }
 
 /* this function will get called everytime a client attempts to connect */
@@ -221,11 +298,9 @@ gboolean incoming_callback  (GSocketService *service,
 	    }
 	  else
 	    {
-	      g_print("cmd_buf 0: \"%s\"\n", control_service_data.cmd_buf->str);
 	      control_service_data.cmd_buf = g_string_append_len(control_service_data.cmd_buf, message, read_cnt);
-	      g_print("cmd_buf 1: \"%s\"\n", control_service_data.cmd_buf->str);
 	    }
-	  cmd_handler();
+	  cmd_buf_handler();
 	}
     } while (read_cnt > 0);
   g_print("Client disconnection!\n");
