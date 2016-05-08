@@ -1,0 +1,8 @@
+# Compile
+
+`autoreconf -fi`
+
+`./configure`
+
+`make`
+
