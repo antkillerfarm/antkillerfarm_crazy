@@ -11,9 +11,10 @@ AM_INIT_AUTOMAKE([1.8 dist-bzip2 no-dist-gzip check-news])
 AC_PROG_CC
 
 # Checks for libraries.
-
-PKG_CHECK_MODULES(GSTREAMER1, gstreamer-1.0, , )
-PKG_CHECK_MODULES(GTK3, gtk+-3.0, , )
+PKG_CHECK_MODULES(GLIB, glib-2.0 gthread-2.0, , )
+# PKG_CHECK_MODULES(GSTREAMER1, gstreamer-1.0, , )
+# PKG_CHECK_MODULES(GTK3, gtk+-3.0, , )
+PKG_CHECK_MODULES(LIBUPNP, libupnp, , )
 
 # Checks for header files.
 
