@@ -12,27 +12,27 @@
 #define UP_SERVICE_SERVCOUNT  2
 #define UP_MAXVARS 4
 
-struct Up_service {
-    char ServiceId[NAME_SIZE];
-    char ServiceType[NAME_SIZE];
-    char *VariableStrVal[UP_MAXVARS];
-    char EventURL[NAME_SIZE];
-    char ControlURL[NAME_SIZE];
-    char SID[NAME_SIZE];
-};
+typedef struct {
+	char ServiceId[NAME_SIZE];
+	char ServiceType[NAME_SIZE];
+	char *VariableStrVal[UP_MAXVARS];
+	char EventURL[NAME_SIZE];
+	char ControlURL[NAME_SIZE];
+	char SID[NAME_SIZE];
+}Up_service;
 
-struct UpDevice {
-    char UDN[250];
-    char DescDocURL[250];
-    char FriendlyName[250];
-    char PresURL[250];
-    int  AdvrTimeOut;
-    struct Up_service UpService[UP_SERVICE_SERVCOUNT];
-};
+typedef struct {
+	char UDN[250];
+	char DescDocURL[250];
+	char FriendlyName[250];
+	char PresURL[250];
+	int  AdvrTimeOut;
+        Up_service UpService[UP_SERVICE_SERVCOUNT];
+}UpDevice;
 
-struct UpDeviceNode {
-    struct UpDevice device;
-    struct UpDeviceNode *next;
+struct UpDeviceNode{
+        UpDevice device;
+        struct UpDeviceNode *next;
 };
 
 ithread_mutex_t DeviceListMutex;
@@ -82,60 +82,6 @@ epilogue:
 	return ret;
 }
 
-void Util_PrintEventType(Upnp_EventType S)
-{
-	switch (S) {
-	/* Discovery */
-	case UPNP_DISCOVERY_ADVERTISEMENT_ALIVE:
-		g_print("UPNP_DISCOVERY_ADVERTISEMENT_ALIVE\n");
-		break;
-	case UPNP_DISCOVERY_ADVERTISEMENT_BYEBYE:
-		g_print("UPNP_DISCOVERY_ADVERTISEMENT_BYEBYE\n");
-		break;
-	case UPNP_DISCOVERY_SEARCH_RESULT:
-		g_print( "UPNP_DISCOVERY_SEARCH_RESULT\n");
-		break;
-	case UPNP_DISCOVERY_SEARCH_TIMEOUT:
-		g_print( "UPNP_DISCOVERY_SEARCH_TIMEOUT\n");
-		break;
-	/* SOAP */
-	case UPNP_CONTROL_ACTION_REQUEST:
-		g_print("UPNP_CONTROL_ACTION_REQUEST\n");
-		break;
-	case UPNP_CONTROL_ACTION_COMPLETE:
-		g_print("UPNP_CONTROL_ACTION_COMPLETE\n");
-		break;
-	case UPNP_CONTROL_GET_VAR_REQUEST:
-		g_print("UPNP_CONTROL_GET_VAR_REQUEST\n");
-		break;
-	case UPNP_CONTROL_GET_VAR_COMPLETE:
-		g_print("UPNP_CONTROL_GET_VAR_COMPLETE\n");
-		break;
-	/* GENA */
-	case UPNP_EVENT_SUBSCRIPTION_REQUEST:
-		g_print("UPNP_EVENT_SUBSCRIPTION_REQUEST\n");
-		break;
-	case UPNP_EVENT_RECEIVED:
-		g_print("UPNP_EVENT_RECEIVED\n");
-		break;
-	case UPNP_EVENT_RENEWAL_COMPLETE:
-		g_print("UPNP_EVENT_RENEWAL_COMPLETE\n");
-		break;
-	case UPNP_EVENT_SUBSCRIBE_COMPLETE:
-		g_print("UPNP_EVENT_SUBSCRIBE_COMPLETE\n");
-		break;
-	case UPNP_EVENT_UNSUBSCRIBE_COMPLETE:
-		g_print("UPNP_EVENT_UNSUBSCRIBE_COMPLETE\n");
-		break;
-	case UPNP_EVENT_AUTORENEWAL_FAILED:
-		g_print("UPNP_EVENT_AUTORENEWAL_FAILED\n");
-		break;
-	case UPNP_EVENT_SUBSCRIPTION_EXPIRED:
-		g_print("UPNP_EVENT_SUBSCRIPTION_EXPIRED\n");
-		break;
-	}
-}
-
 void CtrlPointAddDevice(
 	IXML_Document *DescDoc,
 	const char *location,
@@ -164,7 +110,7 @@ void CtrlPointAddDevice(
 
 int CtrlPointRemoveAll(void)
 {
-	struct UpDeviceNode *curdevnode, *next;
+        struct UpDeviceNode *curdevnode, *next;
 
 	ithread_mutex_lock(&DeviceListMutex);
 
@@ -200,16 +146,17 @@ int CtrlPointRefresh(void)
 	return CP_SUCCESS;
 }
 
-int CtrlPointCallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
-{
-	/*int errCode = 0;*/
+typedef struct {
+	Upnp_EventType EventType;
+        char EventTypeString[64];
+	int (*event_handler)(Upnp_EventType EventType, void *Event, void *Cookie);
+}EventTypeData;
 
-        Util_PrintEventType(EventType);
-	switch ( EventType ) {
-	/* SSDP Stuff */
-	case UPNP_DISCOVERY_ADVERTISEMENT_ALIVE:
-	case UPNP_DISCOVERY_SEARCH_RESULT: {
-		struct Upnp_Discovery *d_event = (struct Upnp_Discovery *)Event;
+#define EVENT_TYPE_DATA_MACRO(x) x, #x
+
+int upnp_discovery_search_result_handler(Upnp_EventType EventType, void *Event, void *Cookie)
+{
+	struct Upnp_Discovery *d_event = (struct Upnp_Discovery *)Event;
 		IXML_Document *DescDoc = NULL;
 		int ret;
 
@@ -229,46 +176,52 @@ int CtrlPointCallbackEventHandler(Upnp_EventType EventType, void *Event, void *C
 			ixmlDocument_free(DescDoc);
 		}
 		//TvCtrlPointPrintList();
-		break;
-	}
-	case UPNP_DISCOVERY_SEARCH_TIMEOUT:
-		/* Nothing to do here... */
-		break;
-	case UPNP_DISCOVERY_ADVERTISEMENT_BYEBYE: {
+}
 
-		break;
-	}
-	/* SOAP Stuff */
-	case UPNP_CONTROL_ACTION_COMPLETE: {
+EventTypeData event_type_data[] =
+{
+	/* Discovery */
+	{EVENT_TYPE_DATA_MACRO(UPNP_DISCOVERY_ADVERTISEMENT_ALIVE), upnp_discovery_search_result_handler},
+	{EVENT_TYPE_DATA_MACRO(UPNP_DISCOVERY_ADVERTISEMENT_BYEBYE), NULL},
+	{EVENT_TYPE_DATA_MACRO(UPNP_DISCOVERY_SEARCH_RESULT), upnp_discovery_search_result_handler},
+	{EVENT_TYPE_DATA_MACRO(UPNP_DISCOVERY_SEARCH_TIMEOUT), NULL},
 
-		break;
-	}
-	case UPNP_CONTROL_GET_VAR_COMPLETE: {
+	/* SOAP */
+	{EVENT_TYPE_DATA_MACRO(UPNP_CONTROL_ACTION_REQUEST), NULL},
+	{EVENT_TYPE_DATA_MACRO(UPNP_CONTROL_ACTION_COMPLETE), NULL},
+	{EVENT_TYPE_DATA_MACRO(UPNP_CONTROL_GET_VAR_REQUEST), NULL},
+	{EVENT_TYPE_DATA_MACRO(UPNP_CONTROL_GET_VAR_COMPLETE), NULL},
 
-		break;
-	}
-	/* GENA Stuff */
-	case UPNP_EVENT_RECEIVED: {
+	/* GENA */
+	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_SUBSCRIPTION_REQUEST), NULL},
+	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_RECEIVED), NULL},
+	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_RENEWAL_COMPLETE), NULL},
+	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_SUBSCRIBE_COMPLETE), NULL},
+	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_UNSUBSCRIBE_COMPLETE), NULL},
+	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_AUTORENEWAL_FAILED), NULL},
+	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_SUBSCRIPTION_EXPIRED), NULL}
+};
 
-		break;
-	}
-	case UPNP_EVENT_SUBSCRIBE_COMPLETE:
-	case UPNP_EVENT_UNSUBSCRIBE_COMPLETE:
-	case UPNP_EVENT_RENEWAL_COMPLETE: {
+int event_type_data_num = sizeof(event_type_data)/sizeof(EventTypeData);
 
-	}
-	case UPNP_EVENT_AUTORENEWAL_FAILED:
-	case UPNP_EVENT_SUBSCRIPTION_EXPIRED: {
+int CtrlPointCallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
+{
+	/*int errCode = 0;*/
 
-		break;
+	int i;
+	for (i = 0; i < event_type_data_num; i++)
+	{
+		if (event_type_data[i].EventType == EventType)
+		{
+			g_print("%s\n", event_type_data[i].EventTypeString);
+			if (event_type_data[i].event_handler != NULL)
+			{
+				event_type_data[i].event_handler(EventType, Event, Cookie);
+			}
+			return 0;
+		}
 	}
-	/* ignore these cases, since this is not a device */
-	case UPNP_EVENT_SUBSCRIPTION_REQUEST:
-	case UPNP_CONTROL_GET_VAR_REQUEST:
-	case UPNP_CONTROL_ACTION_REQUEST:
-		break;
-	}
-
+	
 	return 0;
 }
 
@@ -342,6 +295,7 @@ int main(int argc, char **argv)
 
 	int code;
 
+	//g_print("%d %s\n", event_type_data_num, event_type_data[0].EventTypeString);
 	rc = CtrlPointStart();
 	if (rc != CP_SUCCESS) {
 	        g_print("Error starting UPnP Control Point\n");
