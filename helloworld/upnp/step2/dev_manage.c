@@ -2,6 +2,13 @@
 
 /*! Device type for add devices. */
 const char CPDeviceType[] = "urn:schemas-upnp-org:device:MediaRenderer:1";
+const char CPServiceType[][80] =
+{
+	"urn:schemas-upnp-org:service:AVTransport:1",
+	"urn:schemas-upnp-org:service:ConnectionManager:1",
+	"urn:schemas-upnp-org:service:RenderingControl:1"
+};
+
 
 void CtrlPointAddDevice(
 	IXML_Document *DescDoc,
@@ -60,10 +67,21 @@ void CtrlPointAddDevice(
 		}
 		else
 		{
-		        Util_ListService(DescDoc);
+		        Util_ListServiceList(DescDoc);
 		}
 	}
 	ithread_mutex_unlock(&DeviceListMutex);
+
+	if (deviceType)
+		free(deviceType);
+	if (friendlyName)
+		free(friendlyName);
+	if (UDN)
+		free(UDN);
+	if (baseURL)
+		free(baseURL);
+	if (relURL)
+		free(relURL);
 }
 
 int CtrlPointRemoveAll(void)

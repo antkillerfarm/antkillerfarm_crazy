@@ -6,6 +6,7 @@
 #include <glib.h>
 #include "ithread.h"
 #include "upnp.h"
+#include "upnptools.h"
 
 #define CP_SUCCESS		0
 #define CP_ERROR		(-1)
@@ -41,6 +42,7 @@ extern ithread_mutex_t DeviceListMutex;
 extern struct UpDeviceNode *GlobalDeviceList;
 
 char *Util_GetFirstDocumentItem(IXML_Document *doc, const char *item);
+char *Util_GetFirstElementItem(IXML_Element *element, const char *item);
 void Util_ListService(IXML_NodeList *ServiceList);
 void Util_ListServiceList(IXML_Document *doc);
 
