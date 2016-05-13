@@ -1,8 +1,14 @@
 #include "ctrl_point.h"
 
 /*! Device type for add devices. */
-const char CPDeviceType[] = "urn:schemas-upnp-org:device:MediaRenderer:1";
-const char CPServiceType[][80] =
+const int CPDeviceTypeLen = 1;
+const char CPDeviceType[][FILTER_NAME_SIZE] =
+{
+	"urn:schemas-upnp-org:device:MediaRenderer:1",
+};
+
+const int CPServiceTypeLen = 3;
+const char CPServiceType[][FILTER_NAME_SIZE] =
 {
 	"urn:schemas-upnp-org:service:AVTransport:1",
 	"urn:schemas-upnp-org:service:ConnectionManager:1",
@@ -47,7 +53,10 @@ void CtrlPointAddDevice(
 			baseURL, relURL);
 	}
 
-	if (strcmp(deviceType, CPDeviceType) == 0)
+	CPFilter device_type_filter;
+	device_type_filter.filter = CPDeviceType;
+	device_type_filter.filter_len = CPDeviceTypeLen;
+	if (Util_MatchFilters(&device_type_filter, deviceType) != -1)
 	{
 		/* Check if this device is already in the list */
 		tmpdevnode = GlobalDeviceList;
@@ -67,7 +76,10 @@ void CtrlPointAddDevice(
 		}
 		else
 		{
-		        Util_ListServiceList(DescDoc);
+			CPFilter service_type_filter;
+			service_type_filter.filter = CPServiceType;
+			service_type_filter.filter_len = CPServiceTypeLen;
+		        Util_ListServiceList(DescDoc, &service_type_filter);
 		}
 	}
 	ithread_mutex_unlock(&DeviceListMutex);

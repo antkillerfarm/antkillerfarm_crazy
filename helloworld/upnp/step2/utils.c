@@ -1,8 +1,23 @@
 #include "ctrl_point.h"
 
-int Util_MatchFilters(const char ** filters, int filter_len, const char *str)
+#define FILTER_UNMATCH -1
+#define FILTER_NULL -2
+
+int Util_MatchFilters(CPFilter *filter, const char *str)
 {
-	return -1;
+	int i;
+	if (filter->filter == NULL)
+	{
+		return FILTER_NULL;
+	}
+	for (i = 0; i < filter->filter_len; i++)
+	{
+		if (strcmp(filter->filter[i], str) == 0)
+		{
+			return i;
+		}
+	}
+	return FILTER_UNMATCH;
 }
 
 char *Util_GetFirstDocumentItem(IXML_Document *doc, const char *item)
@@ -76,24 +91,40 @@ char *Util_GetFirstElementItem(IXML_Element *element, const char *item)
 	return ret;
 }
 
-void Util_ListService(IXML_NodeList *ServiceList)
+void Util_ListService(IXML_NodeList *ServiceList, CPFilter *type_filter)
 {
         int i;
 	int list_len = ixmlNodeList_length(ServiceList);
 	char *tempServiceType = NULL;
 	IXML_Element *service = NULL;
+	char *baseURL = NULL;
+	const char *base = NULL;
+	char *relcontrolURL = NULL;
+	char *releventURL = NULL;
 	//g_print("%s\n", __FUNCTION__);
 	for (i = 0; i < list_len; i++)
 	{
 		service = (IXML_Element *)ixmlNodeList_item(ServiceList, i);
 		tempServiceType = Util_GetFirstElementItem((IXML_Element *)service, "serviceType");
-		g_print("%s\n", tempServiceType);
+		if (Util_MatchFilters(type_filter, tempServiceType) != -1)
+		{
+		        g_print("Found service: %s\n", tempServiceType);
+			relcontrolURL = Util_GetFirstElementItem(service, "controlURL");
+			releventURL = Util_GetFirstElementItem(service, "eventSubURL");
+			free(relcontrolURL);
+			free(releventURL);
+			relcontrolURL = NULL;
+			releventURL = NULL;
+		}
 		if (tempServiceType)
+		{
 			free(tempServiceType);
+			tempServiceType = NULL;
+		}
 	}
 }
 
-void Util_ListServiceList(IXML_Document *doc)
+void Util_ListServiceList(IXML_Document *doc, CPFilter *type_filter)
 {
 	IXML_NodeList *ServiceList = NULL;
 	IXML_NodeList *servlistnodelist = NULL;
@@ -113,7 +144,7 @@ void Util_ListServiceList(IXML_Document *doc)
 				ServiceList = ixmlElement_getElementsByTagName((IXML_Element *)servlistnode, "service");
 				if (ServiceList)
 				{
-					Util_ListService(ServiceList);
+					Util_ListService(ServiceList, type_filter);
 					ixmlNodeList_free(ServiceList);
 				}
 			}

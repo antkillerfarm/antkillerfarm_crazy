@@ -55,8 +55,9 @@ extern "C" {
 #ifdef SAMPLE_UTIL_C
 	/*! Service types for tv services. */
 	const char *TvServiceType[] = {
-		"urn:schemas-upnp-org:service:tvcontrol:1",
-		"urn:schemas-upnp-org:service:tvpicture:1"
+		"urn:schemas-upnp-org:service:AVTransport:1",
+		"urn:schemas-upnp-org:service:ConnectionManager:1",
+		"urn:schemas-upnp-org:service:RenderingControl:1"
 	};
 #else /* SAMPLE_UTIL_C */
 	extern const char *TvServiceType[];

@@ -58,7 +58,7 @@ UpnpClient_Handle ctrlpt_handle = -1;
 const char TvDeviceType[] = "urn:schemas-upnp-org:device:MediaRenderer:1";
 
 /*! Service names.*/
-const char *TvServiceName[] = { "AVTransport", "ConnectionManager" };
+const char *TvServiceName[] = { "AVTransport", "ConnectionManager" , "RenderingControl"};
 
 /*!
    Global arrays for storing variable names and counts for 
@@ -320,6 +320,287 @@ int TvCtrlPointGetBrightness(int devnum)
 	return TvCtrlPointGetVar(TV_SERVICE_PICTURE, devnum, "Brightness");
 }
 
+typedef enum {
+	CONTROL_VAR_G_GAIN,
+	CONTROL_VAR_B_BLACK,
+	CONTROL_VAR_VER_KEYSTONE,
+	CONTROL_VAR_G_BLACK,
+	CONTROL_VAR_VOLUME,
+	CONTROL_VAR_LOUDNESS,
+	CONTROL_VAR_AAT_INSTANCE_ID,
+	CONTROL_VAR_R_GAIN,
+	CONTROL_VAR_COLOR_TEMP,
+	CONTROL_VAR_SHARPNESS,
+	CONTROL_VAR_AAT_PRESET_NAME,
+	CONTROL_VAR_R_BLACK,
+	CONTROL_VAR_B_GAIN,
+	CONTROL_VAR_MUTE,
+	CONTROL_VAR_LAST_CHANGE,
+	CONTROL_VAR_AAT_CHANNEL,
+	CONTROL_VAR_HOR_KEYSTONE,
+	CONTROL_VAR_VOLUME_DB,
+	CONTROL_VAR_PRESET_NAME_LIST,
+	CONTROL_VAR_CONTRAST,
+	CONTROL_VAR_BRIGHTNESS,
+	CONTROL_VAR_UNKNOWN,
+	CONTROL_VAR_COUNT
+} control_variable_t;
+
+typedef enum {
+	CONTROL_CMD_GET_BLUE_BLACK,
+	CONTROL_CMD_GET_BLUE_GAIN,
+	CONTROL_CMD_GET_BRIGHTNESS,
+	CONTROL_CMD_GET_COLOR_TEMP,
+	CONTROL_CMD_GET_CONTRAST,
+	CONTROL_CMD_GET_GREEN_BLACK,
+	CONTROL_CMD_GET_GREEN_GAIN,
+	CONTROL_CMD_GET_HOR_KEYSTONE,
+	CONTROL_CMD_GET_LOUDNESS,
+	CONTROL_CMD_GET_MUTE,
+	CONTROL_CMD_GET_RED_BLACK,
+	CONTROL_CMD_GET_RED_GAIN,
+	CONTROL_CMD_GET_SHARPNESS,
+	CONTROL_CMD_GET_VERT_KEYSTONE,
+	CONTROL_CMD_GET_VOL,
+	CONTROL_CMD_GET_VOL_DB,
+	CONTROL_CMD_GET_VOL_DBRANGE,
+	CONTROL_CMD_LIST_PRESETS,      
+	//CONTROL_CMD_SELECT_PRESET,
+	//CONTROL_CMD_SET_BLUE_BLACK,
+	//CONTROL_CMD_SET_BLUE_GAIN,
+	//CONTROL_CMD_SET_BRIGHTNESS,
+	//CONTROL_CMD_SET_COLOR_TEMP,
+	//CONTROL_CMD_SET_CONTRAST,
+	//CONTROL_CMD_SET_GREEN_BLACK,
+	//CONTROL_CMD_SET_GREEN_GAIN,
+	//CONTROL_CMD_SET_HOR_KEYSTONE,
+	//CONTROL_CMD_SET_LOUDNESS,       
+	CONTROL_CMD_SET_MUTE,
+	//CONTROL_CMD_SET_RED_BLACK,
+	//CONTROL_CMD_SET_RED_GAIN,
+	//CONTROL_CMD_SET_SHARPNESS,
+	//CONTROL_CMD_SET_VERT_KEYSTONE,
+	CONTROL_CMD_SET_VOL,
+	CONTROL_CMD_SET_VOL_DB,
+	CONTROL_CMD_UNKNOWN,
+	CONTROL_CMD_COUNT
+} control_cmd;
+
+
+static const char *control_variable_names[] = {
+	[CONTROL_VAR_LAST_CHANGE] = "LastChange",
+	[CONTROL_VAR_PRESET_NAME_LIST] = "PresetNameList",
+	[CONTROL_VAR_AAT_CHANNEL] = "A_ARG_TYPE_Channel",
+	[CONTROL_VAR_AAT_INSTANCE_ID] = "A_ARG_TYPE_InstanceID",
+	[CONTROL_VAR_AAT_PRESET_NAME] = "A_ARG_TYPE_PresetName",
+	[CONTROL_VAR_BRIGHTNESS] = "Brightness",
+	[CONTROL_VAR_CONTRAST] = "Contrast",
+	[CONTROL_VAR_SHARPNESS] = "Sharpness",
+	[CONTROL_VAR_R_GAIN] = "RedVideoGain",
+	[CONTROL_VAR_G_GAIN] = "GreenVideoGain",
+	[CONTROL_VAR_B_GAIN] = "BlueVideoGain",
+	[CONTROL_VAR_R_BLACK] = "RedVideoBlackLevel",
+	[CONTROL_VAR_G_BLACK] = "GreenVideoBlackLevel",
+	[CONTROL_VAR_B_BLACK] = "BlueVideoBlackLevel",
+	[CONTROL_VAR_COLOR_TEMP] = "ColorTemperature",
+	[CONTROL_VAR_HOR_KEYSTONE] = "HorizontalKeystone",
+	[CONTROL_VAR_VER_KEYSTONE] = "VerticalKeystone",
+	[CONTROL_VAR_MUTE] = "Mute",
+	[CONTROL_VAR_VOLUME] = "Volume",
+	[CONTROL_VAR_VOLUME_DB] = "VolumeDB",
+	[CONTROL_VAR_LOUDNESS] = "Loudness",
+	[CONTROL_VAR_UNKNOWN] = NULL
+};
+
+static const char *aat_presetnames[] =
+{
+	"FactoryDefaults",
+	"InstallationDefaults",
+	"Vendor defined",
+	NULL
+};
+
+static const char *aat_channels[] =
+{
+	"Master",
+	"LF",
+	"RF",
+	//"CF",
+	//"LFE",
+	//"LS",
+	//"RS",
+	//"LFC",
+	//"RFC",
+	//"SD",
+	//"SL",
+	//"SR",
+	//"T",
+	//"B",
+	NULL
+};
+
+typedef enum {
+        DATATYPE_STRING,
+        DATATYPE_BOOLEAN,
+        DATATYPE_I2,
+        DATATYPE_I4,
+        DATATYPE_UI2,
+        DATATYPE_UI4,
+        DATATYPE_UNKNOWN,
+        DATATYPE_COUNT
+} param_datatype;
+
+typedef enum {
+        SENDEVENT_NO,
+        SENDEVENT_YES
+} param_event;
+
+struct param_range {
+        long long min;
+        long long max;
+        long long step;
+};
+
+struct var_meta {
+        param_event     sendevents;
+        param_datatype  datatype;
+        const char      **allowed_values;
+        struct param_range      *allowed_range;
+	const char      *default_value;
+};
+
+// We split our volume range into two ranges with different slope.
+// The first half goes from min_db ... mid_db, the second half
+// from mid_db .. max_db.
+static const float vol_min_db = -60.0;
+static const float vol_mid_db = -20.0;
+static const float vol_max_db = 0.0;
+static const int vol_mid_point = 50;  // volume_range.max / 2
+
+// Note, some players don't read the range and assume 0..100. So better leave
+// it like this.
+static struct param_range volume_range = { 0, 100, 1 };
+static struct param_range volume_db_range = { -60 * 256, 0, 0 };  // volume_min_db
+
+
+// The following are not really relevant for a sound renderer.
+static struct param_range brightness_range = { 0, 100, 1 };
+static struct param_range contrast_range = { 0, 100, 1 };
+static struct param_range sharpness_range = { 0, 100, 1 };
+static struct param_range vid_gain_range = { 0, 100, 1 };
+static struct param_range vid_black_range = { 0, 100, 1 };
+static struct param_range colortemp_range = { 0, 65535, 1 };
+static struct param_range keystone_range = { -32768, 32767, 1 };
+
+static struct var_meta control_var_meta[] = {
+	[CONTROL_VAR_LAST_CHANGE] =		{ SENDEVENT_YES, DATATYPE_STRING, NULL, NULL },
+	[CONTROL_VAR_PRESET_NAME_LIST] =	{ SENDEVENT_NO, DATATYPE_STRING, NULL, NULL },
+	[CONTROL_VAR_AAT_CHANNEL] =		{ SENDEVENT_NO, DATATYPE_STRING, aat_channels, NULL },
+	[CONTROL_VAR_AAT_INSTANCE_ID] =		{ SENDEVENT_NO, DATATYPE_UI4, NULL, NULL },
+	[CONTROL_VAR_AAT_PRESET_NAME] =		{ SENDEVENT_NO, DATATYPE_STRING, aat_presetnames, NULL },
+	[CONTROL_VAR_BRIGHTNESS] =		{ SENDEVENT_NO, DATATYPE_UI2, NULL, &brightness_range },
+	[CONTROL_VAR_CONTRAST] =		{ SENDEVENT_NO, DATATYPE_UI2, NULL, &contrast_range },
+	[CONTROL_VAR_SHARPNESS] =		{ SENDEVENT_NO, DATATYPE_UI2, NULL, &sharpness_range },
+	[CONTROL_VAR_R_GAIN] =			{ SENDEVENT_NO, DATATYPE_UI2, NULL, &vid_gain_range },
+	[CONTROL_VAR_G_GAIN] =			{ SENDEVENT_NO, DATATYPE_UI2, NULL, &vid_gain_range },
+	[CONTROL_VAR_B_GAIN] =			{ SENDEVENT_NO, DATATYPE_UI2, NULL, &vid_gain_range },
+	[CONTROL_VAR_R_BLACK] =			{ SENDEVENT_NO, DATATYPE_UI2, NULL, &vid_black_range },
+	[CONTROL_VAR_G_BLACK] =			{ SENDEVENT_NO, DATATYPE_UI2, NULL, &vid_black_range },
+	[CONTROL_VAR_B_BLACK] =			{ SENDEVENT_NO, DATATYPE_UI2, NULL, &vid_black_range },
+	[CONTROL_VAR_COLOR_TEMP] =		{ SENDEVENT_NO, DATATYPE_UI2, NULL, &colortemp_range },
+	[CONTROL_VAR_HOR_KEYSTONE] =		{ SENDEVENT_NO, DATATYPE_I2, NULL, &keystone_range },
+	[CONTROL_VAR_VER_KEYSTONE] =		{ SENDEVENT_NO, DATATYPE_I2, NULL, &keystone_range },
+	[CONTROL_VAR_MUTE] =			{ SENDEVENT_NO, DATATYPE_BOOLEAN, NULL, NULL },
+	[CONTROL_VAR_VOLUME] =			{ SENDEVENT_NO, DATATYPE_UI2, NULL, &volume_range },
+	[CONTROL_VAR_VOLUME_DB] =		{ SENDEVENT_NO, DATATYPE_I2, NULL, &volume_db_range },
+	[CONTROL_VAR_LOUDNESS] =		{ SENDEVENT_NO, DATATYPE_BOOLEAN, NULL, NULL },
+	[CONTROL_VAR_UNKNOWN] =			{ SENDEVENT_NO, DATATYPE_UNKNOWN, NULL, NULL }
+};
+
+static const char *control_default_values[] = {
+	[CONTROL_VAR_LAST_CHANGE] = "<Event xmlns = \"urn:schemas-upnp-org:metadata-1-0/RCS/\"/>",
+	[CONTROL_VAR_PRESET_NAME_LIST] = "",
+	[CONTROL_VAR_AAT_CHANNEL] = "",
+	[CONTROL_VAR_AAT_INSTANCE_ID] = "0",
+	[CONTROL_VAR_AAT_PRESET_NAME] = "",
+	[CONTROL_VAR_BRIGHTNESS] = "0",
+	[CONTROL_VAR_CONTRAST] = "0",
+	[CONTROL_VAR_SHARPNESS] = "0",
+	[CONTROL_VAR_R_GAIN] = "0",
+	[CONTROL_VAR_G_GAIN] = "0",
+	[CONTROL_VAR_B_GAIN] = "0",
+	[CONTROL_VAR_R_BLACK] = "0",
+	[CONTROL_VAR_G_BLACK] = "0",
+	[CONTROL_VAR_B_BLACK] = "0",
+	[CONTROL_VAR_COLOR_TEMP] = "0",
+	[CONTROL_VAR_HOR_KEYSTONE] = "0",
+	[CONTROL_VAR_VER_KEYSTONE] = "0",
+	[CONTROL_VAR_MUTE] = "0",
+	[CONTROL_VAR_VOLUME] = "0",
+	[CONTROL_VAR_VOLUME_DB] = "0",
+	[CONTROL_VAR_LOUDNESS] = "0",
+	[CONTROL_VAR_UNKNOWN] = NULL
+};
+
+typedef enum {
+        PARAM_DIR_IN,
+        PARAM_DIR_OUT,
+} param_dir;
+
+struct argument {
+        const char *name;
+        param_dir direction;
+        int statevar;
+};
+
+static struct argument *arguments_get_vol[] = {
+	& (struct argument) { "InstanceID", PARAM_DIR_IN, CONTROL_VAR_AAT_INSTANCE_ID },
+	& (struct argument) { "Channel", PARAM_DIR_IN, CONTROL_VAR_AAT_CHANNEL },
+	& (struct argument) { "CurrentVolume", PARAM_DIR_OUT, CONTROL_VAR_VOLUME },
+	NULL
+};
+
+static struct argument *arguments_set_vol[] = {
+	& (struct argument) { "InstanceID", PARAM_DIR_IN, CONTROL_VAR_AAT_INSTANCE_ID },
+	& (struct argument) { "Channel", PARAM_DIR_IN, CONTROL_VAR_AAT_CHANNEL },
+	& (struct argument) { "DesiredVolume", PARAM_DIR_IN, CONTROL_VAR_VOLUME },
+	NULL
+};
+
+/*static struct argument **argument_list[] = {
+	[CONTROL_CMD_GET_VOL] =             	arguments_get_vol,
+	[CONTROL_CMD_SET_VOL] =             	arguments_set_vol,
+
+	[CONTROL_CMD_UNKNOWN] =			NULL
+	};*/
+
+int get_argument_length(struct argument **_argument)
+{
+	int i = 0;
+	while (_argument[i] != NULL)
+	{
+		i++;
+	}	
+	return i;
+}
+
+int CtrlPointSendAction(int devnum, int service,
+	const char *actionName,struct argument **_argument)
+{
+	int argument_length = get_argument_length(_argument);
+        char param_name_a[argument_length][50];
+	char param_val_a[argument_length][50];
+	int i;
+
+	for (i = 0; i < argument_length; i++)
+	{
+		strcpy(param_name_a[i], _argument[i]->name);
+		strcpy(param_val_a[i], _argument[i]->name);
+	}
+	
+	//g_print("%s\n", __FUNCTION__);
+	return 0;
+}
 /********************************************************************************
  * TvCtrlPointSendAction
  *
@@ -367,6 +648,11 @@ int TvCtrlPointSendAction(
 					    ("ERROR: TvCtrlPointSendAction: Trying to add action param\n");
 					/*return -1; // TBD - BAD! leaves mutex locked */
 				}
+				else
+				{
+					SampleUtil_Print
+					    ("UpnpAddToAction\n");
+				}
 			}
 		}
 
@@ -381,6 +667,11 @@ int TvCtrlPointSendAction(
 			SampleUtil_Print("Error in UpnpSendActionAsync -- %d\n",
 					 rc);
 			rc = TV_ERROR;
+		}
+		else
+		{
+			SampleUtil_Print
+				("UpnpSendActionAsync\n");
 		}
 	}
 
@@ -405,6 +696,7 @@ int TvCtrlPointSendAction(
  *   paramValue -- Actual value of the parameter being passed
  *
  ********************************************************************************/
+
 int TvCtrlPointSendActionNumericArg(int devnum, int service,
 	const char *actionName, const char *paramName, int paramValue)
 {
@@ -416,6 +708,8 @@ int TvCtrlPointSendActionNumericArg(int devnum, int service,
 		service, devnum, actionName, &paramName,
 		&param_val, 1);
 }
+
+
 
 int TvCtrlPointSendPowerOn(int devnum)
 {
@@ -437,8 +731,13 @@ int TvCtrlPointSendSetChannel(int devnum, int channel)
 
 int TvCtrlPointSendSetVolume(int devnum, int volume)
 {
-	return TvCtrlPointSendActionNumericArg(
-		devnum, TV_SERVICE_CONTROL, "SetVolume", "Volume", volume);
+	//return TvCtrlPointSendActionNumericArg(
+	//	devnum, TV_SERVICE_CONTROL, "SetVolume", "Volume", volume);
+	char *param_name_a[3] = {"InstanceID", "Channel", "DesiredVolume"};
+	char *param_val_a[3] = {"0", "Master", "0"};
+	return TvCtrlPointSendAction(
+		TV_SERVICE_RENDERINGCONTROL, devnum, "SetVolume",
+		param_name_a,param_val_a, 3);
 }
 
 int TvCtrlPointSendSetColor(int devnum, int color)
@@ -1223,6 +1522,7 @@ int TvCtrlPointStart(print_string printFunctionPtr, state_update updateFunctionP
 			 "\tipaddress = %s port = %u\n",
 			 ip_address ? ip_address : "{NULL}", port);
 
+	//g_print("XXX %d\n", get_argument_length(arguments_set_vol));
 	rc = UpnpInit(ip_address, port);
 	if (rc != UPNP_E_SUCCESS) {
 		SampleUtil_Print("WinCEStart: UpnpInit() Error: %d\n", rc);

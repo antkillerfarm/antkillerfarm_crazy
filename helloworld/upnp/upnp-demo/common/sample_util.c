@@ -535,10 +535,12 @@ int SampleUtil_FindAndParseService(IXML_Document *DescDoc, const char *location,
 		service = NULL;
 #endif /* OLD_FIND_SERVICE_CODE */
 		length = ixmlNodeList_length(serviceList);
+		SampleUtil_Print("Found service 0: %d\n", length);
 		for (i = 0; i < length; i++) {
 			service = (IXML_Element *)ixmlNodeList_item(serviceList, i);
 			tempServiceType = SampleUtil_GetFirstElementItem(
 				(IXML_Element *)service, "serviceType");
+			SampleUtil_Print("Found service 1: %s\n", tempServiceType);
 			if (tempServiceType && strcmp(tempServiceType, serviceType) == 0) {
 				SampleUtil_Print("Found service: %s\n", serviceType);
 				*serviceId = SampleUtil_GetFirstElementItem(service, "serviceId");
