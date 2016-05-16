@@ -1,8 +1,8 @@
 bin_PROGRAMS = gmediarender
 
 gmediarender_SOURCES = main.c git-version.h \
-	upnp.c upnp_control.c upnp_connmgr.c  upnp_transport.c \
-	upnp.h upnp_control.h upnp_connmgr.h  upnp_transport.h \
+	upnp.c upnp_control.c upnp_connmgr.c  upnp_transport.c upnp_control_point.c upnp_control_point_dev_manage.c upnp_control_point_utils.c\
+	upnp.h upnp_control.h upnp_connmgr.h  upnp_transport.h upnp_control_point.h\
 	song-meta-data.h song-meta-data.c \
 	variable-container.h variable-container.c \
 	upnp_device.c upnp_device.h \

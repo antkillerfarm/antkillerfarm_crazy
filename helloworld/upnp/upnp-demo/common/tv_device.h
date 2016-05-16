@@ -88,7 +88,7 @@ extern "C" {
 #define MIN_CHANNEL 1
 
 /*! Number of services. */
-#define TV_SERVICE_SERVCOUNT  2
+#define TV_SERVICE_SERVCOUNT  3
 
 /*! Index of control service */
 #define TV_SERVICE_CONTROL    0

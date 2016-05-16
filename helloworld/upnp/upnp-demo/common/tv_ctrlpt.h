@@ -58,7 +58,7 @@ extern "C" {
 #include <stdarg.h>
 #include <stdio.h>
 
-#define TV_SERVICE_SERVCOUNT	2
+#define TV_SERVICE_SERVCOUNT	3
 #define TV_SERVICE_CONTROL	0
 #define TV_SERVICE_PICTURE	1
 #define TV_SERVICE_AVTRANSPORT	0
