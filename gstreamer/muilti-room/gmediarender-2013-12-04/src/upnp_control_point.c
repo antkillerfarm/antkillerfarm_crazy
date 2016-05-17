@@ -86,7 +86,7 @@ int upnp_discovery_search_result_handler(Upnp_EventType EventType, void *Event, 
 	if (DescDoc) {
 		ixmlDocument_free(DescDoc);
 	}
-	//TvCtrlPointPrintList();
+	ctrl_point_print_list();
 	return CP_SUCCESS;
 }
 

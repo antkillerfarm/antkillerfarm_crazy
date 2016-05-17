@@ -9,23 +9,6 @@
 
 #include "upnp_control_point.h"
 
-int util_match_filters(ControlPointFilter *filter, const char *str)
-{
-	int i;
-	if (filter->filter == NULL)
-	{
-		return FILTER_NULL;
-	}
-	for (i = 0; i < filter->filter_len; i++)
-	{
-		if (strcmp(filter->filter[i], str) == 0)
-		{
-			return i;
-		}
-	}
-	return FILTER_UNMATCH;
-}
-
 char *util_get_first_document_item(IXML_Document *doc, const char *item)
 {
 	IXML_NodeList *nodeList = NULL;
@@ -97,67 +80,145 @@ char *util_get_first_element_item(IXML_Element *element, const char *item)
 	return ret;
 }
 
-void util_list_service(IXML_NodeList *ServiceList, ControlPointFilter *type_filter)
-{
-        int i;
-	int list_len = ixmlNodeList_length(ServiceList);
-	char *tempServiceType = NULL;
-	IXML_Element *service = NULL;
-	//char *baseURL = NULL;
-	//const char *base = NULL;
-	char *relcontrolURL = NULL;
-	char *releventURL = NULL;
-	//g_print("%s\n", __FUNCTION__);
-	for (i = 0; i < list_len; i++)
-	{
-		service = (IXML_Element *)ixmlNodeList_item(ServiceList, i);
-		tempServiceType = util_get_first_element_item((IXML_Element *)service, "serviceType");
-		if (util_match_filters(type_filter, tempServiceType) != -1)
-		{
-		        g_print("Found service: %s\n", tempServiceType);
-			relcontrolURL = util_get_first_element_item(service, "controlURL");
-			releventURL = util_get_first_element_item(service, "eventSubURL");
-			free(relcontrolURL);
-			free(releventURL);
-			relcontrolURL = NULL;
-			releventURL = NULL;
-		}
-		if (tempServiceType)
-		{
-			free(tempServiceType);
-			tempServiceType = NULL;
-		}
-	}
-}
-
-void util_list_service_list(IXML_Document *doc, ControlPointFilter *type_filter)
+static IXML_NodeList *util_get_nth_service_list(
+	/*! [in] . */
+	IXML_Document *doc,
+	/*! [in] . */
+	unsigned int n)
 {
 	IXML_NodeList *ServiceList = NULL;
 	IXML_NodeList *servlistnodelist = NULL;
 	IXML_Node *servlistnode = NULL;
-	int i;
 
-	servlistnodelist = ixmlDocument_getElementsByTagName(doc, "serviceList");
-	if (servlistnodelist)
-	{
-		int list_len = ixmlNodeList_length(servlistnodelist);
-		for (i = 0; i < list_len; i++)
-		{
-			servlistnode = ixmlNodeList_item(servlistnodelist, i);
-		        if (servlistnode)
-			{
-				/* create as list of DOM nodes */
-				ServiceList = ixmlElement_getElementsByTagName((IXML_Element *)servlistnode, "service");
-				if (ServiceList)
-				{
-					util_list_service(ServiceList, type_filter);
-					ixmlNodeList_free(ServiceList);
-				}
-			}
-		}
+	/*  ixmlDocument_getElementsByTagName()
+	 *  Returns a NodeList of all Elements that match the given
+	 *  tag name in the order in which they were encountered in a preorder
+	 *  traversal of the Document tree.  
+	 *
+	 *  return (NodeList*) A pointer to a NodeList containing the 
+	 *                      matching items or NULL on an error. 	 */
+	//g_print("util_get_nth_service_list called : n = %d\n", n);
+	servlistnodelist =
+		ixmlDocument_getElementsByTagName(doc, "serviceList");
+	if (servlistnodelist &&
+	    ixmlNodeList_length(servlistnodelist) &&
+	    n < ixmlNodeList_length(servlistnodelist)) {
+		/* For the first service list (from the root device),
+		 * we pass 0 */
+		/*servlistnode = ixmlNodeList_item( servlistnodelist, 0 );*/
+
+		/* Retrieves a Node from a NodeList} specified by a 
+		 *  numerical index.
+		 *
+		 *  return (Node*) A pointer to a Node or NULL if there was an 
+		 *                  error. */
+		servlistnode = ixmlNodeList_item(servlistnodelist, n);
+		if (servlistnode) {
+			/* create as list of DOM nodes */
+			ServiceList = ixmlElement_getElementsByTagName(
+				(IXML_Element *)servlistnode, "service");
+		} else
+			g_print("%s(%d): ixmlNodeList_item(nodeList, n) returned NULL\n",
+				__FILE__, __LINE__);
 	}
 	if (servlistnodelist)
-	{
 		ixmlNodeList_free(servlistnodelist);
+
+	return ServiceList;
+}
+
+int util_find_and_parse_service(IXML_Document *DescDoc, const char *location,
+	const char *serviceType, char **serviceId, char **eventURL, char **controlURL)
+{
+	unsigned int i;
+	unsigned long length;
+	int found = 0;
+	int ret;
+	unsigned int sindex = 0;
+	char *tempServiceType = NULL;
+	char *baseURL = NULL;
+	const char *base = NULL;
+	char *relcontrolURL = NULL;
+	char *releventURL = NULL;
+	IXML_NodeList *serviceList = NULL;
+	IXML_Element *service = NULL;
+
+	baseURL = util_get_first_document_item(DescDoc, "URLBase");
+	if (baseURL)
+		base = baseURL;
+	else
+		base = location;
+	
+	for (sindex = 0;
+	     (serviceList = util_get_nth_service_list(DescDoc , sindex)) != NULL;
+	     sindex++) {
+		tempServiceType = NULL;
+		relcontrolURL = NULL;
+		releventURL = NULL;
+		service = NULL;
+
+		length = ixmlNodeList_length(serviceList);
+		for (i = 0; i < length; i++) {
+			service = (IXML_Element *)ixmlNodeList_item(serviceList, i);
+			tempServiceType = util_get_first_element_item(
+				(IXML_Element *)service, "serviceType");
+			if (tempServiceType && strcmp(tempServiceType, serviceType) == 0) {
+				g_print("Found service: %s\n", serviceType);
+				*serviceId = util_get_first_element_item(service, "serviceId");
+				g_print("serviceId: %s\n", *serviceId);
+				relcontrolURL = util_get_first_element_item(service, "controlURL");
+				releventURL = util_get_first_element_item(service, "eventSubURL");
+				*controlURL = malloc(strlen(base) + strlen(relcontrolURL) + 1);
+				if (*controlURL) {
+					ret = UpnpResolveURL(base, relcontrolURL, *controlURL);
+					if (ret != UPNP_E_SUCCESS)
+						g_print("Error generating controlURL from %s + %s\n",
+							base, relcontrolURL);
+				}
+				*eventURL = malloc(strlen(base) + strlen(releventURL) + 1);
+				if (*eventURL) {
+					ret = UpnpResolveURL(base, releventURL, *eventURL);
+					if (ret != UPNP_E_SUCCESS)
+						g_print("Error generating eventURL from %s + %s\n",
+							base, releventURL);
+				}
+				free(relcontrolURL);
+				free(releventURL);
+				relcontrolURL = NULL;
+				releventURL = NULL;
+				found = 1;
+				break;
+			}
+			free(tempServiceType);
+			tempServiceType = NULL;
+		}
+		free(tempServiceType);
+		tempServiceType = NULL;
+		if (serviceList)
+			ixmlNodeList_free(serviceList);
+		serviceList = NULL;
 	}
+
+	free(baseURL);
+
+	return found;
+}
+
+int ctrl_point_print_list()
+{
+	struct UpDeviceNode *tmpdevnode;
+	int i = 0;
+
+	ithread_mutex_lock(&DeviceListMutex);
+
+	g_print("TvCtrlPointPrintList:\n");
+	tmpdevnode = GlobalDeviceList;
+	while (tmpdevnode) {
+		g_print(" %3d -- %s\n", ++i, tmpdevnode->device.UDN);
+		tmpdevnode = tmpdevnode->next;
+	}
+	g_print("\n");
+	ithread_mutex_unlock(&DeviceListMutex);
+
+	return CP_SUCCESS;
 }

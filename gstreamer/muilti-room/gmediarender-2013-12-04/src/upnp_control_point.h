@@ -5,11 +5,6 @@
 #define CP_ERROR		(-1)
 #define CP_WARNING		1
 
-#define FILTER_NAME_SIZE 80
-
-#define FILTER_UNMATCH -1
-#define FILTER_NULL -2
-
 #define EVENT_TYPE_DATA_MACRO(x) x, #x
 
 ///////////////////////////////////
@@ -17,6 +12,12 @@
 
 #define UP_SERVICE_SERVCOUNT  3
 #define UP_MAXVARS 4
+
+#define UP_AVTRANSPORT_VARCOUNT	0
+#define UP_CONNECTIONMANAGER_VARCOUNT	0
+#define UP_RENDERINGCONTROL_VARCOUNT 1
+
+#define UP_MAX_VAL_LEN 5
 
 ///////////////////////////////////
 
@@ -54,11 +55,19 @@ typedef struct {
 	int filter_len;
 }ControlPointFilter;
 
+typedef enum {
+	STATE_UPDATE = 0,
+	DEVICE_ADDED = 1,
+	DEVICE_REMOVED = 2,
+	GET_VAR_COMPLETE = 3
+} eventType;
+
 ///////////////////////////////////
 
 extern ithread_mutex_t DeviceListMutex;
 extern struct UpDeviceNode *GlobalDeviceList;
 extern const char upnp_device_type[];
+extern UpnpClient_Handle ctrlpt_handle;
 
 /////////////////////////////////////
 
@@ -71,10 +80,12 @@ int upnp_discovery_search_result_handler(Upnp_EventType EventType, void *Event, 
 
 int ctrl_point_remove_all(void);
 void ctrl_point_add_device(IXML_Document *DescDoc, const char *location, int expires);
+int ctrl_point_delete_node( struct UpDeviceNode *node );
+int ctrl_point_print_list(void);
 
-int util_match_filters(ControlPointFilter *filter, const char *str);
+
 char *util_get_first_document_item(IXML_Document *doc, const char *item);
 char *util_get_first_element_item(IXML_Element *element, const char *item);
-void util_list_service(IXML_NodeList *ServiceList, ControlPointFilter *type_filter);
-void util_list_service_list(IXML_Document *doc, ControlPointFilter *type_filter);
+int util_find_and_parse_service(IXML_Document *DescDoc, const char *location, const char *serviceType, char **serviceId, char **eventURL, char **controlURL);
+
 #endif /* _UPNP_CONTROL_POINT_H */
