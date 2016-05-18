@@ -27,10 +27,11 @@ const char *UpVarName[UP_SERVICE_SERVCOUNT][UP_MAXVARS] = {
     {"Volume", "", "", ""}
 };
 char UpVarCount[UP_SERVICE_SERVCOUNT] =
-{ UP_AVTRANSPORT_VARCOUNT, UP_CONNECTIONMANAGER_VARCOUNT, UP_RENDERINGCONTROL_VARCOUNT};
-
+{ UP_AV_TRANSPORT_VARCOUNT, UP_CONNECTION_MANAGER_VARCOUNT, UP_RENDERING_CONTROL_VARCOUNT};
 
 int default_timeout = 1801;
+
+////////////////////////////////////
 
 void ctrl_point_add_device(
 	IXML_Document *DescDoc,
@@ -197,6 +198,41 @@ void ctrl_point_add_device(
 	}
 }
 
+int ctrl_point_remove_device(const char *UDN)
+{
+	struct UpDeviceNode *curdevnode;
+	struct UpDeviceNode *prevdevnode;
+
+	ithread_mutex_lock(&DeviceListMutex);
+
+	curdevnode = GlobalDeviceList;
+	if (!curdevnode) {
+		g_print(
+			"WARNING: TvCtrlPointRemoveDevice: Device list empty\n");
+	} else {
+		if (0 == strcmp(curdevnode->device.UDN, UDN)) {
+			GlobalDeviceList = curdevnode->next;
+		        ctrl_point_delete_node(curdevnode);
+		} else {
+			prevdevnode = curdevnode;
+			curdevnode = curdevnode->next;
+			while (curdevnode) {
+				if (strcmp(curdevnode->device.UDN, UDN) == 0) {
+					prevdevnode->next = curdevnode->next;
+					ctrl_point_delete_node(curdevnode);
+					break;
+				}
+				prevdevnode = curdevnode;
+				curdevnode = curdevnode->next;
+			}
+		}
+	}
+
+	ithread_mutex_unlock(&DeviceListMutex);
+
+	return CP_SUCCESS;
+}
+
 int ctrl_point_remove_all(void)
 {
         struct UpDeviceNode *curdevnode, *next;
@@ -257,3 +293,60 @@ int ctrl_point_delete_node( struct UpDeviceNode *node )
 
 	return CP_SUCCESS;
 }
+
+void ctrl_point_state_update(char *UDN, int Service, IXML_Document *ChangedVariables, char **State)
+{
+	IXML_NodeList *properties;
+	IXML_NodeList *variables;
+	IXML_Element *property;
+	IXML_Element *variable;
+	long unsigned int length;
+	long unsigned int length1;
+	long unsigned int i;
+	int j;
+	char *tmpstate = NULL;
+
+	g_print("Upnp State Update (service %d):\n", Service);
+	/* Find all of the e:property tags in the document */
+	properties = ixmlDocument_getElementsByTagName(ChangedVariables,
+		"e:property");
+	if (properties) {
+		length = ixmlNodeList_length(properties);
+		for (i = 0; i < length; i++) {
+			/* Loop through each property change found */
+			property = (IXML_Element *)ixmlNodeList_item(
+				properties, i);
+			/* For each variable name in the state table,
+			 * check if this is a corresponding property change */
+			for (j = 0; j < UpVarCount[Service]; j++) {
+				variables = ixmlElement_getElementsByTagName(
+					property, UpVarName[Service][j]);
+				/* If a match is found, extract 
+				 * the value, and update the state table */
+				if (variables) {
+					length1 = ixmlNodeList_length(variables);
+					if (length1) {
+						variable = (IXML_Element *)
+							ixmlNodeList_item(variables, 0);
+						tmpstate = util_get_element_value(variable);
+						if (tmpstate) {
+							strcpy(State[j], tmpstate);
+							g_print(
+								" Variable Name: %s New Value:'%s'\n",
+								UpVarName[Service][j], State[j]);
+						}
+						if (tmpstate)
+							free(tmpstate);
+						tmpstate = NULL;
+					}
+					ixmlNodeList_free(variables);
+					variables = NULL;
+				}
+			}
+		}
+		ixmlNodeList_free(properties);
+	}
+	return;
+	UDN = UDN;
+}
+

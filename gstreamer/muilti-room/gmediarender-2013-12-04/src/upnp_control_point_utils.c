@@ -9,6 +9,17 @@
 
 #include "upnp_control_point.h"
 
+char *util_get_element_value(IXML_Element *element)
+{
+	IXML_Node *child = ixmlNode_getFirstChild((IXML_Node *)element);
+	char *temp = NULL;
+
+	if (child != 0 && ixmlNode_getNodeType(child) == eTEXT_NODE)
+		temp = strdup(ixmlNode_getNodeValue(child));
+
+	return temp;
+}
+
 char *util_get_first_document_item(IXML_Document *doc, const char *item)
 {
 	IXML_NodeList *nodeList = NULL;
@@ -204,17 +215,19 @@ int util_find_and_parse_service(IXML_Document *DescDoc, const char *location,
 	return found;
 }
 
-int ctrl_point_print_list()
+int ctrl_point_dev_node_operation(DevNodeOperation *dev_node_op)
 {
 	struct UpDeviceNode *tmpdevnode;
-	int i = 0;
 
 	ithread_mutex_lock(&DeviceListMutex);
 
-	g_print("TvCtrlPointPrintList:\n");
+	g_print("ctrl_point_dev_node_operation:\n");
 	tmpdevnode = GlobalDeviceList;
 	while (tmpdevnode) {
-		g_print(" %3d -- %s\n", ++i, tmpdevnode->device.UDN);
+		if (dev_node_op->operation)
+		{
+			dev_node_op->operation(tmpdevnode);
+		}
 		tmpdevnode = tmpdevnode->next;
 	}
 	g_print("\n");
@@ -222,3 +235,116 @@ int ctrl_point_print_list()
 
 	return CP_SUCCESS;
 }
+
+void ctrl_point_handle_get_var(
+	const char *controlURL,
+	const char *varName,
+	const DOMString varValue)
+{
+
+	struct UpDeviceNode *tmpdevnode;
+	int service;
+
+	ithread_mutex_lock(&DeviceListMutex);
+
+	tmpdevnode = GlobalDeviceList;
+	while (tmpdevnode) {
+		for (service = 0; service < UP_SERVICE_SERVCOUNT; service++) {
+			if (strcmp
+			    (tmpdevnode->device.UpService[service].ControlURL,
+			     controlURL) == 0) {
+				break;
+			}
+		}
+		tmpdevnode = tmpdevnode->next;
+	}
+
+	ithread_mutex_unlock(&DeviceListMutex);
+}
+
+void ctrl_point_handle_event(
+	const char *sid,
+	int evntkey,
+	IXML_Document *changes)
+{
+	struct UpDeviceNode *tmpdevnode;
+	int service;
+
+	ithread_mutex_lock(&DeviceListMutex);
+
+	tmpdevnode = GlobalDeviceList;
+	while (tmpdevnode) {
+		for (service = 0; service < UP_SERVICE_SERVCOUNT; ++service) {
+			if (strcmp(tmpdevnode->device.UpService[service].SID, sid) ==  0) {
+				g_print("Received Upnp %s Event: %d for SID %s\n",
+					UpServiceName[service],
+					evntkey,
+					sid);
+				ctrl_point_state_update(
+					tmpdevnode->device.UDN,
+					service,
+					changes,
+					(char **)&tmpdevnode->device.UpService[service].VariableStrVal);
+				break;
+			}
+		}
+		tmpdevnode = tmpdevnode->next;
+	}
+
+	ithread_mutex_unlock(&DeviceListMutex);
+}
+
+void ctrl_point_handle_subscribe_update(
+	const char *eventURL,
+	const Upnp_SID sid,
+	int timeout)
+{
+	struct UpDeviceNode *tmpdevnode;
+	int service;
+
+	ithread_mutex_lock(&DeviceListMutex);
+
+	tmpdevnode = GlobalDeviceList;
+	while (tmpdevnode) {
+		for (service = 0; service < UP_SERVICE_SERVCOUNT; service++) {
+			if (strcmp
+			    (tmpdevnode->device.UpService[service].EventURL,
+			     eventURL) == 0) {
+				g_print
+				    ("Received Upnp %s Event Renewal for eventURL %s\n",
+				     UpServiceName[service], eventURL);
+				strcpy(tmpdevnode->device.UpService[service].
+				       SID, sid);
+				break;
+			}
+		}
+
+		tmpdevnode = tmpdevnode->next;
+	}
+
+	ithread_mutex_unlock(&DeviceListMutex);
+
+	return;
+	timeout = timeout;
+}
+
+int ctrl_point_get_device(int devnum, struct UpDeviceNode **devnode)
+{
+	int count = devnum;
+	struct UpDeviceNode *tmpdevnode = NULL;
+
+	if (count)
+		tmpdevnode = GlobalDeviceList;
+	while (--count && tmpdevnode) {
+		tmpdevnode = tmpdevnode->next;
+	}
+	if (!tmpdevnode) {
+	        g_print("Error finding UpDevice number -- %d\n",
+				 devnum);
+		return CP_ERROR;
+	}
+	*devnode = tmpdevnode;
+
+	return CP_SUCCESS;
+}
+

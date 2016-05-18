@@ -11,11 +11,14 @@
 // Macro needed be modified by usage
 
 #define UP_SERVICE_SERVCOUNT  3
+#define UP_SERVICE_AV_TRANSPORT	0
+#define UP_SERVICE_CONNECTION_MANAGER	1
+#define UP_SERVICE_RENDERING_CONTROL	2
 #define UP_MAXVARS 4
 
-#define UP_AVTRANSPORT_VARCOUNT	0
-#define UP_CONNECTIONMANAGER_VARCOUNT	0
-#define UP_RENDERINGCONTROL_VARCOUNT 1
+#define UP_AV_TRANSPORT_VARCOUNT	0
+#define UP_CONNECTION_MANAGER_VARCOUNT	0
+#define UP_RENDERING_CONTROL_VARCOUNT 1
 
 #define UP_MAX_VAL_LEN 5
 
@@ -50,17 +53,16 @@ struct UpDeviceNode{
         struct UpDeviceNode *next;
 };
 
-typedef struct {
-	const char **filter;
-	int filter_len;
-}ControlPointFilter;
-
 typedef enum {
 	STATE_UPDATE = 0,
 	DEVICE_ADDED = 1,
 	DEVICE_REMOVED = 2,
 	GET_VAR_COMPLETE = 3
-} eventType;
+}eventType;
+
+typedef struct {
+	int (*operation)(struct UpDeviceNode *devnode);
+}DevNodeOperation;
 
 ///////////////////////////////////
 
@@ -68,6 +70,10 @@ extern ithread_mutex_t DeviceListMutex;
 extern struct UpDeviceNode *GlobalDeviceList;
 extern const char upnp_device_type[];
 extern UpnpClient_Handle ctrlpt_handle;
+extern int default_timeout;
+extern const char *UpServiceName[];
+extern const char *UpVarName[UP_SERVICE_SERVCOUNT][UP_MAXVARS];
+extern char UpVarCount[UP_SERVICE_SERVCOUNT];
 
 /////////////////////////////////////
 
@@ -76,16 +82,38 @@ int upnp_ctrl_point_stop(void);
 int ctrl_point_refresh(void);
 int upnp_ctrl_point_callback_event_handler(Upnp_EventType EventType, void *Event, void *Cookie);
 
+
 int upnp_discovery_search_result_handler(Upnp_EventType EventType, void *Event, void *Cookie);
+int upnp_discovery_byebye_handler(Upnp_EventType EventType, void *Event, void *Cookie);
+int upnp_control_action_complete_handler(Upnp_EventType EventType, void *Event, void *Cookie);
+int upnp_control_get_var_complete_handler(Upnp_EventType EventType, void *Event, void *Cookie);
+int upnp_event_received_handler(Upnp_EventType EventType, void *Event, void *Cookie);
+int upnp_event_subscribe_handler(Upnp_EventType EventType, void *Event, void *Cookie);
+int upnp_event_subscription_expired_handler(Upnp_EventType EventType, void *Event, void *Cookie);
+
+
+int ctrl_point_dev_node_operation(DevNodeOperation *dev_node_op);
+int dev_node_print(struct UpDeviceNode *devnode);
+int dev_node_get_var(int service, struct UpDeviceNode *devnode, const char *varname, int is_lock);
+int dev_node_get_volume(struct UpDeviceNode *devnode);
+
 
 int ctrl_point_remove_all(void);
 void ctrl_point_add_device(IXML_Document *DescDoc, const char *location, int expires);
 int ctrl_point_delete_node( struct UpDeviceNode *node );
-int ctrl_point_print_list(void);
+int ctrl_point_remove_device(const char *UDN);
+void ctrl_point_handle_get_var(const char *controlURL, const char *varName, const DOMString varValue);
+void ctrl_point_handle_event(const char *sid, int evntkey, IXML_Document *changes);
+void ctrl_point_handle_subscribe_update(const char *eventURL, const Upnp_SID sid, int timeout);
+void ctrl_point_state_update(char *UDN, int Service, IXML_Document *ChangedVariables, char **State);
+int ctrl_point_get_device(int devnum, struct UpDeviceNode **devnode);
 
 
+char *util_get_element_value(IXML_Element *element);
 char *util_get_first_document_item(IXML_Document *doc, const char *item);
 char *util_get_first_element_item(IXML_Element *element, const char *item);
 int util_find_and_parse_service(IXML_Document *DescDoc, const char *location, const char *serviceType, char **serviceId, char **eventURL, char **controlURL);
 
+
 #endif /* _UPNP_CONTROL_POINT_H */
+

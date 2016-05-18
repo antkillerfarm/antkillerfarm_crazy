@@ -15,24 +15,21 @@ EventTypeData event_type_data[] =
 {
 	/* Discovery */
 	{EVENT_TYPE_DATA_MACRO(UPNP_DISCOVERY_ADVERTISEMENT_ALIVE), upnp_discovery_search_result_handler},
-	{EVENT_TYPE_DATA_MACRO(UPNP_DISCOVERY_ADVERTISEMENT_BYEBYE), NULL},
+	{EVENT_TYPE_DATA_MACRO(UPNP_DISCOVERY_ADVERTISEMENT_BYEBYE), upnp_discovery_byebye_handler},
 	{EVENT_TYPE_DATA_MACRO(UPNP_DISCOVERY_SEARCH_RESULT), upnp_discovery_search_result_handler},
 	{EVENT_TYPE_DATA_MACRO(UPNP_DISCOVERY_SEARCH_TIMEOUT), NULL},
 
 	/* SOAP */
-	{EVENT_TYPE_DATA_MACRO(UPNP_CONTROL_ACTION_REQUEST), NULL},
-	{EVENT_TYPE_DATA_MACRO(UPNP_CONTROL_ACTION_COMPLETE), NULL},
-	{EVENT_TYPE_DATA_MACRO(UPNP_CONTROL_GET_VAR_REQUEST), NULL},
-	{EVENT_TYPE_DATA_MACRO(UPNP_CONTROL_GET_VAR_COMPLETE), NULL},
+	{EVENT_TYPE_DATA_MACRO(UPNP_CONTROL_ACTION_COMPLETE), upnp_control_action_complete_handler},
+	{EVENT_TYPE_DATA_MACRO(UPNP_CONTROL_GET_VAR_COMPLETE), upnp_control_get_var_complete_handler},
 
 	/* GENA */
-	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_SUBSCRIPTION_REQUEST), NULL},
-	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_RECEIVED), NULL},
-	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_RENEWAL_COMPLETE), NULL},
-	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_SUBSCRIBE_COMPLETE), NULL},
-	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_UNSUBSCRIBE_COMPLETE), NULL},
-	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_AUTORENEWAL_FAILED), NULL},
-	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_SUBSCRIPTION_EXPIRED), NULL}
+	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_RECEIVED), upnp_event_received_handler},
+	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_RENEWAL_COMPLETE), upnp_event_subscribe_handler},
+	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_SUBSCRIBE_COMPLETE), upnp_event_subscribe_handler},
+	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_UNSUBSCRIBE_COMPLETE), upnp_event_subscribe_handler},
+	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_AUTORENEWAL_FAILED), upnp_event_subscription_expired_handler},
+	{EVENT_TYPE_DATA_MACRO(UPNP_EVENT_SUBSCRIPTION_EXPIRED), upnp_event_subscription_expired_handler}
 };
 
 int event_type_data_num = sizeof(event_type_data)/sizeof(EventTypeData);
@@ -86,7 +83,112 @@ int upnp_discovery_search_result_handler(Upnp_EventType EventType, void *Event, 
 	if (DescDoc) {
 		ixmlDocument_free(DescDoc);
 	}
-	ctrl_point_print_list();
+	DevNodeOperation dev_node_op;
+	dev_node_op.operation = dev_node_print;
+        ctrl_point_dev_node_operation(&dev_node_op);
+
+	dev_node_op.operation = dev_node_get_volume;
+        ctrl_point_dev_node_operation(&dev_node_op);
+	return CP_SUCCESS;
+}
+
+int upnp_discovery_byebye_handler(Upnp_EventType EventType, void *Event, void *Cookie)
+{
+	struct Upnp_Discovery *d_event = (struct Upnp_Discovery *)Event;
+
+	if (d_event->ErrCode != UPNP_E_SUCCESS) {
+		g_print("Error in Discovery ByeBye Callback -- %d\n",
+				 d_event->ErrCode);
+	}
+	g_print("Received ByeBye for Device: %s\n", d_event->DeviceId);
+        ctrl_point_remove_device(d_event->DeviceId);
+	g_print("After byebye:\n");
+	DevNodeOperation dev_node_op;
+	dev_node_op.operation = dev_node_print;
+        ctrl_point_dev_node_operation(&dev_node_op);
+
+	dev_node_op.operation = dev_node_get_volume;
+        ctrl_point_dev_node_operation(&dev_node_op);
+	return CP_SUCCESS;
+}
+
+int upnp_control_action_complete_handler(Upnp_EventType EventType, void *Event, void *Cookie)
+{
+	struct Upnp_Action_Complete *a_event = (struct Upnp_Action_Complete *)Event;
+
+	if (a_event->ErrCode != UPNP_E_SUCCESS) {
+		g_print("Error in  Action Complete Callback -- %d\n",
+				 a_event->ErrCode);
+	}
+	return CP_SUCCESS;
+}
+
+int upnp_control_get_var_complete_handler(Upnp_EventType EventType, void *Event, void *Cookie)
+{
+
+	struct Upnp_State_Var_Complete *sv_event = (struct Upnp_State_Var_Complete *)Event;
+
+	if (sv_event->ErrCode != UPNP_E_SUCCESS) {
+		g_print("Error in Get Var Complete Callback -- %d\n",
+				 sv_event->ErrCode);
+	} else {
+		g_print("%s %s %s\n", __FUNCTION__, sv_event->StateVarName, sv_event->CurrentVal);
+		ctrl_point_handle_get_var(
+			(const char *)sv_event->CtrlUrl,
+		        sv_event->StateVarName,
+		        sv_event->CurrentVal);
+	}
+	return CP_SUCCESS;
+}
+
+int upnp_event_received_handler(Upnp_EventType EventType, void *Event, void *Cookie)
+{
+	struct Upnp_Event *e_event = (struct Upnp_Event *)Event;
+
+        ctrl_point_handle_event(
+		e_event->Sid,
+		e_event->EventKey,
+		e_event->ChangedVariables);
+	return CP_SUCCESS;
+}
+
+int upnp_event_subscribe_handler(Upnp_EventType EventType, void *Event, void *Cookie)
+{
+	struct Upnp_Event_Subscribe *es_event = (struct Upnp_Event_Subscribe *)Event;
+
+	if (es_event->ErrCode != UPNP_E_SUCCESS) {
+		g_print("Error in Event Subscribe Callback -- %d\n",
+				 es_event->ErrCode);
+	} else {
+		ctrl_point_handle_subscribe_update(
+			(const char *)es_event->PublisherUrl,
+			es_event->Sid,
+			es_event->TimeOut);
+	}
+	return CP_SUCCESS;
+}
+
+int upnp_event_subscription_expired_handler(Upnp_EventType EventType, void *Event, void *Cookie)
+{
+	struct Upnp_Event_Subscribe *es_event = (struct Upnp_Event_Subscribe *)Event;
+	int TimeOut = default_timeout;
+	Upnp_SID newSID;
+	int ret;
+
+	ret = UpnpSubscribe(
+		ctrlpt_handle,
+		(const char *)es_event->PublisherUrl,
+		&TimeOut,
+		newSID);
+	if (ret == UPNP_E_SUCCESS) {
+		g_print("Subscribed to EventURL with SID=%s\n", newSID);
+	        ctrl_point_handle_subscribe_update(
+			(const char *)es_event->PublisherUrl,
+			newSID,
+			TimeOut);
+	} else {
+		g_print("Error Subscribing to EventURL -- %d\n", ret);
+	}
 	return CP_SUCCESS;
 }
 

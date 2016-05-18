@@ -65,11 +65,12 @@ const char *TvServiceName[] = { "AVTransport", "ConnectionManager" , "RenderingC
    TvControl and TvPicture services 
  */
 const char *TvVarName[TV_SERVICE_SERVCOUNT][TV_MAXVARS] = {
-    {"Power", "Channel", "Volume", ""},
-    {"Color", "Tint", "Contrast", "Brightness"}
+    {"", "", "", ""},
+    {"", "", "", ""},
+    {"Volume", "", "", ""},
 };
 char TvVarCount[TV_SERVICE_SERVCOUNT] =
-    { TV_CONTROL_VARCOUNT, TV_PICTURE_VARCOUNT };
+  { TV_CONTROL_VARCOUNT, TV_PICTURE_VARCOUNT, TV_RENDERINGCONTROL_VARCOUNT};
 
 /*!
    Timeout to request during subscriptions 
@@ -266,6 +267,9 @@ int TvCtrlPointGetVar(int service, int devnum, const char *varname)
 	rc = TvCtrlPointGetDevice(devnum, &devnode);
 
 	if (TV_SUCCESS == rc) {
+	  	SampleUtil_Print(
+				"TvCtrlPointGetVar %d %s\n",
+				service, devnode->device.TvService[service].ControlURL);
 		rc = UpnpGetServiceVarStatusAsync(
 			ctrlpt_handle,
 			devnode->device.TvService[service].ControlURL,
@@ -1849,7 +1853,7 @@ int TvCtrlPointProcessCommand(char *cmdline)
 		/* re-parse commandline since second arg is string. */
 		validargs = sscanf(cmdline, "%s %d %s", cmd, &arg1, strarg);
 		if (validargs == 3)
-			TvCtrlPointGetVar(TV_SERVICE_CONTROL, arg1, strarg);
+			TvCtrlPointGetVar(TV_SERVICE_RENDERINGCONTROL, arg1, strarg);
 		else
 			invalidargs++;
 		break;
