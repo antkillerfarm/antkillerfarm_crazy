@@ -87,6 +87,9 @@ int upnp_discovery_search_result_handler(Upnp_EventType EventType, void *Event, 
 	dev_node_op.operation = dev_node_print;
         ctrl_point_dev_node_operation(&dev_node_op);
 
+	dev_node_op.operation = dev_node_get_ip_info;
+        ctrl_point_dev_node_operation(&dev_node_op);
+
 	dev_node_op.operation = dev_node_get_volume;
         ctrl_point_dev_node_operation(&dev_node_op);
 	return CP_SUCCESS;
@@ -105,9 +108,6 @@ int upnp_discovery_byebye_handler(Upnp_EventType EventType, void *Event, void *C
 	g_print("After byebye:\n");
 	DevNodeOperation dev_node_op;
 	dev_node_op.operation = dev_node_print;
-        ctrl_point_dev_node_operation(&dev_node_op);
-
-	dev_node_op.operation = dev_node_get_volume;
         ctrl_point_dev_node_operation(&dev_node_op);
 	return CP_SUCCESS;
 }

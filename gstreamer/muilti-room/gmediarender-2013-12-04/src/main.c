@@ -75,7 +75,7 @@ static int listen_port = 49494;
 // Compile-time uuid.
 static const gchar *uuid = GMRENDER_UUID;
 #else
-static const gchar *uuid = "GMediaRender-1_0-000-000-002";
+static const gchar *uuid = "GMediaRender-1_0-001-000-002";
 #endif
 static const gchar *friendly_name = PACKAGE_NAME;
 static const gchar *output = NULL;

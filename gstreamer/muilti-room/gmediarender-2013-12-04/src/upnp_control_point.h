@@ -48,8 +48,14 @@ typedef struct {
         Up_service UpService[UP_SERVICE_SERVCOUNT];
 }UpDevice;
 
+typedef struct {
+	char ip_addr[20];
+	char port[8]; 
+}UpDeviceUserData;
+
 struct UpDeviceNode{
         UpDevice device;
+	UpDeviceUserData user_data;
         struct UpDeviceNode *next;
 };
 
@@ -95,6 +101,7 @@ int upnp_event_subscription_expired_handler(Upnp_EventType EventType, void *Even
 int ctrl_point_dev_node_operation(DevNodeOperation *dev_node_op);
 int dev_node_print(struct UpDeviceNode *devnode);
 int dev_node_get_var(int service, struct UpDeviceNode *devnode, const char *varname, int is_lock);
+int dev_node_get_ip_info(struct UpDeviceNode *devnode);
 int dev_node_get_volume(struct UpDeviceNode *devnode);
 
 

@@ -128,6 +128,7 @@ void ctrl_point_add_device(
 			deviceNode =
 			    (struct UpDeviceNode *)
 			    malloc(sizeof(struct UpDeviceNode));
+			memset(deviceNode, 0, sizeof(struct UpDeviceNode));
 			strcpy(deviceNode->device.UDN, UDN);
 			strcpy(deviceNode->device.DescDocURL, location);
 			strcpy(deviceNode->device.FriendlyName, friendlyName);

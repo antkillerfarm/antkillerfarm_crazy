@@ -39,12 +39,36 @@ int dev_node_get_var(int service, struct UpDeviceNode *devnode, const char *varn
 	return rc;
 }
 
+int dev_node_get_ip_info(struct UpDeviceNode *devnode)
+{
+	//g_print("%s %s\n", __FUNCTION__, devnode->device.DescDocURL);
+	//return dev_node_get_var(UP_SERVICE_RENDERING_CONTROL, devnode, "Volume", FALSE);
+	char DescDocURL[250];
+	strcpy(DescDocURL, devnode->device.DescDocURL);
+	const char *d = "/:";
+	char *p;
+	int i = 0;
+	p = strtok(DescDocURL, d);
+	while(p)
+	{
+		if (i == 1)
+		{
+			strcpy(devnode->user_data.ip_addr, p);
+		}
+		else if (i == 2)
+		{
+			strcpy(devnode->user_data.port, p);
+		}
+		p = strtok(NULL, d);
+		i++;
+	}
+	g_print("%s %s\n", devnode->user_data.ip_addr, devnode->user_data.port);
+	return CP_SUCCESS;
+}
+
 int dev_node_get_volume(struct UpDeviceNode *devnode)
 {
-	g_print("%s %d\n", __FUNCTION__, UP_SERVICE_RENDERING_CONTROL);
 	return dev_node_get_var(UP_SERVICE_RENDERING_CONTROL, devnode, "Volume", FALSE);
-	//g_print(" -- %s\n", devnode->device.UDN);
-	//return CP_SUCCESS;
 }
 
 int dev_node_print(struct UpDeviceNode *devnode)
