@@ -34,11 +34,38 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <totem-pl-parser.h>
 
 #include "logging.h"
 #include "upnp_connmgr.h"
+#include "upnp_transport.h"
 #include "output_module.h"
 #include "output_gstreamer.h"
+
+#define MAX_PATH 256
+#define MAX_TITLE_LENGTH 64
+
+typedef struct{
+	gchar title[MAX_TITLE_LENGTH];
+	gchar uri[MAX_PATH];
+}MediaInfo;
+
+typedef struct{
+	GSList* play_list;
+	gint current_idx;
+}PlayListInfo;
+
+typedef struct{
+	gboolean is_play_list;
+}AppState;
+
+PlayListInfo play_list_info = {0};
+const gchar play_list_suffix[] = ".m3u .pls .xspf";
+AppState app_state = {0};
+
+void load_playlist(const  char* file_name);
+void load_playlist_file(const char* file_name);
+gint get_next_current_idx(void);
 
 static void scan_caps(const GstCaps * caps)
 {
@@ -94,7 +121,6 @@ static void scan_pad_templates_info(GstElement *element,
 	}
 
 }
-
 
 static void scan_mime_list(void)
 {
@@ -169,6 +195,7 @@ static void output_gstreamer_set_next_uri(const char *uri) {
 	Log_info("gstreamer", "Set next uri to '%s'", uri);
 	free(gs_next_uri_);
 	gs_next_uri_ = (uri && *uri) ? strdup(uri) : NULL;
+	app_state.is_play_list = FALSE;
 }
 
 static void output_gstreamer_set_uri(const char *uri,
@@ -176,8 +203,117 @@ static void output_gstreamer_set_uri(const char *uri,
 	Log_info("gstreamer", "Set uri to '%s'", uri);
 	free(gsuri_);
 	gsuri_ = (uri && *uri) ? strdup(uri) : NULL;
+	app_state.is_play_list = FALSE;
 	meta_update_callback_ = meta_cb;
 	SongMetaData_clear(&song_meta_);
+}
+
+static void free_media_info (gpointer data)
+{
+	//MediaInfo *p_media_info = (MediaInfo *)data;
+	//g_print ("%s: %s %s\n", __func__, p_media_info->title, p_media_info->uri);
+	g_free(data);
+}
+
+static void playlist_entry_parsed (TotemPlParser *parser, const gchar *uri, GHashTable *metadata, gpointer user_data)
+{
+	gchar *title = g_hash_table_lookup (metadata, TOTEM_PL_PARSER_FIELD_TITLE);
+	gchar *uri0;
+	MediaInfo *p_media_info = (MediaInfo*)g_malloc0(sizeof(MediaInfo));
+	if (gst_uri_is_valid (uri))
+	{
+		uri0 = g_strdup (uri);
+	}
+	else
+	{
+		uri0 = gst_filename_to_uri (uri, NULL);
+	}
+	g_strlcpy(p_media_info->uri, uri0, MAX_PATH);
+	if (title != NULL)
+	{
+		//g_print ("Entry title: %s\n%s\n", title,uri0);
+		Log_error("gstreamer", "%s: Entry title: %s", __func__, title);
+		g_strlcpy(p_media_info->title, title, MAX_TITLE_LENGTH);
+	}
+	else
+	{
+		//g_print ("Entry (URI: %s) has no title.\n", uri0);
+		Log_error("gstreamer", "%s: Entry (URI: %s) has no title.", __func__, uri0);
+	}
+	play_list_info.play_list = g_slist_append(play_list_info.play_list, p_media_info);
+}
+
+void load_playlist(const char* file_name)
+{
+	gchar *uri;
+	if (play_list_info.play_list != NULL)
+	{
+		g_slist_free_full(play_list_info.play_list, free_media_info);
+		memset(&play_list_info, 0, sizeof(play_list_info));
+	}
+	if (gst_uri_is_valid (file_name))
+	{
+		uri = g_strdup (file_name);
+	}
+	else
+	{
+		uri = gst_filename_to_uri (file_name, NULL);
+	}
+	//g_print ("%s: %s\n", __func__, uri);
+	Log_error("gstreamer", "%s: %s", __func__, uri);
+	TotemPlParser *pl = totem_pl_parser_new ();
+	g_object_set (pl, "recurse", FALSE, "disable-unsafe", TRUE, NULL);
+	//g_signal_connect (G_OBJECT (pl), "playlist-started", G_CALLBACK (playlist_started), NULL);
+	g_signal_connect (G_OBJECT (pl), "entry-parsed", G_CALLBACK (playlist_entry_parsed), NULL);
+	TotemPlParserResult res = totem_pl_parser_parse (pl, uri, FALSE);
+	if ( res != TOTEM_PL_PARSER_RESULT_SUCCESS)
+	{
+		//g_print ("Playlist parsing failed.\n");
+		Log_error("gstreamer", "%s: Playlist parsing failed.%x", __func__, res);
+	}
+	//g_print ("Playlist parsing finished.\n");
+	Log_error("gstreamer", "%s: Playlist parsing finished.", __func__);
+	g_object_unref (pl);
+}
+
+void load_playlist_file(const char* file_name)
+{
+	gchar *p = g_strrstr(file_name, ".");
+	if (g_strstr_len(play_list_suffix, sizeof(play_list_suffix), p) != NULL)
+	{
+		Log_error("gstreamer", "%s: TRUE", __func__);
+		app_state.is_play_list = TRUE;
+		load_playlist(file_name);
+	}
+	else
+	{
+		Log_error("gstreamer", "%s: FALSE", __func__);
+		app_state.is_play_list = FALSE;
+		g_print ("Invalid playlist file.\n");
+	}
+}
+
+gint get_next_current_idx(void)
+{
+	gint play_list_num = g_slist_length(play_list_info.play_list);
+	gint next_current_idx = (play_list_info.current_idx + 1) % play_list_num;
+	g_print ("%s: %d\n", __func__, next_current_idx);
+	return next_current_idx;
+}
+
+static void output_gstreamer_set_playlist(const char *uri) 
+{
+	load_playlist_file(uri);
+	if(app_state.is_play_list == FALSE)
+		return;
+	MediaInfo *p_media_info = g_slist_nth_data(play_list_info.play_list, play_list_info.current_idx);
+	Log_error("gstreamer", "%s: set", __func__);
+	if (p_media_info)
+	{
+		char * uri0 = p_media_info->uri;
+		free(gsuri_);
+		gsuri_ = (uri0 && *uri0) ? strdup(uri0) : NULL;
+	}
 }
 
 static int output_gstreamer_play(output_transition_cb_t callback) {
@@ -290,6 +426,7 @@ static gboolean my_bus_callback(GstBus * bus, GstMessage * msg,
 	GstMessageType msgType;
 	const GstObject *msgSrc;
 	const gchar *msgSrcName;
+	gboolean play_flag = FALSE;
 
 	msgType = GST_MESSAGE_TYPE(msg);
 	msgSrc = GST_MESSAGE_SRC(msg);
@@ -298,21 +435,39 @@ static gboolean my_bus_callback(GstBus * bus, GstMessage * msg,
 	switch (msgType) {
 	case GST_MESSAGE_EOS:
 		Log_info("gstreamer", "%s: End-of-stream", msgSrcName);
-		if (gs_next_uri_ != NULL) {
-			// If playbin does not support gapless (old
-			// versions didn't), this will trigger.
+	        if (app_state.is_play_list)
+		{
 			free(gsuri_);
-			gsuri_ = gs_next_uri_;
-			gs_next_uri_ = NULL;
+			play_list_info.current_idx = get_next_current_idx();
+			MediaInfo *p_media_info = g_slist_nth_data(play_list_info.play_list, play_list_info.current_idx);
+			char * uri0 = p_media_info->uri;
+			gsuri_ = (uri0 && *uri0) ? strdup(uri0) : NULL;
+			play_flag = TRUE;
+		}
+		else
+		{
+			if (gs_next_uri_ != NULL) {
+				// If playbin does not support gapless (old
+				// versions didn't), this will trigger.
+				free(gsuri_);
+				gsuri_ = gs_next_uri_;
+				gs_next_uri_ = NULL;
+				play_flag = TRUE;
+			} else if (play_trans_callback_) {
+				play_trans_callback_(PLAY_STOPPED);
+			}
+		}
+		
+		if (play_flag)
+		{
 			gst_element_set_state(player_, GST_STATE_READY);
 			g_object_set(G_OBJECT(player_), "uri", gsuri_, NULL);
 			gst_element_set_state(player_, GST_STATE_PLAYING);
 			if (play_trans_callback_) {
 				play_trans_callback_(PLAY_STARTED_NEXT_STREAM);
 			}
-		} else if (play_trans_callback_) {
-			play_trans_callback_(PLAY_STOPPED);
 		}
+
 		break;
 
 	case GST_MESSAGE_ERROR: {
@@ -320,6 +475,19 @@ static gboolean my_bus_callback(GstBus * bus, GstMessage * msg,
 		GError *err;
 
 		gst_message_parse_error(msg, &err, &debug);
+
+		Log_error("gstreamer", "%s: Error: %s (Debug: %s)",
+			  msgSrcName, err->message, debug);
+		g_error_free(err);
+		g_free(debug);
+
+		break;
+	}
+	case GST_MESSAGE_WARNING: {
+		gchar *debug;
+		GError *err;
+
+		gst_message_parse_warning(msg, &err, &debug);
 
 		Log_error("gstreamer", "%s: Error: %s (Debug: %s)",
 			  msgSrcName, err->message, debug);
@@ -457,6 +625,9 @@ static int output_gstreamer_set_volume(float value) {
 	g_object_set(player_, "volume", (double) value, NULL);
 	return 0;
 }
+
+
+
 static int output_gstreamer_get_mute(int *m) {
 	gboolean val;
 	g_object_get(player_, "mute", &val, NULL);
@@ -473,8 +644,19 @@ static void prepare_next_stream(GstElement *obj, gpointer userdata) {
 	Log_info("gstreamer", "about-to-finish cb: setting uri %s",
 		 gs_next_uri_);
 	free(gsuri_);
-	gsuri_ = gs_next_uri_;
-	gs_next_uri_ = NULL;
+	if (app_state.is_play_list)
+	{
+		play_list_info.current_idx = get_next_current_idx();
+		MediaInfo *p_media_info = g_slist_nth_data(play_list_info.play_list, play_list_info.current_idx);
+		char * uri0 = p_media_info->uri;
+		gsuri_ = (uri0 && *uri0) ? strdup(uri0) : NULL;
+	}
+	else
+	{
+		gsuri_ = gs_next_uri_;
+		gs_next_uri_ = NULL;
+	}
+
 	if (gsuri_ != NULL) {
 		g_object_set(G_OBJECT(player_), "uri", gsuri_, NULL);
 		if (play_trans_callback_) {
@@ -550,6 +732,7 @@ struct output_module gstreamer_output = {
 	.add_options = output_gstreamer_add_options,
 	.set_uri     = output_gstreamer_set_uri,
 	.set_next_uri= output_gstreamer_set_next_uri,
+	.set_playlist= output_gstreamer_set_playlist,
 	.play        = output_gstreamer_play,
 	.stop        = output_gstreamer_stop,
 	.pause       = output_gstreamer_pause,

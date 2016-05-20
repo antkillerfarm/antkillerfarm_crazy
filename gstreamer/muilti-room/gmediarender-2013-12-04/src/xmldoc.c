@@ -56,6 +56,13 @@ struct xmldoc *xmldoc_new(void)
 	return (struct xmldoc*) doc;
 }
 
+struct xmldoc * xmldoc_fromdoc(const char *uri)
+{
+	IXML_Document *doc;
+	ixmlLoadDocumentEx(uri, &doc);
+	return (struct xmldoc*) doc;
+}
+
 void xmldoc_free(struct xmldoc *doc)
 {
 	assert(doc != NULL);
@@ -68,6 +75,17 @@ char *xmldoc_tostring(struct xmldoc *doc)
 	assert(doc != NULL);
 	result = ixmlDocumenttoString(to_idoc(doc));
 	return result;
+}
+
+
+int xmlstringtofile(const char *uri, char *xmlString)
+{
+	FILE *fp = NULL;
+	if(!(fp = fopen(uri, "w")))	
+		return -1;
+	fputs(xmlString, fp);
+	fclose(fp);
+	return 0;
 }
 
 struct xmldoc *xmldoc_parsexml(const char *xml_text) {
@@ -132,6 +150,14 @@ char *get_node_value(struct xmlelement *element) {
 	return strdup(node_value != NULL ? node_value : "");
 }
 
+int set_node_value(struct xmlelement *element, const char *newNodeValue)
+{
+	IXML_Node *node = (IXML_Node*) to_ielem(element);
+	node = ixmlNode_getFirstChild(node);
+
+	return ixmlNode_setNodeValue(node, newNodeValue);
+}
+
 void xmlelement_add_element(struct xmldoc *doc,
 			    struct xmlelement *parent,
 			    struct xmlelement *child)
@@ -172,7 +198,6 @@ void add_value_element(struct xmldoc *doc,
                        const char *tagname, const char *value)
 {
         struct xmlelement *top;
-
         top=xmlelement_new(doc, tagname);
         xmlelement_add_text(doc, top, value);
         xmlelement_add_element(doc, parent, top);
@@ -197,10 +222,10 @@ void add_value_element_int(struct xmldoc *doc,
                            const char *tagname, int value)
 {
         char *buf;
-
-        asprintf(&buf,"%d",value);
-        add_value_element(doc, parent, tagname, buf);
-        free(buf);
+        if (asprintf(&buf,"%d",value) >= 0) {
+		add_value_element(doc, parent, tagname, buf);
+		free(buf);
+	}
 }
 void add_value_element_long(struct xmldoc *doc,
                             struct xmlelement *parent,
@@ -208,8 +233,9 @@ void add_value_element_long(struct xmldoc *doc,
 {
         char *buf;
 
-        asprintf(&buf,"%lld",value);
-        add_value_element(doc, parent, tagname, buf);
-        free(buf);
+        if (asprintf(&buf,"%lld",value) >= 0) {
+		add_value_element(doc, parent, tagname, buf);
+		free(buf);
+	}
 }
 

@@ -1,52 +1,22 @@
-#!/bin/sh -e
-### BEGIN INIT INFO
-# Provides:          vncserver
-# Required-Start:    networking
-# Default-Start:     S
-# Default-Stop:      0 6
-### END INIT INFO
-
-PATH="$PATH:/usr/X11R6/bin/"
-
-# The Username:Group that will run VNC
-export USER="mythtv"
-#${RUNAS}
-
-# The display that VNC will use
-DISPLAY="1"
-
-# Color depth (between 8 and 32)
-DEPTH="16"
-
-# The Desktop geometry to use.
-#GEOMETRY="<WIDTH>x<HEIGHT>"
-#GEOMETRY="800x600"
-GEOMETRY="1024x768"
-#GEOMETRY="1280x1024"
-
-# The name that the VNC Desktop will have.
-NAME="my-vnc-server"
-
-OPTIONS="-name ${NAME} -depth ${DEPTH} -geometry ${GEOMETRY} :${DISPLAY}"
-
-. /lib/lsb/init-functions
-
+#!/bin/sh
+# /etc/init.d/tightvncserver
+# Set the VNCUSER variable to the name of the user to start tightvncserver unde\
+r
+VNCUSER='pi'
 case "$1" in
-start)
-log_action_begin_msg "Starting vncserver for user '${USER}' on localhost:${DISPLAY}"
-su ${USER} -c "/usr/bin/vncserver ${OPTIONS}"
-;;
-
-stop)
-log_action_begin_msg "Stoping vncserver for user '${USER}' on localhost:${DISPLAY}"
-su ${USER} -c "/usr/bin/vncserver -kill :${DISPLAY}"
-;;
-
-restart)
-$0 stop
-$0 start
-;;
+    start)
+        su $VNCUSER -c '/usr/bin/vncserver :1 -geometry 1440x900'
+        echo "Starting TightVNC server for $VNCUSER"
+        ;;
+    stop)
+        pkill Xtightvnc
+        echo "Tightvncserver stopped"
+        ;;
+    *)
+        echo "Usage: /etc/init.d/vncserver {start|stop}"
+        exit 1
+        ;;
 esac
-
 exit 0
+
 

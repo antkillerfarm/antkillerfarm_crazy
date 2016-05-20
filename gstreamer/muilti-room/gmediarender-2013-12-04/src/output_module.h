@@ -35,6 +35,7 @@ struct output_module {
 	int (*init)(void);
 	void (*set_uri)(const char *uri, output_update_meta_cb_t meta_info);
 	void (*set_next_uri)(const char *uri);
+	void (*set_playlist)(const char *uri);
 	int (*play)(output_transition_cb_t transition_callback);
 	int (*stop)(void);
 	int (*pause)(void);
@@ -46,7 +47,11 @@ struct output_module {
 	int (*get_volume)(float *);
 	int (*set_volume)(float);
 	int (*get_mute)(int *);
-	int (*set_mute)(int);
+	int (*set_mute)(int);	
+	int (*get_groupid)(char *);
+	int (*set_groupid)(const char *);
+	int (*get_grouprole)(char *);
+	int (*set_grouprole)(const char *);
 };
 
 #endif

@@ -23,6 +23,8 @@
 #ifndef _UPNP_CONTROL_H
 #define _UPNP_CONTROL_H
 
+#define GROUP
+
 #include "variable-container.h"
 
 struct upnp_device;

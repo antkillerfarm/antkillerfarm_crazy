@@ -11,7 +11,8 @@ gmediarender_SOURCES = main.c git-version.h \
 	output.c output.h \
 	logging.h logging.c \
 	xmldoc.c xmldoc.h \
-	xmlescape.c xmlescape.h
+	xmlescape.c xmlescape.h \
+	rendermsg.c rendermsg.h
 
 if HAVE_GST
 gmediarender_SOURCES += \
@@ -27,5 +28,5 @@ git-version.h: .FORCE
 
 .FORCE:
 
-AM_CPPFLAGS = $(GLIB_CFLAGS) $(GST_CFLAGS) $(LIBUPNP_CFLAGS) -DPKG_DATADIR=\"$(datadir)/gmediarender\"
-gmediarender_LDADD = $(GLIB_LIBS) $(GST_LIBS) $(LIBUPNP_LIBS) 
+AM_CPPFLAGS = $(GLIB_CFLAGS) $(GST_CFLAGS) $(LIBUPNP_CFLAGS) $(TOTEM_PL_PARSER_CFLAGS) -DPKG_DATADIR=\"$(datadir)/gmediarender\"
+gmediarender_LDADD = $(GLIB_LIBS) $(GST_LIBS) $(LIBUPNP_LIBS) $(TOTEM_PL_PARSER_LIBS)

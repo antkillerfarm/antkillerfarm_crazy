@@ -44,6 +44,7 @@
 #include "upnp_device.h"
 #include "variable-container.h"
 #include "xmlescape.h"
+#include "logging.h"
 
 #define TRANSPORT_TYPE "urn:schemas-upnp-org:service:AVTransport:1"
 #define TRANSPORT_SERVICE_ID "urn:upnp-org:serviceId:AVTransport"
@@ -54,41 +55,6 @@
 
 // Namespace, see UPnP-av-AVTransport-v3-Service-20101231.pdf page 15
 #define TRANSPORT_EVENT_XML_NS "urn:schemas-upnp-org:metadata-1-0/AVT/"
-
-typedef enum {
-	TRANSPORT_VAR_TRANSPORT_STATUS,
-	TRANSPORT_VAR_NEXT_AV_URI,
-	TRANSPORT_VAR_NEXT_AV_URI_META,
-	TRANSPORT_VAR_CUR_TRACK_META,
-	TRANSPORT_VAR_REL_CTR_POS,
-	TRANSPORT_VAR_AAT_INSTANCE_ID,
-	TRANSPORT_VAR_AAT_SEEK_TARGET,
-	TRANSPORT_VAR_PLAY_MEDIUM,
-	TRANSPORT_VAR_REL_TIME_POS,
-	TRANSPORT_VAR_REC_MEDIA,
-	TRANSPORT_VAR_CUR_PLAY_MODE,
-	TRANSPORT_VAR_TRANSPORT_PLAY_SPEED,
-	TRANSPORT_VAR_PLAY_MEDIA,
-	TRANSPORT_VAR_ABS_TIME_POS,
-	TRANSPORT_VAR_CUR_TRACK,
-	TRANSPORT_VAR_CUR_TRACK_URI,
-	TRANSPORT_VAR_CUR_TRANSPORT_ACTIONS,
-	TRANSPORT_VAR_NR_TRACKS,
-	TRANSPORT_VAR_AV_URI,
-	TRANSPORT_VAR_ABS_CTR_POS,
-	TRANSPORT_VAR_CUR_REC_QUAL_MODE,
-	TRANSPORT_VAR_CUR_MEDIA_DUR,
-	TRANSPORT_VAR_AAT_SEEK_MODE,
-	TRANSPORT_VAR_AV_URI_META,
-	TRANSPORT_VAR_REC_MEDIUM,
-	TRANSPORT_VAR_REC_MEDIUM_WR_STATUS,
-	TRANSPORT_VAR_LAST_CHANGE,
-	TRANSPORT_VAR_CUR_TRACK_DUR,
-	TRANSPORT_VAR_TRANSPORT_STATE,
-	TRANSPORT_VAR_POS_REC_QUAL_MODE,
-	TRANSPORT_VAR_UNKNOWN,
-	TRANSPORT_VAR_COUNT
-} transport_variable_t;
 
 enum {
 	TRANSPORT_CMD_GETCURRENTTRANSPORTACTIONS,
@@ -103,11 +69,14 @@ enum {
 	//TRANSPORT_CMD_PREVIOUS,
 	TRANSPORT_CMD_SEEK,
 	TRANSPORT_CMD_SETAVTRANSPORTURI,
-	//TRANSPORT_CMD_SETPLAYMODE,
+	TRANSPORT_CMD_SETPLAYMODE,
 	TRANSPORT_CMD_STOP,
 	TRANSPORT_CMD_SETNEXTAVTRANSPORTURI,
 	//TRANSPORT_CMD_RECORD,
 	//TRANSPORT_CMD_SETRECORDQUALITYMODE,
+	TRANSPORT_CMD_SETSTATICPLAYLIST,
+	TRANSPORT_CMD_SETSTREAMINGPLAYLIST,
+	TRANSPORT_CMD_GETPLAYLISTINFO,
 	TRANSPORT_CMD_UNKNOWN,
 	TRANSPORT_CMD_COUNT
 };
@@ -131,6 +100,12 @@ enum UPNPTransportError {
 	UPNP_TRANSPORT_E_RES_NOT_FOUND	= 716,
 	UPNP_TRANSPORT_E_PLAYSPEED_NS	= 717,
 	UPNP_TRANSPORT_E_INVALID_IID	= 718,
+	/*setStaticPlaylist*/
+	UPNP_TRANSPORT_E_ILLEGAL_PLAYLIST_OFFSET = 734,
+	UPNP_TRANSPORT_E_ILLEGAL_PLAYLIST_LENGTH = 735,
+	UPNP_TRANSPORT_E_ILLEGAL_PLAYLIST = 736
+	/*setStaticPlaylist*/
+	
 };
 
 static const char *transport_variable_names[] = {
@@ -164,6 +139,20 @@ static const char *transport_variable_names[] = {
 	[TRANSPORT_VAR_AAT_SEEK_TARGET] = "A_ARG_TYPE_SeekTarget",
 	[TRANSPORT_VAR_AAT_INSTANCE_ID] = "A_ARG_TYPE_InstanceID",
 	[TRANSPORT_VAR_CUR_TRANSPORT_ACTIONS] = "CurrentTransportActions",
+	/*setStaticPlaylist*/
+	[TRANSPORT_VAR_AAT_PLAYLIST_DATA] = "A_ARG_TYPE_PlaylistData",
+	[TRANSPORT_VAR_AAT_PLAYLIST_DATA_LENGTH] = "A_ARG_TYPE_PlaylistDataLength",
+	[TRANSPORT_VAR_AAT_PLAYLIST_OFFSET] = "A_ARG_TYPE_PlaylistOffset",
+	[TRANSPORT_VAR_AAT_PLAYLIST_TOTAL_LENGTH] = "A_ARG_TYPPE_PlaylistTotalLength",
+	[TRANSPORT_VAR_AAT_PLAYLIST_MIME_TYPE] = "A_ARG_TYPE_PlaylistMIMEType",
+	[TRANSPORT_VAR_AAT_PLAYLIST_EXTENDED_TYPE] = "A_ARG_TYPE_PlaylistExtendedType",
+	[TRANSPORT_VAR_AAT_PLAYLIST_START_OBJ_ID] = "A_ARG_TYPE_PlaylistStartObjID",
+	[TRANSPORT_VAR_AAT_PLAYLIST_START_GROUP_ID] = "A_ARG_TYPE_PlaylistStartGroupID",
+	/*setStreamingPlaylist*/
+	[TRANSPORT_VAR_AAT_PLAYLIST_STEP] = "A_ARG_TYPE_PlaylistStep",
+	/**/
+	[TRANSPORT_VAR_AAT_PLAYLIST_TYPE] = "A_ARG_TYPE_PlaylistType",
+	[TRANSPORT_VAR_AAT_PLAYLIST_INFO] = "A_ARG_TYPE_PlaylistInfo",
 	[TRANSPORT_VAR_UNKNOWN] = NULL
 };
 
@@ -199,6 +188,11 @@ static const char *transport_default_values[] = {
 	[TRANSPORT_VAR_AAT_SEEK_TARGET] = "",
 	[TRANSPORT_VAR_AAT_INSTANCE_ID] = "0",
 	[TRANSPORT_VAR_CUR_TRANSPORT_ACTIONS] = "PLAY",
+	
+	[TRANSPORT_VAR_AAT_PLAYLIST_START_OBJ_ID] = "",
+	[TRANSPORT_VAR_AAT_PLAYLIST_START_GROUP_ID] = "",
+	
+	
 	[TRANSPORT_VAR_UNKNOWN] = NULL
 };
 
@@ -267,10 +261,10 @@ static const char *media[] = {
 
 static const char *playmodi[] = {
 	"NORMAL",
-	//"SHUFFLE",
-	//"REPEAT_ONE",
+	"SHUFFLE",
+	"REPEAT_ONE",
 	"REPEAT_ALL",
-	//"RANDOM",
+	"RANDOM",
 	//"DIRECT_1",
 	"INTRO",
 	NULL
@@ -315,6 +309,30 @@ static const char *aat_seekmodi[] = {
 	NULL
 };
 
+static const char *aat_playliststep[] = {
+	"Initial",
+	"Continue",
+	"Stop",
+	"Reset",
+	NULL
+};
+
+static const char *aat_playlisttype[] = {
+//	"Static",
+	"Streaming",
+	NULL
+};
+
+
+static const char *aat_playlistmimetype[] = {
+	"audio/m3u",
+	"audio/pls",
+	"audio/xspf",
+	NULL
+};
+
+
+
 static struct param_range track_range = {
 	0,
 	4294967295LL,
@@ -358,6 +376,20 @@ static struct var_meta transport_var_meta[] = {
 	[TRANSPORT_VAR_AAT_SEEK_TARGET] =		{ SENDEVENT_NO, DATATYPE_STRING, NULL, NULL },
 	[TRANSPORT_VAR_AAT_INSTANCE_ID] =		{ SENDEVENT_NO, DATATYPE_UI4, NULL, NULL },
 	[TRANSPORT_VAR_CUR_TRANSPORT_ACTIONS] =		{ SENDEVENT_NO, DATATYPE_STRING, NULL, NULL },
+	[TRANSPORT_VAR_AAT_PLAYLIST_DATA] = {SENDEVENT_NO, DATATYPE_STRING, NULL, NULL} ,
+	[TRANSPORT_VAR_AAT_PLAYLIST_DATA_LENGTH] = {SENDEVENT_NO, DATATYPE_UI4, NULL, NULL} ,
+	[TRANSPORT_VAR_AAT_PLAYLIST_OFFSET]= {SENDEVENT_NO, DATATYPE_UI4, NULL, NULL},
+	[TRANSPORT_VAR_AAT_PLAYLIST_TOTAL_LENGTH] ={SENDEVENT_NO, DATATYPE_UI4, NULL, NULL} ,
+	[TRANSPORT_VAR_AAT_PLAYLIST_MIME_TYPE] = {SENDEVENT_NO, DATATYPE_STRING, aat_playlistmimetype, NULL},
+	[TRANSPORT_VAR_AAT_PLAYLIST_EXTENDED_TYPE] = {SENDEVENT_NO, DATATYPE_STRING, NULL, NULL},
+	[TRANSPORT_VAR_AAT_PLAYLIST_START_OBJ_ID] = {SENDEVENT_NO, DATATYPE_STRING, NULL, NULL},
+	[TRANSPORT_VAR_AAT_PLAYLIST_START_GROUP_ID] = {SENDEVENT_NO, DATATYPE_STRING, NULL, NULL},
+	/*setStreamingPlaylist*/
+	[TRANSPORT_VAR_AAT_PLAYLIST_STEP]= {SENDEVENT_NO, DATATYPE_STRING, aat_playliststep, NULL},
+	/*playlist info*/
+	[TRANSPORT_VAR_AAT_PLAYLIST_TYPE] = {SENDEVENT_NO, DATATYPE_STRING, aat_playlisttype, NULL},
+	[TRANSPORT_VAR_AAT_PLAYLIST_INFO] = {SENDEVENT_NO, DATATYPE_STRING, NULL, NULL},
+	
 	[TRANSPORT_VAR_UNKNOWN] =			{ SENDEVENT_NO, DATATYPE_UNKNOWN, NULL, NULL }
 };
 
@@ -457,11 +489,11 @@ static struct argument *arguments_seek[] = {
 //        & (struct argument) { "InstanceID", PARAM_DIR_IN, TRANSPORT_VAR_AAT_INSTANCE_ID },
 //	NULL
 //};
-//static struct argument *arguments_setplaymode[] = {
-//        & (struct argument) { "InstanceID", PARAM_DIR_IN, TRANSPORT_VAR_AAT_INSTANCE_ID },
-//        & (struct argument) { "NewPlayMode", PARAM_DIR_IN, TRANSPORT_VAR_CUR_PLAY_MODE },
-//	NULL
-//};
+static struct argument *arguments_setplaymode[] = {
+        & (struct argument) { "InstanceID", PARAM_DIR_IN, TRANSPORT_VAR_AAT_INSTANCE_ID },
+        & (struct argument) { "NewPlayMode", PARAM_DIR_IN, TRANSPORT_VAR_CUR_PLAY_MODE },
+	NULL
+};
 //static struct argument *arguments_setrecordqualitymode[] = {
 //        & (struct argument) { "InstanceID", PARAM_DIR_IN, TRANSPORT_VAR_AAT_INSTANCE_ID },
 //        & (struct argument) { "NewRecordQualityMode", PARAM_DIR_IN, TRANSPORT_VAR_CUR_REC_QUAL_MODE },
@@ -472,6 +504,42 @@ static struct argument *arguments_getcurrenttransportactions[] = {
         & (struct argument) { "Actions", PARAM_DIR_OUT, TRANSPORT_VAR_CUR_TRANSPORT_ACTIONS },
 	NULL
 };
+
+
+static struct argument *arguments_setstaticplaylist[] = {
+        & (struct argument) { "InstanceID", PARAM_DIR_IN, TRANSPORT_VAR_AAT_INSTANCE_ID },
+        & (struct argument) { "PlaylistData", PARAM_DIR_IN, TRANSPORT_VAR_AAT_PLAYLIST_DATA},
+        & (struct argument) { "PlaylistDataLength", PARAM_DIR_IN, TRANSPORT_VAR_AAT_PLAYLIST_DATA_LENGTH},
+	& (struct argument) { "PlaylistOffset", PARAM_DIR_IN, TRANSPORT_VAR_AAT_PLAYLIST_OFFSET},
+	& (struct argument) { "PlaylistTotalLength", PARAM_DIR_IN, TRANSPORT_VAR_AAT_PLAYLIST_TOTAL_LENGTH},
+	& (struct argument) { "PlaylistMIMEType", PARAM_DIR_IN, TRANSPORT_VAR_AAT_PLAYLIST_MIME_TYPE},
+	& (struct argument) { "PlaylistExtendedType", PARAM_DIR_IN, TRANSPORT_VAR_AAT_PLAYLIST_EXTENDED_TYPE},
+	& (struct argument) { "PlaylistStartObj", PARAM_DIR_IN, TRANSPORT_VAR_AAT_PLAYLIST_START_OBJ_ID},
+	& (struct argument) { "PlaylistStartGroup", PARAM_DIR_IN, TRANSPORT_VAR_AAT_PLAYLIST_START_GROUP_ID},
+
+	NULL
+};
+
+
+static struct argument *arguments_setstreamingplaylist[] = {
+        & (struct argument) { "InstanceID", PARAM_DIR_IN, TRANSPORT_VAR_AAT_INSTANCE_ID },
+        & (struct argument) { "PlaylistData", PARAM_DIR_IN, TRANSPORT_VAR_AAT_PLAYLIST_DATA},
+        & (struct argument) { "PlaylistDataLength", PARAM_DIR_IN, TRANSPORT_VAR_AAT_PLAYLIST_DATA_LENGTH},
+	& (struct argument) { "PlaylistMIMEType", PARAM_DIR_IN, TRANSPORT_VAR_AAT_PLAYLIST_MIME_TYPE},
+	& (struct argument) { "PlaylistExtendedType", PARAM_DIR_IN, TRANSPORT_VAR_AAT_PLAYLIST_EXTENDED_TYPE},
+	& (struct argument) { "PlaylistStep", PARAM_DIR_IN, TRANSPORT_VAR_AAT_PLAYLIST_STEP},
+
+	NULL
+};
+
+static struct argument *arguments_getplaylistinfo[] = {
+        & (struct argument) { "InstanceID", PARAM_DIR_IN, TRANSPORT_VAR_AAT_INSTANCE_ID },
+        & (struct argument) { "PlaylistType", PARAM_DIR_IN, TRANSPORT_VAR_AAT_PLAYLIST_TYPE},
+	& (struct argument) { "PlaylistInfo", PARAM_DIR_OUT, TRANSPORT_VAR_AAT_PLAYLIST_INFO},
+
+	NULL
+};
+
 
 
 static struct argument **argument_list[] = {
@@ -489,9 +557,12 @@ static struct argument **argument_list[] = {
 	[TRANSPORT_CMD_SEEK] =                      arguments_seek,
 	//[TRANSPORT_CMD_NEXT] =                      arguments_next,
 	//[TRANSPORT_CMD_PREVIOUS] =                  arguments_previous,
-	//[TRANSPORT_CMD_SETPLAYMODE] =               arguments_setplaymode,
+	[TRANSPORT_CMD_SETPLAYMODE] =               arguments_setplaymode,
 	//[TRANSPORT_CMD_SETRECORDQUALITYMODE] =      arguments_setrecordqualitymode,
 	[TRANSPORT_CMD_GETCURRENTTRANSPORTACTIONS] = arguments_getcurrenttransportactions,
+	[TRANSPORT_CMD_SETSTATICPLAYLIST] = arguments_setstaticplaylist,
+	[TRANSPORT_CMD_SETSTREAMINGPLAYLIST] = arguments_setstreamingplaylist,
+	[TRANSPORT_CMD_GETPLAYLISTINFO] = arguments_getplaylistinfo,
 	[TRANSPORT_CMD_UNKNOWN] =	NULL
 };
 
@@ -565,6 +636,10 @@ static int replace_var(transport_variable_t varnum, const char *new_value) {
 
 static const char *get_var(transport_variable_t varnum) {
 	return VariableContainer_get(state_variables_, varnum, NULL);
+}
+
+const char *get_transport_var(transport_variable_t varnum) {
+  return get_var(varnum);
 }
 
 // Transport uri always comes in uri/meta pairs. Set these and also the related
@@ -656,9 +731,14 @@ static int set_avtransport_uri(struct action_event *event)
 	if (uri == NULL) {
 		return -1;
 	}
-
-	service_lock();
 	char *meta = upnp_get_string(event, "CurrentURIMetaData");
+	if (meta == NULL) {
+		free(uri);
+		return -1;
+	}
+	service_lock();
+
+	
 	// Transport URI/Meta set now, current URI/Meta when it starts playing.
 	int requires_meta_update = replace_transport_uri_and_meta(uri, meta);
 
@@ -708,7 +788,10 @@ static int set_next_avtransport_uri(struct action_event *event)
 
 	service_unlock();
 
-	free(next_uri);
+	if (next_uri_meta != NULL)
+	{
+		free(next_uri);
+	}
 	free(next_uri_meta);
 
 	return rc;
@@ -852,7 +935,7 @@ static int stop(struct action_event *event)
 	case TRANSPORT_NO_MEDIA_PRESENT:
 		/* action not allowed in these states - error 701 */
 		upnp_set_error(event, UPNP_TRANSPORT_E_TRANSITION_NA,
-			       "Transition not allowed; allowed=%s",
+			       "Transition to STOP not allowed; allowed=%s",
 			       get_var(TRANSPORT_VAR_CUR_TRANSPORT_ACTIONS));
 
 		break;
@@ -924,7 +1007,7 @@ static int play(struct action_event *event)
 	case TRANSPORT_RECORDING:
 		/* action not allowed in these states - error 701 */
 		upnp_set_error(event, UPNP_TRANSPORT_E_TRANSITION_NA,
-			       "Transition not allowed; allowed=%s",
+			       "Transition to PLAY not allowed; allowed=%s",
 			       get_var(TRANSPORT_VAR_CUR_TRANSPORT_ACTIONS));
 		rc = -1;
 		break;
@@ -959,7 +1042,7 @@ static int pause_stream(struct action_event *event)
         default:
 		/* action not allowed in these states - error 701 */
 		upnp_set_error(event, UPNP_TRANSPORT_E_TRANSITION_NA,
-			       "Transition not allowed; allowed=%s",
+			       "Transition to PAUSE not allowed; allowed=%s",
 			       get_var(TRANSPORT_VAR_CUR_TRANSPORT_ACTIONS));
 		rc = -1;
         }
@@ -975,9 +1058,16 @@ static int seek(struct action_event *event)
 	}
 
 	char *unit = upnp_get_string(event, "Unit");
+	if (unit == NULL) {
+		return -1;
+	}
 	if (strcmp(unit, "REL_TIME") == 0) {
 		// This is the only thing we support right now.
 		char *target = upnp_get_string(event, "Target");
+		if (target == NULL) {
+			free(unit);
+			return -1;
+		}
 		gint64 nanos = parse_upnp_time(target);
 		service_lock();
 		if (output_seek(nanos) == 0) {
@@ -994,6 +1084,141 @@ static int seek(struct action_event *event)
 
 	return 0;
 }
+//TODO:FIXME
+static int set_playmode(struct action_event *event)
+{
+	if (obtain_instanceid(event, NULL) < 0) {
+		return -1;
+	}
+	char *playmode = upnp_get_string(event, "NewPlayMode");
+	if (playmode == NULL) {
+		return -1;
+	}
+//TODO: support this playmode?  error 712
+	
+// This is the only thing we support right now.
+	service_lock();
+	replace_var(TRANSPORT_VAR_CUR_PLAY_MODE, playmode);
+	service_unlock();
+	free(playmode);
+	return 0;
+}
+//TODO:FIXME
+static int set_static_playlist(struct action_event *event)  
+{
+	if (obtain_instanceid(event, NULL) < 0) {
+		return -1;
+	}
+	
+	return 0;
+
+}
+
+static int write_playlist(struct action_event *event, char* playlistdata, int playlistdatalength, const char *mode)
+{
+		FILE *fp = NULL;
+		int n, rc = 0;
+		fp= fopen(M3U_STREAMINGPLAYLIST_PATH, mode);
+		if(!fp){
+			upnp_set_error(event, UPNP_TRANSPORT_E_ILLEGAL_PLAYLIST_LENGTH,
+			       "The Device does not have sufficient memory capacity to process the playlist ");
+			return -1;
+		}
+		n = fwrite(playlistdata, 1, playlistdatalength, fp);
+		if(n!=playlistdatalength){
+			upnp_set_error(event, UPNP_TRANSPORT_E_ILLEGAL_PLAYLIST_LENGTH,
+			       "The Device does not have sufficient memory capacity to process the playlist ");
+			rc = -1;
+		}
+		fclose(fp);
+		return rc;
+
+}
+
+static int set_streaming_playlist(struct action_event *event)  
+{
+	if (obtain_instanceid(event, NULL) < 0) {
+		return -1;
+	}
+
+	char *playlistdata = upnp_get_string(event, "PlaylistData");
+	if (playlistdata == NULL) {
+		return -1;
+	}
+	int playlistdatalength = atoi(upnp_get_string(event, "PlaylistDataLength"));
+	char *playlistmimetype = upnp_get_string(event, "PlaylistMIMEType");
+	if (playlistmimetype == NULL) {
+		free(playlistdata);
+		return -1;
+	}
+	char *playliststep = upnp_get_string(event, "PlaylistStep");  //Initial Continue Stop Reset
+	if (playliststep == NULL) {
+		free(playlistdata);
+		free(playlistmimetype);
+		return -1;
+	}
+
+	int rc = 0;
+	service_lock();
+	if(strcmp(playliststep, "Initial") == 0){
+		//TODO:
+		rc = write_playlist(event, playlistdata, playlistdatalength, "w");
+		if(!rc){
+			Log_error("gstreamer", "%s: Initial", __func__);
+			//TODO: set playlist uri & transportvar
+			output_set_playlist(M3U_STREAMINGPLAYLIST_PATH);
+		}
+	}
+
+	if(strcmp(playliststep, "Continue") == 0){
+		rc = write_playlist(event, playlistdata, playlistdatalength, "a");
+		
+	}
+
+	if(strcmp(playliststep, "Stop") == 0){
+		//TODO:  Indicates that the current streaming playlist operation will end when all pending playlist data at then device is consumed.
+		rc = write_playlist(event, playlistdata, playlistdatalength, "a");
+	}
+
+	if(strcmp(playliststep, "Reset") == 0){
+		//TODO: Indicates that processing of the current streaming playlist ends immediately. any pending playlist data for the streaming playlist is discarded.
+		Log_error("gstreamer", "%s: Reset", __func__);
+		output_set_playlist(M3U_STREAMINGPLAYLIST_PATH);
+		if(1){ //transport_state
+			//output_stop();
+			//change_transport_state(TRANSPORT_STOPPED);
+			//replace_var( ) //playlist status
+		}
+	}
+	if(!rc)
+		replace_var(TRANSPORT_VAR_AAT_PLAYLIST_STEP, playliststep);
+	service_unlock();
+
+	free(playlistdata);
+	free(playlistmimetype);
+	free(playliststep);
+	return rc;
+
+}
+
+
+static int get_playlist_info(struct action_event *event)  
+{
+	if (obtain_instanceid(event, NULL) < 0) {
+		return -1;
+	}
+	char *playlisttype = upnp_get_string(event, "PlaylistType");
+	if (playlisttype == NULL) {
+		return -1;
+	}
+
+	//fprintf(stderr, "InstanceID = %s \n", unit);
+	free(playlisttype);
+
+	return 0;
+
+}
+
 
 static struct action transport_actions[] = {
 	[TRANSPORT_CMD_GETCURRENTTRANSPORTACTIONS] = {"GetCurrentTransportActions", get_current_transportactions},
@@ -1011,8 +1236,11 @@ static struct action transport_actions[] = {
 	[TRANSPORT_CMD_SEEK] =                      {"Seek", seek},
 	//[TRANSPORT_CMD_NEXT] =                      {"Next", next},
 	//[TRANSPORT_CMD_PREVIOUS] =                  {"Previous", previous},
-	//[TRANSPORT_CMD_SETPLAYMODE] =               {"SetPlayMode", NULL},	/* optional */
+	[TRANSPORT_CMD_SETPLAYMODE] =               {"SetPlayMode", set_playmode},	/* optional */
 	//[TRANSPORT_CMD_SETRECORDQUALITYMODE] =      {"SetRecordQualityMode", NULL},	/* optional */
+	[TRANSPORT_CMD_SETSTATICPLAYLIST] = {"SetStaticPlaylist", set_static_playlist},
+	[TRANSPORT_CMD_SETSTREAMINGPLAYLIST] = {"SetStreamingPlaylist", set_streaming_playlist},
+	[TRANSPORT_CMD_GETPLAYLISTINFO] = {"GetPlaylistInfo", get_playlist_info},
 	[TRANSPORT_CMD_UNKNOWN] =                  {NULL, NULL}
 };
 

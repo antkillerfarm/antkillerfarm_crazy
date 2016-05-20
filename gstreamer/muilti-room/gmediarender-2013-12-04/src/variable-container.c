@@ -231,7 +231,7 @@ UPnPLastChangeCollector_new(variable_container_t *variable_container,
 	// without proper registration.
 	// Also determine, which variable is actually the "LastChange" one.
 	const int var_count = VariableContainer_get_num_vars(variable_container);
-	assert(var_count < 32);  // otherwise widen not_eventable_variables
+	assert(var_count < 64);  // otherwise widen not_eventable_variables
 	for (int i = 0; i < var_count; ++i) {
 		const char *name;
 		const char *value = VariableContainer_get(variable_container,

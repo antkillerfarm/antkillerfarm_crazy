@@ -26,6 +26,9 @@
 
 struct xmldoc;
 struct xmlelement;
+struct xmldoc * xmldoc_fromdoc(const char *uri);
+int xmlstringtofile(const char *uri, char *xmlString);
+
 
 struct xmldoc *xmldoc_new(void);
 
@@ -63,6 +66,8 @@ struct xmlelement *find_element_in_element(struct xmlelement *element,
 
 // Returns a newly allocated string representing the element value.
 char *get_node_value(struct xmlelement *element);
+int set_node_value(struct xmlelement *element, const char *newNodeValue);
+
 
 struct xmlelement *add_attributevalue_element(struct xmldoc *doc,
 					      struct xmlelement *parent,

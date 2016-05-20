@@ -100,7 +100,7 @@ int webserver_register_file(const char *path, const char *content_type)
 
 	rc = stat(local_fname, &buf);
 	if (rc) {
-		error(0, errno, "Could not stat '%s'", local_fname);
+		//error(0, errno, "Could not stat '%s'", local_fname);
 		return -1;
 	}
 
@@ -121,7 +121,11 @@ int webserver_register_file(const char *path, const char *content_type)
 			free(entry);
 			return -1;
 		}
-		fread(cbuf, buf.st_size, 1, in);
+		if (fread(cbuf, buf.st_size, 1, in) != 1) {
+			free(entry);
+			free(cbuf);
+			return -1;
+		}
 		fclose(in);
 		entry->len = buf.st_size;
 		entry->contents = cbuf;
@@ -200,7 +204,7 @@ static int webserver_read(UpnpWebFileHandle fh, char *buf, size_t buflen)
 	memcpy(buf, file->contents + file->pos, len);
 
 	if (len < 0) {
-		error(0, errno, "%s failed", __FUNCTION__);
+		//error(0, errno, "%s failed", __FUNCTION__);
 	} else {
 		file->pos += len;
 	}
@@ -231,7 +235,7 @@ static int webserver_seek(UpnpWebFileHandle fh, off_t offset, int origin)
 	}
 
 	if (newpos < 0 || newpos > file->len) {
-		error(0, errno, "%s seek failed", __FUNCTION__);
+		//error(0, errno, "%s seek failed", __FUNCTION__);
 		return -1;
 	}
 

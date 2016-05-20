@@ -27,6 +27,8 @@
 #include <glib.h>
 #include "song-meta-data.h"
 
+
+#define RENDERXML "/etc/config/gmediarender.xml"
 // Feedback for the controlling part what is happening with the
 // output.
 enum PlayFeedback {
@@ -58,5 +60,17 @@ int output_get_volume(float *v);
 int output_set_volume(float v);
 int output_get_mute(int *m);
 int output_set_mute(int m);
+void output_set_playlist(const char *playlist) ;
+char *output_get_groupid(void);
+int output_set_groupid(const char*groupid);
+
+char * output_get_grouprole(void);
+int output_set_grouprole(const char*grouprole);
+
+
+
+
+
+
 
 #endif /* _OUTPUT_H */

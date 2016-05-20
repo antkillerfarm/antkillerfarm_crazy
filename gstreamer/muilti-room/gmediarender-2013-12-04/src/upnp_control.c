@@ -82,6 +82,11 @@ typedef enum {
 	CONTROL_VAR_PRESET_NAME_LIST,
 	CONTROL_VAR_CONTRAST,
 	CONTROL_VAR_BRIGHTNESS,
+	//GROUP
+#ifdef GROUP
+	CONTROL_VAR_GROUPID,
+	CONTROL_VAR_GROUPROLE,
+#endif	
 	CONTROL_VAR_UNKNOWN,
 	CONTROL_VAR_COUNT
 } control_variable_t;
@@ -104,6 +109,7 @@ typedef enum {
 	CONTROL_CMD_GET_VOL,
 	CONTROL_CMD_GET_VOL_DB,
 	CONTROL_CMD_GET_VOL_DBRANGE,
+	//GROUP
 	CONTROL_CMD_LIST_PRESETS,      
 	//CONTROL_CMD_SELECT_PRESET,
 	//CONTROL_CMD_SET_BLUE_BLACK,
@@ -122,6 +128,16 @@ typedef enum {
 	//CONTROL_CMD_SET_VERT_KEYSTONE,
 	CONTROL_CMD_SET_VOL,
 	CONTROL_CMD_SET_VOL_DB,
+//GROUP
+#ifdef GROUP
+
+	CONTROL_CMD_GET_GROUPID,
+	CONTROL_CMD_GET_GROUPROLE,
+
+	CONTROL_CMD_SET_GROUPID,
+	CONTROL_CMD_SET_GROUPROLE,
+
+#endif
 	CONTROL_CMD_UNKNOWN,
 	CONTROL_CMD_COUNT
 } control_cmd;
@@ -150,6 +166,11 @@ static const char *control_variable_names[] = {
 	[CONTROL_VAR_VOLUME] = "Volume",
 	[CONTROL_VAR_VOLUME_DB] = "VolumeDB",
 	[CONTROL_VAR_LOUDNESS] = "Loudness",
+	//Group 
+#ifdef GROUP
+	[CONTROL_VAR_GROUPID] = "GroupID",
+	[CONTROL_VAR_GROUPROLE] = "GroupRole",
+#endif	
 	[CONTROL_VAR_UNKNOWN] = NULL
 };
 
@@ -160,6 +181,7 @@ static const char *aat_presetnames[] =
 	"Vendor defined",
 	NULL
 };
+
 
 static const char *aat_channels[] =
 {
@@ -202,6 +224,15 @@ static struct param_range vid_gain_range = { 0, 100, 1 };
 static struct param_range vid_black_range = { 0, 100, 1 };
 static struct param_range colortemp_range = { 0, 65535, 1 };
 static struct param_range keystone_range = { -32768, 32767, 1 };
+#ifdef GROUP
+static const char *grouprolenames[] =
+{
+	"Null",
+	"Master",
+	"Slave",
+	NULL
+};
+#endif
 
 static struct var_meta control_var_meta[] = {
 	[CONTROL_VAR_LAST_CHANGE] =		{ SENDEVENT_YES, DATATYPE_STRING, NULL, NULL },
@@ -225,6 +256,10 @@ static struct var_meta control_var_meta[] = {
 	[CONTROL_VAR_VOLUME] =			{ SENDEVENT_NO, DATATYPE_UI2, NULL, &volume_range },
 	[CONTROL_VAR_VOLUME_DB] =		{ SENDEVENT_NO, DATATYPE_I2, NULL, &volume_db_range },
 	[CONTROL_VAR_LOUDNESS] =		{ SENDEVENT_NO, DATATYPE_BOOLEAN, NULL, NULL },
+#ifdef GROUP	
+	[CONTROL_VAR_GROUPID] =			{ SENDEVENT_NO, DATATYPE_STRING, NULL, NULL },
+	[CONTROL_VAR_GROUPROLE] =			{ SENDEVENT_NO, DATATYPE_STRING, grouprolenames, NULL },
+#endif
 	[CONTROL_VAR_UNKNOWN] =			{ SENDEVENT_NO, DATATYPE_UNKNOWN, NULL, NULL }
 };
 
@@ -250,6 +285,10 @@ static const char *control_default_values[] = {
 	[CONTROL_VAR_VOLUME] = "0",
 	[CONTROL_VAR_VOLUME_DB] = "0",
 	[CONTROL_VAR_LOUDNESS] = "0",
+#ifdef GROUP
+	[CONTROL_VAR_GROUPID] = "Null",
+	[CONTROL_VAR_GROUPROLE] = "Null",
+#endif
 	[CONTROL_VAR_UNKNOWN] = NULL
 };
 
@@ -459,7 +498,35 @@ static struct argument *arguments_get_loudness[] = {
 // 	& (struct argument) { "DesiredLoudness", PARAM_DIR_IN, CONTROL_VAR_LOUDNESS },
 // 	NULL
 // };
+#ifdef GROUP
+static struct argument *arguments_set_groupid[] = {
+	& (struct argument) { "InstanceID", PARAM_DIR_IN, CONTROL_VAR_AAT_INSTANCE_ID },
+	& (struct argument) { "DesiredGroupID", PARAM_DIR_IN, CONTROL_VAR_GROUPID },
+	NULL
+};
 
+
+static struct argument *arguments_get_groupid[] = {
+	& (struct argument) { "InstanceID", PARAM_DIR_IN, CONTROL_VAR_AAT_INSTANCE_ID },
+	& (struct argument) { "CurrentGroupID", PARAM_DIR_OUT, CONTROL_VAR_GROUPID },
+	NULL
+};
+
+
+
+static struct argument *arguments_set_grouprole[] = {
+	& (struct argument) { "InstanceID", PARAM_DIR_IN, CONTROL_VAR_AAT_INSTANCE_ID },
+	& (struct argument) { "DesiredGroupRole", PARAM_DIR_IN, CONTROL_VAR_GROUPROLE },
+	NULL
+};
+
+
+static struct argument *arguments_get_grouprole[] = {
+	& (struct argument) { "InstanceID", PARAM_DIR_IN, CONTROL_VAR_AAT_INSTANCE_ID },
+	& (struct argument) { "CurrentGroupRole", PARAM_DIR_OUT, CONTROL_VAR_GROUPROLE },
+	NULL
+};
+#endif
 
 static struct argument **argument_list[] = {
 	[CONTROL_CMD_LIST_PRESETS] =        	arguments_list_presets,
@@ -497,7 +564,13 @@ static struct argument **argument_list[] = {
 	[CONTROL_CMD_GET_VOL_DBRANGE] =     	arguments_get_vol_dbrange,
 	[CONTROL_CMD_GET_LOUDNESS] =        	arguments_get_loudness,
 	//[CONTROL_CMD_SET_LOUDNESS] =        	arguments_set_loudness,
-	[CONTROL_CMD_UNKNOWN] =			NULL
+#ifdef GROUP	
+	[CONTROL_CMD_GET_GROUPID] = 			arguments_get_groupid,
+	[CONTROL_CMD_SET_GROUPID] =				arguments_set_groupid,
+	[CONTROL_CMD_GET_GROUPROLE] =			arguments_get_grouprole,
+	[CONTROL_CMD_SET_GROUPROLE] =			arguments_set_grouprole,
+#endif
+	[CONTROL_CMD_UNKNOWN] =					NULL			
 };
 
 
@@ -510,7 +583,17 @@ static void change_volume(const char *volume, const char *db_volume) {
 	replace_var(CONTROL_VAR_VOLUME, volume);
 	replace_var(CONTROL_VAR_VOLUME_DB, db_volume);
 }
+#ifdef GROUP
+static void change_groupid(const char *groupid)
+{
+	replace_var(CONTROL_VAR_GROUPID, groupid);
+}
 
+static void change_grouprole(const char *grouprole)
+{
+	replace_var(CONTROL_VAR_GROUPROLE, grouprole);
+}
+#endif
 static int cmd_obtain_variable(struct action_event *event,
 			       control_variable_t varnum,
 			       const char *paramname)
@@ -611,6 +694,7 @@ static int get_mute(struct action_event *event)
 	return cmd_obtain_variable(event, CONTROL_VAR_MUTE, "CurrentMute");
 }
 
+
 static void set_mute_toggle(int do_mute) {
 	replace_var(CONTROL_VAR_MUTE, do_mute ? "1" : "0");
 	output_set_mute(do_mute);
@@ -618,8 +702,10 @@ static void set_mute_toggle(int do_mute) {
 
 static int set_mute(struct action_event *event) {
 	const char *value = upnp_get_string(event, "DesiredMute");
+	if (value == NULL) return -1;
 	service_lock();
 	const int do_mute = atoi(value);
+	free((char *)value);
 	set_mute_toggle(do_mute);
 	replace_var(CONTROL_VAR_MUTE, do_mute ? "1" : "0");
 	service_unlock();
@@ -682,8 +768,10 @@ static float change_volume_decibel(float raw_decibel) {
 
 static int set_volume_db(struct action_event *event) {
 	const char *str_decibel_in = upnp_get_string(event, "DesiredVolume");
+	if (str_decibel_in == NULL) return -1;
 	service_lock();
 	float raw_decibel_in = atof(str_decibel_in);
+	free((char *)str_decibel_in);
 	float decibel = change_volume_decibel(raw_decibel_in);
 
 	output_set_volume(exp(decibel / 20 * log(10)));
@@ -694,6 +782,7 @@ static int set_volume_db(struct action_event *event) {
 
 static int set_volume(struct action_event *event) {
 	const char *volume = upnp_get_string(event, "DesiredVolume");
+	if (volume == NULL) return -1;
 	service_lock();
 	int volume_level = atoi(volume);  // range 0..100
 	if (volume_level < volume_range.min) volume_level = volume_range.min;
@@ -706,6 +795,7 @@ static int set_volume(struct action_event *event) {
 	const double fraction = exp(decibel / 20 * log(10));
 
 	change_volume(volume, db_volume);
+	free((char *)volume);
 	output_set_volume(fraction);
 	set_mute_toggle(volume_level == 0);
 	service_unlock();
@@ -735,6 +825,52 @@ static int get_loudness(struct action_event *event)
 	return cmd_obtain_variable(event, CONTROL_VAR_LOUDNESS,
 				   "CurrentLoudness");
 }
+#ifdef GROUP
+
+static int get_groupid(struct action_event *event)
+{
+	return cmd_obtain_variable(event, CONTROL_VAR_GROUPID, "CurrentGroupID");
+
+}
+
+static int set_groupid(struct action_event *event)
+{
+	const char *groupid = upnp_get_string(event, "DesiredGroupID");
+	if (groupid == NULL || !strlen(groupid)) return -1;
+	service_lock();
+	
+	if(!output_set_groupid(groupid)){//TODO: set to file
+		change_groupid(groupid);
+	}
+	free((char *)groupid);
+	service_unlock();
+
+	return 0;
+
+}
+static int get_grouprole(struct action_event *event)
+{
+	return cmd_obtain_variable(event, CONTROL_VAR_GROUPROLE, "CurrentGroupRole");
+
+}
+
+static int set_grouprole(struct action_event *event)
+{
+	const char *grouprole = upnp_get_string(event, "DesiredGroupRole");
+	if (grouprole == NULL || !strlen(grouprole)) return -1;	
+	service_lock();
+	
+	if(!output_set_grouprole(grouprole)){//TODO: set to file
+		change_grouprole(grouprole);
+	} 
+	free((char *)grouprole);
+	service_unlock();
+
+	return 0;
+
+}
+#endif
+
 
 
 static struct action control_actions[] = {
@@ -773,6 +909,12 @@ static struct action control_actions[] = {
 	[CONTROL_CMD_GET_VOL_DBRANGE] =     	{"GetVolumeDBRange", get_volume_dbrange}, /* optional */
 	[CONTROL_CMD_GET_LOUDNESS] =        	{"GetLoudness", get_loudness}, /* optional */
 	//[CONTROL_CMD_SET_LOUDNESS] =        	{"SetLoudness", NULL}, /* optional */
+#ifdef GROUP
+	[CONTROL_CMD_GET_GROUPID] = 			{"GetGroupID", get_groupid},
+	[CONTROL_CMD_SET_GROUPID] =				{"SetGroupID", set_groupid},
+	[CONTROL_CMD_GET_GROUPROLE] = 			{"GetGroupRole", get_grouprole},
+	[CONTROL_CMD_SET_GROUPROLE] =			{"SetGroupRole", set_grouprole},
+#endif	
 	[CONTROL_CMD_UNKNOWN] =			{NULL, NULL}
 };
 
@@ -793,11 +935,21 @@ void upnp_control_init(struct upnp_device *device) {
 
 	// Set initial volume.
 	float volume_fraction = 0;
+	char *groupid, *grouprole;
 	if (output_get_volume(&volume_fraction) == 0) {
 		Log_info("control", "Output inital volume is %f; setting "
 			 "control variables accordingly.", volume_fraction);
 		change_volume_decibel(20 * log(volume_fraction) / log(10));
 	}
+	groupid = output_get_groupid();
+	if(groupid){
+		change_groupid(groupid);
+	}
+	grouprole = output_get_grouprole();
+	if(grouprole){
+		change_grouprole(grouprole);
+	}
+	
 
 	assert(control_service_.last_change == NULL);
 	control_service_.last_change =
