@@ -49,7 +49,9 @@
 #include "git-version.h"
 #include "logging.h"
 #include "output.h"
-#include "upnp.h"
+#include <upnp/upnp.h>
+#include <upnp/ithread.h>
+#include <upnp/upnptools.h>
 #include "upnp_control.h"
 #include "upnp_control_point.h"
 #include "upnp_device.h"
