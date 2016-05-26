@@ -14,7 +14,8 @@ typedef struct{
 typedef struct{
   GstElement *playbin;
   GstElement *source;
-  GstElement *tcp_sink;
+  GstElement *rtppay;
+  GstElement *udp_sink;
 }GstData;
 
 typedef struct{
@@ -32,8 +33,9 @@ static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 {
   switch (GST_MESSAGE_TYPE (msg)) {
     case GST_MESSAGE_EOS:{
+      //gst_element_send_event(gst_data.playbin, gst_event_new_eos());
       gst_element_set_state (gst_data.playbin, GST_STATE_NULL);
-      g_print ("End-of-stream\n");
+      g_print ("End-of-stream 1\n");
       break;
     }
     case GST_MESSAGE_ERROR:{
@@ -104,14 +106,16 @@ G_MODULE_EXPORT void do_button_open_clicked(GtkButton *button, gpointer data)
 G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
 {
   gchar *uri;
-  /*if (gst_uri_is_valid (g_filename))
+  if (gst_uri_is_valid (g_filename))
     uri = g_strdup (g_filename);
   else
-  uri = gst_filename_to_uri (g_filename, NULL);*/
-  uri = g_strdup (g_filename);
+    uri = gst_filename_to_uri (g_filename, NULL);
+  //uri = g_strdup (g_filename);
   //g_object_set (gst_data.playbin, "uri", uri, NULL);
-  g_object_set (gst_data.source, "location", uri, NULL);
-  g_object_set (gst_data.tcp_sink, "port", MEDIA_PORT, NULL);
+  //g_object_set (gst_data.source, "location", uri, NULL);
+  g_print ("uri: %s\n", uri);
+  g_object_set (gst_data.source, "uri", uri, NULL);
+  g_object_set (gst_data.udp_sink, "port", MEDIA_PORT, NULL);
   g_free (uri);
 
   gst_element_set_state (gst_data.playbin, GST_STATE_PLAYING);
@@ -119,8 +123,8 @@ G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
 
 G_MODULE_EXPORT void do_button_next_clicked(GtkButton *button, gpointer data)
 {
-  //gchar *cmd = "Pause\n";
-  //send_cmd_to_server(cmd);
+  gchar *cmd = "Stop\n";
+  send_cmd_to_server(cmd);
 }
 
 G_MODULE_EXPORT void do_button_pause_clicked(GtkButton *button, gpointer data)
@@ -172,6 +176,52 @@ void ui_init()
   gtk_widget_show_all(window);
 }
 
+static void pad_added_handler (GstElement *src, GstPad *new_pad, gpointer data)
+{
+  GstPad *sink_pad = gst_element_get_static_pad (gst_data.rtppay, "sink");
+  GstPadLinkReturn ret;
+  GstCaps *new_pad_caps = NULL;
+  GstStructure *new_pad_struct = NULL;
+  const gchar *new_pad_type = NULL;
+  guint caps_size = 0, i;
+
+  g_print ("Received new pad '%s' from '%s':\n", GST_PAD_NAME (new_pad), GST_ELEMENT_NAME (src));
+  g_print ("sink_pad: '%s'\n", GST_PAD_NAME (sink_pad));
+
+  if (gst_pad_is_linked (sink_pad)) {
+    g_print ("We are already linked. Ignoring.\n");
+    goto exit;
+  }
+
+  new_pad_caps = gst_pad_get_current_caps(new_pad);
+  caps_size = gst_caps_get_size(new_pad_caps);
+  g_print ("caps_size : %d\n", caps_size);
+  for (i = 0; i < caps_size; i++)
+    {
+      new_pad_struct = gst_caps_get_structure(new_pad_caps, i);
+      new_pad_type = gst_structure_get_name(new_pad_struct);
+      g_print ("new_pad_type %d: '%s'\n", i, new_pad_type);
+      if (strstr(new_pad_type, "audio/x-raw"))
+	{
+	    ret = gst_pad_link (new_pad, sink_pad);
+	    if (GST_PAD_LINK_FAILED (ret)) {
+	      g_print ("Type is '%s' but link failed.\n", new_pad_type);
+	    } else {
+	      g_print ("Link succeeded (type '%s').\n", new_pad_type);
+	    }
+	    break;
+	}
+    }
+
+exit:
+  /* Unreference the new pad's caps, if we got them */
+  if (new_pad_caps != NULL)
+    gst_caps_unref (new_pad_caps);
+   
+  /* Unreference the sink pad */
+  gst_object_unref (sink_pad);
+}
+
 void media_init()
 {
   GstBus *bus;
@@ -179,21 +229,24 @@ void media_init()
   gst_init (NULL, NULL);
 
   gst_data.playbin = gst_pipeline_new("audio_player_client");
-  gst_data.source = gst_element_factory_make ("filesrc", "source");
-  gst_data.tcp_sink = gst_element_factory_make ("tcpclientsink", "tcp_sink");
+  gst_data.source = gst_element_factory_make ("uridecodebin", "source");
+  gst_data.rtppay = gst_element_factory_make ("rtpgstpay", "rtppay");
+  gst_data.udp_sink = gst_element_factory_make ("udpsink", "udp_sink");
 
-  if (!gst_data.playbin || !gst_data.source || !gst_data.tcp_sink)
+  if (!gst_data.playbin || !gst_data.source || !gst_data.rtppay || !gst_data.udp_sink)
     {
       g_print ("Not all elements could be created.\n");
     }
 
-  gst_bin_add_many (GST_BIN (gst_data.playbin), gst_data.source, gst_data.tcp_sink, NULL);
+  gst_bin_add_many (GST_BIN (gst_data.playbin), gst_data.source, gst_data.rtppay, gst_data.udp_sink, NULL);
 
-  if (gst_element_link_many (gst_data.source, gst_data.tcp_sink, NULL) != TRUE)
+  if (gst_element_link_many (gst_data.rtppay, gst_data.udp_sink, NULL) != TRUE)
     {
       g_print ("Elements could not be linked.\n");
       gst_object_unref (gst_data.playbin);
-    }
+      }
+  g_object_set (gst_data.udp_sink, "port", MEDIA_PORT, NULL);
+  g_signal_connect (gst_data.source, "pad-added", G_CALLBACK (pad_added_handler), NULL);
 
   bus = gst_element_get_bus (gst_data.playbin);
   gst_bus_add_watch (bus, bus_call, NULL);

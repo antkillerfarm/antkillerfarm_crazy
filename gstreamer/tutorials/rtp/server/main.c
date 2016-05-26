@@ -10,6 +10,7 @@
 typedef struct{
   GstElement *playbin;
   GstElement *source;
+  GstElement *rtpdepay;
   GstElement *decode_bin;
   GstElement *audio_sink;
 }GstData;
@@ -108,24 +109,34 @@ void media_init()
   gst_init (NULL, NULL);
 
   gst_data.playbin = gst_pipeline_new("audio_player_server");
-  gst_data.source = gst_element_factory_make ("tcpserversrc", "source");
+  gst_data.source = gst_element_factory_make ("udpsrc", "source");
+  gst_data.rtpdepay = gst_element_factory_make ("rtpgstdepay", "rtpdepay");
   gst_data.decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
   gst_data.audio_sink = gst_element_factory_make ("autoaudiosink", "audio_sink");
 
-  if (!gst_data.playbin || !gst_data.source || !gst_data.decode_bin || !gst_data.audio_sink)
+  if (!gst_data.playbin || !gst_data.source || !gst_data.rtpdepay || !gst_data.decode_bin || !gst_data.audio_sink)
     {
       g_print ("Not all elements could be created.\n");
     }
 
-  gst_bin_add_many (GST_BIN (gst_data.playbin), gst_data.source, gst_data.decode_bin, gst_data.audio_sink, NULL);
+  gst_bin_add_many (GST_BIN (gst_data.playbin), gst_data.source, gst_data.rtpdepay, gst_data.decode_bin, gst_data.audio_sink, NULL);
 
-  if (gst_element_link_many (gst_data.source, gst_data.decode_bin, NULL) != TRUE)
+  if (gst_element_link_many (gst_data.source, gst_data.rtpdepay, gst_data.decode_bin, NULL) != TRUE)
     {
       g_print ("Elements could not be linked.\n");
       gst_object_unref (gst_data.playbin);
     }
 
   g_object_set (gst_data.source, "port", MEDIA_PORT, NULL);
+
+  GstCaps *caps = gst_caps_new_simple ("application/x-rtp",
+				       "media", G_TYPE_STRING, "application",
+				       "payload", G_TYPE_INT, 96,
+				       "clock-rate", G_TYPE_INT, 90000,
+				       "encoding-name", G_TYPE_STRING, "X-GST",
+				       NULL);
+  g_object_set (gst_data.source, "caps", caps, NULL);
+  gst_caps_unref (caps);
   g_signal_connect (gst_data.decode_bin, "pad-added", G_CALLBACK (pad_added_handler), NULL);
 
   bus = gst_element_get_bus (gst_data.playbin);
@@ -175,7 +186,7 @@ void cmd_do_play(gchar **arg_strv, gint arg_num)
   g_print ("%s\n", __func__);
   if (gst_element_set_state(gst_data.playbin, GST_STATE_PLAYING) ==
       GST_STATE_CHANGE_FAILURE) {
-    g_print("gstreamer", "setting play state failed (2)");
+    g_print("gstreamer setting play state failed (2)\n");
   }
 }
 
@@ -184,13 +195,14 @@ void cmd_do_pause(gchar **arg_strv, gint arg_num)
   g_print ("%s\n", __func__);
   if (gst_element_set_state(gst_data.playbin, GST_STATE_PAUSED) ==
       GST_STATE_CHANGE_FAILURE) {
-    g_print("gstreamer", "setting play state failed (3)");
+    g_print("gstreamer setting play state failed (3)\n");
   }
 }
 
 void cmd_do_stop(gchar **arg_strv, gint arg_num)
 {
   g_print ("%s\n", __func__);
+  gst_element_set_state (gst_data.playbin, GST_STATE_NULL);
 }
 
 CommandFormat cmd_format[] =

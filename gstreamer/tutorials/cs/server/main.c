@@ -175,7 +175,7 @@ void cmd_do_play(gchar **arg_strv, gint arg_num)
   g_print ("%s\n", __func__);
   if (gst_element_set_state(gst_data.playbin, GST_STATE_PLAYING) ==
       GST_STATE_CHANGE_FAILURE) {
-    g_print("gstreamer", "setting play state failed (2)");
+    g_print("gstreamer setting play state failed (2)\n");
   }
 }
 
@@ -184,7 +184,7 @@ void cmd_do_pause(gchar **arg_strv, gint arg_num)
   g_print ("%s\n", __func__);
   if (gst_element_set_state(gst_data.playbin, GST_STATE_PAUSED) ==
       GST_STATE_CHANGE_FAILURE) {
-    g_print("gstreamer", "setting play state failed (3)");
+    g_print("gstreamer setting play state failed (3)\n");
   }
 }
 
