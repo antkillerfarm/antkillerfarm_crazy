@@ -193,11 +193,18 @@ void cmd_do_stop(gchar **arg_strv, gint arg_num)
   g_print ("%s\n", __func__);
 }
 
+void cmd_do_eos(gchar **arg_strv, gint arg_num)
+{
+  gst_element_send_event(gst_data.playbin, gst_event_new_eos());
+  g_print ("%s\n", __func__);
+}
+
 CommandFormat cmd_format[] =
   {
     {"Play", 1, cmd_do_play},
     {"Pause", 1, cmd_do_pause},
-    {"Stop", 1, cmd_do_stop}
+    {"Stop", 1, cmd_do_stop},
+    {"EOS", 1, cmd_do_eos}
   };
 
 gboolean are_cmd_args_valid(gchar **arg_strv, gint arg_num)
