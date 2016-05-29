@@ -37,6 +37,11 @@
 #include <totem-pl-parser.h>
 
 #include "logging.h"
+#include <upnp/upnp.h>
+#include <upnp/ithread.h>
+#include <upnp/upnptools.h>
+#include "upnp_control.h"
+#include "upnp_control_point.h"
 #include "upnp_connmgr.h"
 #include "upnp_transport.h"
 #include "output_module.h"
@@ -62,6 +67,9 @@ typedef struct{
 PlayListInfo play_list_info = {0};
 const gchar play_list_suffix[] = ".m3u .pls .xspf";
 AppState app_state = {0};
+GstData gst_data = {0};
+
+int g_device_play_mode = DEVICE_PLAY_MODE_SINGLE;
 
 void load_playlist(const  char* file_name);
 void load_playlist_file(const char* file_name);
@@ -169,8 +177,7 @@ static void scan_mime_list(void)
 	}
 }
 
-
-static GstElement *player_ = NULL;
+GstElement *player_ = NULL;
 static char *gsuri_ = NULL;         // locally strdup()ed
 static char *gs_next_uri_ = NULL;   // locally strdup()ed
 static struct SongMetaData song_meta_;
@@ -568,7 +575,6 @@ static GOptionEntry option_entries[] = {
         { NULL }
 };
 
-
 static int output_gstreamer_add_options(GOptionContext *ctx)
 {
 	GOptionGroup *option_group;
@@ -626,8 +632,6 @@ static int output_gstreamer_set_volume(float value) {
 	return 0;
 }
 
-
-
 static int output_gstreamer_get_mute(int *m) {
 	gboolean val;
 	g_object_get(player_, "mute", &val, NULL);
@@ -668,13 +672,8 @@ static void prepare_next_stream(GstElement *obj, gpointer userdata) {
 	}
 }
 
-static int output_gstreamer_init(void)
+static int output_gstreamer_init_single(void)
 {
-	GstBus *bus;
-
-	SongMetaData_init(&song_meta_);
-	scan_mime_list();
-
 #if (GST_VERSION_MAJOR < 1)
 	const char player_element_name[] = "playbin2";
 #else
@@ -683,6 +682,29 @@ static int output_gstreamer_init(void)
 
 	player_ = gst_element_factory_make(player_element_name, "play");
 	assert(player_ != NULL);
+
+	return 0;
+}
+
+static int output_gstreamer_init(void)
+{
+	GstBus *bus;
+
+	SongMetaData_init(&song_meta_);
+	scan_mime_list();
+
+	if (g_device_play_mode == DEVICE_PLAY_MODE_MASTER)
+	{
+		output_gstreamer_init_single();
+	}
+	else if (g_device_play_mode == DEVICE_PLAY_MODE_SLAVE)
+	{
+		output_gstreamer_init_single();
+	}
+	else
+	{
+		output_gstreamer_init_single();
+	}
 
 	bus = gst_pipeline_get_bus(GST_PIPELINE(player_));
 	gst_bus_add_watch(bus, my_bus_callback, NULL);

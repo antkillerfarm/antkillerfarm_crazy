@@ -24,6 +24,18 @@
 #ifndef _OUTPUT_GSTREAMER_H
 #define _OUTPUT_GSTREAMER_H
 
+#define MEDIA_PORT 1500
+
+typedef struct{
+	GstElement *audio_sink;
+	GstElement *udp_sink;
+}GstData;
+
 extern struct output_module gstreamer_output;
+extern GstData gst_data;
+extern GstElement *player_;
+
+int output_gstreamer_init_master(void);
+int output_gstreamer_init_slave(void);
 
 #endif /*  _OUTPUT_GSTREAMER_H */

@@ -7,6 +7,10 @@
 
 #define EVENT_TYPE_DATA_MACRO(x) x, #x
 
+#define DEVICE_PLAY_MODE_SINGLE 0
+#define DEVICE_PLAY_MODE_MASTER 1
+#define DEVICE_PLAY_MODE_SLAVE 2
+
 ///////////////////////////////////
 // Macro needed be modified by usage
 

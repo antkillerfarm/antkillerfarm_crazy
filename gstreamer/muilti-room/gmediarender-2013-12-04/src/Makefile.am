@@ -16,7 +16,7 @@ gmediarender_SOURCES = main.c git-version.h \
 
 if HAVE_GST
 gmediarender_SOURCES += \
-	output_gstreamer.c  output_gstreamer.h
+	output_gstreamer.c output_gstreamer_master.c output_gstreamer_slave.c output_gstreamer.h
 endif
 
 main.c : git-version.h
