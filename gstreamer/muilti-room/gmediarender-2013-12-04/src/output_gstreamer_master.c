@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <gst/gst.h>
+#include <upnp/upnp.h>
+#include <upnp/ithread.h>
+#include <upnp/upnptools.h>
 #include "output_module.h"
 #include "output_gstreamer.h"
 
@@ -91,14 +94,14 @@ int add_slave_to_pipeline(char* ip_addr)
 
 	gst_bin_add_many (GST_BIN (player_), queue1, tcp_sink, NULL);
 	
-	if (gst_element_link_many (gst_data.tee, queue0, tcp_sink, NULL) != TRUE)
+	if (gst_element_link_many (gst_data.tee, queue1, tcp_sink, NULL) != TRUE)
 	{
 		g_print ("Elements could not be linked. 2\n");
-		gst_object_unref (gst_data.playbin);
+		//gst_object_unref (player_);
 	}
 
 	g_object_set (tcp_sink, "host", ip_addr, NULL);
-	g_print ("tcpserversrc %s\n", UpnpGetServerIpAddress());
+	g_print ("add_slave_to_pipeline %s\n", ip_addr);
 	g_object_set (tcp_sink, "port", MEDIA_PORT, NULL);
 	return 0;
 }

@@ -442,39 +442,46 @@ static gboolean my_bus_callback(GstBus * bus, GstMessage * msg,
 	switch (msgType) {
 	case GST_MESSAGE_EOS:
 		Log_info("gstreamer", "%s: End-of-stream", msgSrcName);
-	        if (app_state.is_play_list)
+		if (g_device_play_mode == DEVICE_PLAY_MODE_SLAVE)
 		{
-			free(gsuri_);
-			play_list_info.current_idx = get_next_current_idx();
-			MediaInfo *p_media_info = g_slist_nth_data(play_list_info.play_list, play_list_info.current_idx);
-			char * uri0 = p_media_info->uri;
-			gsuri_ = (uri0 && *uri0) ? strdup(uri0) : NULL;
-			play_flag = TRUE;
+			gst_element_set_state (player_, GST_STATE_NULL);
+			gst_element_set_state (player_, GST_STATE_PLAYING);
 		}
 		else
 		{
-			if (gs_next_uri_ != NULL) {
-				// If playbin does not support gapless (old
-				// versions didn't), this will trigger.
+			if (app_state.is_play_list)
+			{
 				free(gsuri_);
-				gsuri_ = gs_next_uri_;
-				gs_next_uri_ = NULL;
+				play_list_info.current_idx = get_next_current_idx();
+				MediaInfo *p_media_info = g_slist_nth_data(play_list_info.play_list, play_list_info.current_idx);
+				char * uri0 = p_media_info->uri;
+				gsuri_ = (uri0 && *uri0) ? strdup(uri0) : NULL;
 				play_flag = TRUE;
-			} else if (play_trans_callback_) {
-				play_trans_callback_(PLAY_STOPPED);
 			}
-		}
+			else
+			{
+				if (gs_next_uri_ != NULL) {
+					// If playbin does not support gapless (old
+					// versions didn't), this will trigger.
+					free(gsuri_);
+					gsuri_ = gs_next_uri_;
+					gs_next_uri_ = NULL;
+					play_flag = TRUE;
+				} else if (play_trans_callback_) {
+					play_trans_callback_(PLAY_STOPPED);
+				}
+			}
 		
-		if (play_flag)
-		{
-			gst_element_set_state(player_, GST_STATE_READY);
-			g_object_set(G_OBJECT(player_), "uri", gsuri_, NULL);
-			gst_element_set_state(player_, GST_STATE_PLAYING);
-			if (play_trans_callback_) {
-				play_trans_callback_(PLAY_STARTED_NEXT_STREAM);
+			if (play_flag)
+			{
+				gst_element_set_state(player_, GST_STATE_READY);
+				g_object_set(G_OBJECT(player_), "uri", gsuri_, NULL);
+				gst_element_set_state(player_, GST_STATE_PLAYING);
+				if (play_trans_callback_) {
+					play_trans_callback_(PLAY_STARTED_NEXT_STREAM);
+				}
 			}
 		}
-
 		break;
 
 	case GST_MESSAGE_ERROR: {
