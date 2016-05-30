@@ -37,7 +37,7 @@ static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 {
   switch (GST_MESSAGE_TYPE (msg)) {
     case GST_MESSAGE_EOS:{
-      gst_element_set_state (gst_data.playbin, GST_STATE_NULL);
+      gst_element_set_state (gst_data.playbin, GST_STATE_READY);
       g_print ("End-of-stream\n");
       break;
     }
@@ -115,8 +115,8 @@ G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
   uri = gst_filename_to_uri (g_filename, NULL);*/
   uri = g_strdup (g_filename);
   //g_object_set (gst_data.playbin, "uri", uri, NULL);
+  gst_element_set_state(gst_data.playbin, GST_STATE_READY);
   g_object_set (gst_data.source, "location", uri, NULL);
-  g_object_set (gst_data.tcp_sink, "port", MEDIA_PORT, NULL);
   g_free (uri);
 
   gst_element_set_state (gst_data.playbin, GST_STATE_PLAYING);
@@ -124,7 +124,7 @@ G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
 
 G_MODULE_EXPORT void do_button_next_clicked(GtkButton *button, gpointer data)
 {
-  gchar *cmd = "EOS\n";
+  gchar *cmd = "Stop\n";
   send_cmd_to_server(cmd);
 }
 
@@ -132,12 +132,14 @@ G_MODULE_EXPORT void do_button_pause_clicked(GtkButton *button, gpointer data)
 {
   gchar *cmd = "Pause\n";
   send_cmd_to_server(cmd);
+  gst_element_set_state(gst_data.playbin, GST_STATE_PAUSED);
 }
 
 G_MODULE_EXPORT void do_button_continue_clicked(GtkButton *button, gpointer data)
 {
   gchar *cmd = "Play\n";
   send_cmd_to_server(cmd);
+  gst_element_set_state(gst_data.playbin, GST_STATE_PLAYING);
 }
 
 void ui_init()
@@ -263,6 +265,8 @@ void media_init()
       gst_object_unref (gst_data.playbin);
     }
 
+  g_object_set (gst_data.tcp_sink, "port", MEDIA_PORT, NULL);
+  
   g_signal_connect (gst_data.decode_bin, "pad-added", G_CALLBACK (pad_added_handler), NULL);
   
   bus = gst_element_get_bus (gst_data.playbin);

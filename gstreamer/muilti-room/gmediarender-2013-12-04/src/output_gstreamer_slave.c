@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <gst/gst.h>
+#include <upnp/upnp.h>
+#include <upnp/ithread.h>
+#include <upnp/upnptools.h>
 #include "output_module.h"
 #include "output_gstreamer.h"
 
@@ -51,6 +54,7 @@ exit:
 	gst_object_unref (sink_pad);
 }
 
+#if 0
 int output_gstreamer_init_slave(void)
 {
         GstElement *source;
@@ -82,3 +86,39 @@ int output_gstreamer_init_slave(void)
 
 	return 0;
 }
+#endif
+
+#if 1
+int output_gstreamer_init_slave(void)
+{
+        GstElement *source;
+	GstElement *decode_bin;
+
+	player_ = gst_pipeline_new("audio_player_slave");
+	source = gst_element_factory_make ("tcpserversrc", "source");
+	decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
+        gst_data.audio_sink = gst_element_factory_make ("autoaudiosink", "audio_sink");
+	
+	if (!player_ || !source || !decode_bin || !gst_data.audio_sink)
+	{
+		g_print ("Not all elements could be created.\n");
+	}
+
+	gst_bin_add_many (GST_BIN (player_), source, decode_bin, gst_data.audio_sink, NULL);
+
+	if (gst_element_link_many (source, decode_bin, NULL) != TRUE)
+	{
+		g_print ("Elements could not be linked.\n");
+		gst_object_unref (player_);
+	}
+	
+	g_object_set (source, "host", UpnpGetServerIpAddress(), NULL);
+	g_print ("tcpserversrc %s\n", UpnpGetServerIpAddress());
+	g_object_set (source, "port", MEDIA_PORT, NULL);
+	
+	g_signal_connect (player_, "pad-added", G_CALLBACK (slave_pad_added_handler), NULL);
+
+	return 0;
+}
+#endif
+

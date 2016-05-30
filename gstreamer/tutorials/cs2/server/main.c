@@ -33,6 +33,7 @@ static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
   switch (GST_MESSAGE_TYPE (msg)) {
     case GST_MESSAGE_EOS:{
       gst_element_set_state (gst_data.playbin, GST_STATE_NULL);
+      gst_element_set_state (gst_data.playbin, GST_STATE_PLAYING);
       g_print ("End-of-stream\n");
       break;
     }
@@ -191,6 +192,7 @@ void cmd_do_pause(gchar **arg_strv, gint arg_num)
 void cmd_do_stop(gchar **arg_strv, gint arg_num)
 {
   g_print ("%s\n", __func__);
+  gst_element_set_state (gst_data.playbin, GST_STATE_NULL);
 }
 
 void cmd_do_eos(gchar **arg_strv, gint arg_num)

@@ -51,6 +51,11 @@ exit:
 	gst_object_unref (sink_pad);
 }
 
+# if 0
+int add_slave_to_pipeline(char* ip_addr)
+{
+	return 0;
+}
 
 int output_gstreamer_init_master(void)
 {
@@ -74,3 +79,63 @@ int output_gstreamer_init_master(void)
 	g_signal_connect (player_, "pad-added", G_CALLBACK (master_pad_added_handler), NULL);
 	return 0;
 }
+#endif
+
+# if 1
+int add_slave_to_pipeline(char* ip_addr)
+{
+	GstElement *queue1;
+	GstElement *tcp_sink;
+        queue1 = gst_element_factory_make ("queue", "queue1");
+	tcp_sink = gst_element_factory_make ("tcpclientsink", "tcp_sink");
+
+	gst_bin_add_many (GST_BIN (player_), queue1, tcp_sink, NULL);
+	
+	if (gst_element_link_many (gst_data.tee, queue0, tcp_sink, NULL) != TRUE)
+	{
+		g_print ("Elements could not be linked. 2\n");
+		gst_object_unref (gst_data.playbin);
+	}
+
+	g_object_set (tcp_sink, "host", ip_addr, NULL);
+	g_print ("tcpserversrc %s\n", UpnpGetServerIpAddress());
+	g_object_set (tcp_sink, "port", MEDIA_PORT, NULL);
+	return 0;
+}
+
+int output_gstreamer_init_master(void)
+{
+	GstElement *source;
+	GstElement *queue0;
+	GstElement *decode_bin;
+
+	player_ = gst_pipeline_new("audio_player_master");
+	source = gst_element_factory_make ("giosrc", "source");
+	gst_data.tee = gst_element_factory_make ("tee", "tee");
+	queue0 = gst_element_factory_make ("queue", "queue0");
+	decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
+	gst_data.audio_sink = gst_element_factory_make ("autoaudiosink", "audio_sink");
+
+	if (!player_ || !source || !gst_data.tee || !queue0 || !decode_bin || !gst_data.audio_sink)
+	{
+		g_print ("Not all elements could be created.\n");
+	}
+
+	gst_bin_add_many (GST_BIN (player_), source, gst_data.tee, queue0, decode_bin, gst_data.audio_sink, NULL);
+
+	if (gst_element_link_many (gst_data.source, gst_data.tee, NULL) != TRUE)
+	{
+		g_print ("Elements could not be linked. 1\n");
+		//gst_object_unref (player_);
+	}
+
+	if (gst_element_link_many (gst_data.tee, gst_data.queue0, gst_data.decode_bin, NULL) != TRUE)
+	{
+		g_print ("Elements could not be linked. 2\n");
+		//gst_object_unref (player_);
+	}
+	
+	g_signal_connect (player_, "pad-added", G_CALLBACK (master_pad_added_handler), NULL);
+	return 0;
+}
+#endif
