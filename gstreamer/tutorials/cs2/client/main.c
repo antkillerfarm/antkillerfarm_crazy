@@ -5,6 +5,7 @@
 #define MAX_PATH 256
 #define MEDIA_PORT 1500
 #define CONTROL_PORT 1501
+#define SERVER_IP "192.168.3.125"
 
 typedef struct{
   GtkStatusbar *statusbar;
@@ -230,6 +231,7 @@ void media_init()
   GstBus *bus;
 
   gst_init (NULL, NULL);
+  //gst_debug_set_default_threshold(GST_LEVEL_MEMDUMP);
 
   gst_data.playbin = gst_pipeline_new("audio_player_client");
   gst_data.source = gst_element_factory_make ("filesrc", "source");
@@ -264,7 +266,7 @@ void media_init()
       g_print ("Elements could not be linked. 3\n");
       gst_object_unref (gst_data.playbin);
     }
-
+  g_object_set (gst_data.tcp_sink, "host", SERVER_IP, NULL);
   g_object_set (gst_data.tcp_sink, "port", MEDIA_PORT, NULL);
   
   g_signal_connect (gst_data.decode_bin, "pad-added", G_CALLBACK (pad_added_handler), NULL);
@@ -289,7 +291,7 @@ void cortrol_service_init()
 
     /* connect to the host */
   control_service_data.connection = g_socket_client_connect_to_host (control_service_data.client,
-                                               (gchar*)"localhost",
+                                                SERVER_IP,
                                                 CONTROL_PORT,
                                                 NULL,
                                                 &error);

@@ -6,6 +6,7 @@
 #define MAX_PATH 256
 #define MEDIA_PORT 1500
 #define CONTROL_PORT 1501
+#define SERVER_IP "192.168.3.125"
 
 typedef struct{
   GstElement *playbin;
@@ -126,6 +127,7 @@ void media_init()
       gst_object_unref (gst_data.playbin);
     }
 
+  g_object_set (gst_data.source, "host", SERVER_IP, NULL);
   g_object_set (gst_data.source, "port", MEDIA_PORT, NULL);
   g_signal_connect (gst_data.decode_bin, "pad-added", G_CALLBACK (pad_added_handler), NULL);
 
@@ -329,11 +331,16 @@ void cortrol_service_init()
   /* create the new socketservice */
   control_service_data.service = g_socket_service_new ();
 
+  GInetAddress *address = g_inet_address_new_from_string(SERVER_IP);
+  GSocketAddress *socket_address = g_inet_socket_address_new(address, CONTROL_PORT);
+  g_socket_listener_add_address(G_SOCKET_LISTENER(control_service_data.service), socket_address, G_SOCKET_TYPE_STREAM,
+          G_SOCKET_PROTOCOL_TCP, NULL, NULL, NULL);
+
   /* connect to the port */
-  g_socket_listener_add_inet_port ((GSocketListener*)control_service_data.service,
+  /*g_socket_listener_add_inet_port ((GSocketListener*)control_service_data.service,
                                     CONTROL_PORT,
                                     NULL,
-                                    &error);
+                                    &error);*/
 
   /* don't forget to check for errors */
   if (error != NULL)
