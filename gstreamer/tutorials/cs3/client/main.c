@@ -36,8 +36,8 @@ GstData gst_data;
 
 ControlServiceData control_service_data[] =
 {
-  {"192.168.3.125", NULL, NULL},
-  {"192.168.3.116", NULL, NULL},
+  {"192.168.3.102", NULL, NULL},
+  {"192.168.3.103", NULL, NULL},
 };
 
 static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
@@ -237,14 +237,21 @@ exit:
   gst_object_unref (sink_pad);
 }
 
+int server_num = 0;
+
 int add_server_to_pipeline(char* ip_addr)
 {
 	GstElement *queue1;
 	GstElement *tcp_sink;
-        queue1 = gst_element_factory_make ("queue", "queue1");
-	tcp_sink = gst_element_factory_make ("tcpclientsink", "tcp_sink");
+	char name[20];
+	
+	sprintf(name, "queue%d", server_num);
+	queue1 = gst_element_factory_make ("queue", name);
+	sprintf(name, "tcp_sink%d", server_num);
+	tcp_sink = gst_element_factory_make ("tcpclientsink", name);
+	server_num++;
 
-	gst_bin_add_many (GST_BIN (gst_data.decode_bin), queue1, tcp_sink, NULL);
+	gst_bin_add_many (GST_BIN (gst_data.playbin), queue1, tcp_sink, NULL);
 	
 	if (gst_element_link_many (gst_data.tee, queue1, tcp_sink, NULL) != TRUE)
 	{
@@ -268,7 +275,7 @@ void media_init()
   gst_data.playbin = gst_pipeline_new("audio_player_client");
   gst_data.source = gst_element_factory_make ("filesrc", "source");
   gst_data.tee = gst_element_factory_make ("tee", "tee");
-  gst_data.queue0 = gst_element_factory_make ("queue", "queue0");
+  gst_data.queue0 = gst_element_factory_make ("queue", "queue");
   gst_data.decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
   gst_data.audio_sink = gst_element_factory_make ("autoaudiosink", "audio_sink");
 

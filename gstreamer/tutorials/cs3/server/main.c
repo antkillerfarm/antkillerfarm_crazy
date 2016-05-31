@@ -1,4 +1,8 @@
 #include <string.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <net/if.h>
+#include <arpa/inet.h>
 #include <glib.h>
 #include <gio/gio.h>
 #include <gst/gst.h>
@@ -6,7 +10,7 @@
 #define MAX_PATH 256
 #define MEDIA_PORT 1500
 #define CONTROL_PORT 1501
-#define SERVER_IP "192.168.3.125"
+#define NET_DEV "enp0s8"
 
 typedef struct{
   GstElement *playbin;
@@ -28,6 +32,7 @@ typedef struct{
 
 GstData gst_data;
 ControlServiceData control_service_data;
+struct in_addr local_ip;
 
 static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 {
@@ -103,10 +108,32 @@ exit:
   gst_object_unref (sink_pad);
 }
 
+void get_local_ip_addr(void)
+{
+  int fd = -1;
+  struct ifreq ethreq;
+  struct sockaddr_in ipaddr;
+  
+  fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  if (fd < 0) 
+    return;
+
+  memset(&ethreq, 0, sizeof(ethreq));
+  strncpy(ethreq.ifr_ifrn.ifrn_name, NET_DEV, IF_NAMESIZE);
+
+  if (ioctl(fd, SIOCGIFADDR, &ethreq) == 0){
+    memcpy(&ipaddr, &ethreq.ifr_addr, sizeof(ipaddr));
+    memcpy(&local_ip, &ipaddr.sin_addr, sizeof(struct in_addr));
+    g_print ("local_ip: %s\n", inet_ntoa(local_ip));
+  }
+  close(fd);
+}
+
 void media_init()
 {
   GstBus *bus;
 
+  get_local_ip_addr();
   gst_init (NULL, NULL);
 
   gst_data.playbin = gst_pipeline_new("audio_player_server");
@@ -127,7 +154,7 @@ void media_init()
       gst_object_unref (gst_data.playbin);
     }
 
-  g_object_set (gst_data.source, "host", SERVER_IP, NULL);
+  g_object_set (gst_data.source, "host", inet_ntoa(local_ip), NULL);
   g_object_set (gst_data.source, "port", MEDIA_PORT, NULL);
   g_signal_connect (gst_data.decode_bin, "pad-added", G_CALLBACK (pad_added_handler), NULL);
 
@@ -332,7 +359,7 @@ void cortrol_service_init()
   /* create the new socketservice */
   control_service_data.service = g_socket_service_new ();
 
-  GInetAddress *address = g_inet_address_new_from_string(SERVER_IP);
+  GInetAddress *address = g_inet_address_new_from_string(inet_ntoa(local_ip));
   GSocketAddress *socket_address = g_inet_socket_address_new(address, CONTROL_PORT);
   g_socket_listener_add_address(G_SOCKET_LISTENER(control_service_data.service), socket_address, G_SOCKET_TYPE_STREAM,
           G_SOCKET_PROTOCOL_TCP, NULL, NULL, NULL);
