@@ -5,7 +5,7 @@
 #define MAX_PATH 256
 #define MEDIA_PORT 1500
 #define CONTROL_PORT 1501
-#define SERVER_IP "192.168.3.125"
+//#define SERVER_IP "192.168.3.125"
 
 typedef struct{
   GtkStatusbar *statusbar;
@@ -17,13 +17,12 @@ typedef struct{
   GstElement *source;
   GstElement *tee;
   GstElement *queue0;
-  GstElement *queue1;
   GstElement *decode_bin;
-  GstElement *tcp_sink;
   GstElement *audio_sink;
 }GstData;
 
 typedef struct{
+  char *server_ip;
   GSocketConnection *connection;
   GSocketClient *client;
 }ControlServiceData;
@@ -32,7 +31,14 @@ char g_filename[MAX_PATH];
 
 MainWindowSubWidget main_window_sub_widget;
 GstData gst_data;
-ControlServiceData control_service_data;
+
+#define SERVER_LIST_NUM 2
+
+ControlServiceData control_service_data[] =
+{
+  {"192.168.3.125", NULL, NULL},
+  {"192.168.3.116", NULL, NULL},
+};
 
 static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 {
@@ -66,19 +72,23 @@ void send_cmd_to_server(gchar *cmd)
 {
   GError * error = NULL;
 
-  /* use the connection */
-  //GInputStream * istream = g_io_stream_get_input_stream (G_IO_STREAM (control_service_data.connection));
-  GOutputStream * ostream = g_io_stream_get_output_stream (G_IO_STREAM (control_service_data.connection));
-  g_output_stream_write  (ostream,
-                          cmd, /* your message goes here */
-                          strlen(cmd), /* length of your message */
-                          NULL,
-                          &error);
-  /* don't forget to check for errors */
-  if (error != NULL)
-  {
-    g_print ("%s", error->message);
-  }
+  int i;
+  for (i = 0; i < SERVER_LIST_NUM; i++)
+    {
+      /* use the connection */
+      //GInputStream * istream = g_io_stream_get_input_stream (G_IO_STREAM (control_service_data[i].connection));
+      GOutputStream * ostream = g_io_stream_get_output_stream (G_IO_STREAM (control_service_data[i].connection));
+      g_output_stream_write  (ostream,
+			      cmd, /* your message goes here */
+			      strlen(cmd), /* length of your message */
+			      NULL,
+			      &error);
+      /* don't forget to check for errors */
+      if (error != NULL)
+	{
+	  g_print ("%s", error->message);
+	}
+    }
 }
 
 G_MODULE_EXPORT void do_button_open_clicked(GtkButton *button, gpointer data)
@@ -227,6 +237,27 @@ exit:
   gst_object_unref (sink_pad);
 }
 
+int add_server_to_pipeline(char* ip_addr)
+{
+	GstElement *queue1;
+	GstElement *tcp_sink;
+        queue1 = gst_element_factory_make ("queue", "queue1");
+	tcp_sink = gst_element_factory_make ("tcpclientsink", "tcp_sink");
+
+	gst_bin_add_many (GST_BIN (gst_data.decode_bin), queue1, tcp_sink, NULL);
+	
+	if (gst_element_link_many (gst_data.tee, queue1, tcp_sink, NULL) != TRUE)
+	{
+		g_print ("Elements could not be linked. 2\n");
+		//gst_object_unref (player_);
+	}
+
+	g_object_set (tcp_sink, "host", ip_addr, NULL);
+	g_print ("add_server_to_pipeline %s\n", ip_addr);
+	g_object_set (tcp_sink, "port", MEDIA_PORT, NULL);
+	return 0;
+}
+
 void media_init()
 {
   GstBus *bus;
@@ -238,17 +269,15 @@ void media_init()
   gst_data.source = gst_element_factory_make ("filesrc", "source");
   gst_data.tee = gst_element_factory_make ("tee", "tee");
   gst_data.queue0 = gst_element_factory_make ("queue", "queue0");
-  gst_data.queue1 = gst_element_factory_make ("queue", "queue1");
   gst_data.decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
   gst_data.audio_sink = gst_element_factory_make ("autoaudiosink", "audio_sink");
-  gst_data.tcp_sink = gst_element_factory_make ("tcpclientsink", "tcp_sink");
 
-  if (!gst_data.playbin || !gst_data.source || !gst_data.tcp_sink || !gst_data.tee || !gst_data.queue0 || !gst_data.queue1 || !gst_data.decode_bin || !gst_data.audio_sink)
+  if (!gst_data.playbin || !gst_data.source || !gst_data.tee || !gst_data.queue0 || !gst_data.decode_bin || !gst_data.audio_sink)
     {
       g_print ("Not all elements could be created.\n");
     }
 
-  gst_bin_add_many (GST_BIN (gst_data.playbin), gst_data.source, gst_data.tcp_sink, gst_data.tee, gst_data.queue0, gst_data.queue1, gst_data.decode_bin, gst_data.audio_sink, NULL);
+  gst_bin_add_many (GST_BIN (gst_data.playbin), gst_data.source, gst_data.tee, gst_data.queue0, gst_data.decode_bin, gst_data.audio_sink, NULL);
 
   if (gst_element_link_many (gst_data.source, gst_data.tee, NULL) != TRUE)
     {
@@ -256,19 +285,17 @@ void media_init()
       gst_object_unref (gst_data.playbin);
     }
 
-  if (gst_element_link_many (gst_data.tee, gst_data.queue0, gst_data.tcp_sink, NULL) != TRUE)
+  if (gst_element_link_many (gst_data.tee, gst_data.queue0, gst_data.decode_bin, NULL) != TRUE)
     {
       g_print ("Elements could not be linked. 2\n");
       gst_object_unref (gst_data.playbin);
     }
 
-  if (gst_element_link_many (gst_data.tee, gst_data.queue1, gst_data.decode_bin, NULL) != TRUE)
+  int i;
+  for (i = 0; i < SERVER_LIST_NUM; i++)
     {
-      g_print ("Elements could not be linked. 3\n");
-      gst_object_unref (gst_data.playbin);
+      add_server_to_pipeline(control_service_data[i].server_ip);
     }
-  g_object_set (gst_data.tcp_sink, "host", SERVER_IP, NULL);
-  g_object_set (gst_data.tcp_sink, "port", MEDIA_PORT, NULL);
   
   g_signal_connect (gst_data.decode_bin, "pad-added", G_CALLBACK (pad_added_handler), NULL);
   
@@ -286,34 +313,39 @@ void media_cleanup()
 void cortrol_service_init()
 {
   GError * error = NULL;
-  
-  /* create a new connection */
-  control_service_data.client = g_socket_client_new();
+  int i;
 
-    /* connect to the host */
-  control_service_data.connection = g_socket_client_connect_to_host (control_service_data.client,
-                                                SERVER_IP,
-                                                CONTROL_PORT,
-                                                NULL,
-                                                &error);
-    /* don't forget to check for errors */
-  if (error != NULL)
-  {
-    g_print ("%s", error->message);
-  }
-  else
-  {
-    g_print ("Connection successful!\n");
-  }
+  for (i = 0; i < SERVER_LIST_NUM; i++)
+    {
+      /* create a new connection */
+      control_service_data[i].client = g_socket_client_new();
+
+      /* connect to the host */
+      control_service_data[i].connection = g_socket_client_connect_to_host (control_service_data[i].client,
+          control_service_data[i].server_ip, CONTROL_PORT, NULL, &error);
+      /* don't forget to check for errors */
+      if (error != NULL)
+	{
+	  g_print ("%s", error->message);
+	}
+      else
+	{
+	  g_print ("Connection successful!\n");
+	}
+    }
 }
 
 void cortrol_service_cleanup()
 {
-  g_object_unref(control_service_data.client);
-  if (control_service_data.connection != NULL)
-  {
-    g_object_unref(control_service_data.connection);
-  }
+  int i;
+  for (i = 0; i < SERVER_LIST_NUM; i++)
+    {
+      g_object_unref(control_service_data[i].client);
+      if (control_service_data[i].connection != NULL)
+	{
+	  g_object_unref(control_service_data[i].connection);
+	}
+    }
 }
 
 gint main (gint argc, gchar * argv[])
