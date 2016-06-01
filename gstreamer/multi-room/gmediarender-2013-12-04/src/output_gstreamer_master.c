@@ -115,7 +115,7 @@ int output_gstreamer_init_master(void)
 	player_ = gst_pipeline_new("audio_player_master");
 	source = gst_element_factory_make ("giosrc", "source");
 	gst_data.tee = gst_element_factory_make ("tee", "tee");
-	queue0 = gst_element_factory_make ("queue", "queue0");
+	queue0 = gst_element_factory_make ("queue", "queue");
 	decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
 	gst_data.audio_sink = gst_element_factory_make ("autoaudiosink", "audio_sink");
 
@@ -126,13 +126,13 @@ int output_gstreamer_init_master(void)
 
 	gst_bin_add_many (GST_BIN (player_), source, gst_data.tee, queue0, decode_bin, gst_data.audio_sink, NULL);
 
-	if (gst_element_link_many (gst_data.source, gst_data.tee, NULL) != TRUE)
+	if (gst_element_link_many (source, gst_data.tee, NULL) != TRUE)
 	{
 		g_print ("Elements could not be linked. 1\n");
 		//gst_object_unref (player_);
 	}
 
-	if (gst_element_link_many (gst_data.tee, gst_data.queue0, gst_data.decode_bin, NULL) != TRUE)
+	if (gst_element_link_many (gst_data.tee, queue0, decode_bin, NULL) != TRUE)
 	{
 		g_print ("Elements could not be linked. 2\n");
 		//gst_object_unref (player_);

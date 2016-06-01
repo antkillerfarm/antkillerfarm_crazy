@@ -29,6 +29,9 @@
 
 
 #define RENDERXML "/etc/config/gmediarender.xml"
+
+extern int g_device_play_mode;
+
 // Feedback for the controlling part what is happening with the
 // output.
 enum PlayFeedback {

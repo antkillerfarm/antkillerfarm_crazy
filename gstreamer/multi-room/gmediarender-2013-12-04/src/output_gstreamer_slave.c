@@ -118,7 +118,7 @@ int output_gstreamer_init_slave(void)
 	
 	g_signal_connect (player_, "pad-added", G_CALLBACK (slave_pad_added_handler), NULL);
 
-	gst_element_set_state (gst_data.playbin, GST_STATE_PLAYING);
+	gst_element_set_state (player_, GST_STATE_PLAYING);
 	return 0;
 }
 #endif

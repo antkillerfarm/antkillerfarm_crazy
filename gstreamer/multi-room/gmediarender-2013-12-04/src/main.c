@@ -280,7 +280,10 @@ int main(int argc, char **argv)
 
 	upnp_transport_init(device);
 	upnp_control_init(device);
-	upnp_ctrl_point_start();
+	if (g_device_play_mode == DEVICE_PLAY_MODE_MASTER)
+	{
+	    upnp_ctrl_point_start();
+	}
 
 	if (show_devicedesc) {
 		// This can only be run after all services have been
@@ -309,7 +312,10 @@ int main(int argc, char **argv)
 	// We're here, because the loop exited. Probably due to catching
 	// a signal.
 	Log_info("main", "Exiting.");
-	upnp_ctrl_point_stop();
+	if (g_device_play_mode == DEVICE_PLAY_MODE_MASTER)
+	{
+		upnp_ctrl_point_stop();
+	}
 	upnp_device_shutdown(device);
 
 	return EXIT_SUCCESS;

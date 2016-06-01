@@ -44,6 +44,7 @@
 #include "upnp_control_point.h"
 #include "upnp_connmgr.h"
 #include "upnp_transport.h"
+#include "output.h"
 #include "output_module.h"
 #include "output_gstreamer.h"
 
@@ -69,7 +70,7 @@ const gchar play_list_suffix[] = ".m3u .pls .xspf";
 AppState app_state = {0};
 GstData gst_data = {0};
 
-int g_device_play_mode = DEVICE_PLAY_MODE_SINGLE;
+int g_device_play_mode = DEVICE_PLAY_MODE_SLAVE;
 
 void load_playlist(const  char* file_name);
 void load_playlist_file(const char* file_name);
