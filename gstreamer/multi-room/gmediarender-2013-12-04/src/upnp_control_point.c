@@ -1,10 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <glib.h>
-
-#include <upnp/upnp.h>
-#include <upnp/ithread.h>
-#include <upnp/upnptools.h>
 
 #include "upnp_control_point.h"
 
@@ -90,7 +85,10 @@ int upnp_discovery_search_result_handler(Upnp_EventType EventType, void *Event, 
 	dev_node_op.operation = dev_node_get_ip_info;
         ctrl_point_dev_node_operation(&dev_node_op);
 
-	dev_node_op.operation = dev_node_get_volume;
+	dev_node_op.operation = dev_node_get_group_info;
+        ctrl_point_dev_node_operation(&dev_node_op);
+
+	dev_node_op.operation = dev_node_add_gst_pipeline;
         ctrl_point_dev_node_operation(&dev_node_op);
 	return CP_SUCCESS;
 }
@@ -132,11 +130,11 @@ int upnp_control_get_var_complete_handler(Upnp_EventType EventType, void *Event,
 		g_print("Error in Get Var Complete Callback -- %d\n",
 				 sv_event->ErrCode);
 	} else {
-		g_print("%s %s %s\n", __FUNCTION__, sv_event->StateVarName, sv_event->CurrentVal);
+		g_print("%s %s %s %s\n", __FUNCTION__, sv_event->StateVarName, sv_event->CurrentVal, UpnpString_get_String(sv_event->CtrlUrl));
 		ctrl_point_handle_get_var(
-			(const char *)sv_event->CtrlUrl,
-		        sv_event->StateVarName,
-		        sv_event->CurrentVal);
+					  UpnpString_get_String(sv_event->CtrlUrl),
+					  sv_event->StateVarName,
+					  sv_event->CurrentVal);
 	}
 	return CP_SUCCESS;
 }
@@ -257,3 +255,4 @@ int upnp_ctrl_point_stop(void)
 
 	return CP_SUCCESS;
 }
+

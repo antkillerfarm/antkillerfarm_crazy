@@ -1,6 +1,12 @@
 #ifndef _UPNP_CONTROL_POINT_H
 #define _UPNP_CONTROL_POINT_H
 
+#include <glib.h>
+#include <gio/gio.h>
+#include <upnp/upnp.h>
+#include <upnp/ithread.h>
+#include <upnp/upnptools.h>
+
 #define CP_SUCCESS		0
 #define CP_ERROR		(-1)
 #define CP_WARNING		1
@@ -10,6 +16,18 @@
 #define DEVICE_PLAY_MODE_SINGLE 0
 #define DEVICE_PLAY_MODE_MASTER 1
 #define DEVICE_PLAY_MODE_SLAVE 2
+
+#define DEVICE_GROUP_ID_UNKNOWN 0
+#define DEVICE_GROUP_ID_SAME 1
+#define DEVICE_GROUP_ID_NOT_SAME 2
+
+#define DEVICE_GROUP_ID_FLAG_INIT 0
+#define DEVICE_GROUP_ID_FLAG_REQUEST 1
+#define DEVICE_GROUP_ID_FLAG_VALID 2
+
+#define DEVICE_GROUP_ROLE_FLAG_INIT 0
+#define DEVICE_GROUP_ROLE_FLAG_REQUEST 1
+#define DEVICE_GROUP_ROLE_FLAG_VALID 2
 
 ///////////////////////////////////
 // Macro needed be modified by usage
@@ -22,7 +40,7 @@
 
 #define UP_AV_TRANSPORT_VARCOUNT	0
 #define UP_CONNECTION_MANAGER_VARCOUNT	0
-#define UP_RENDERING_CONTROL_VARCOUNT 1
+#define UP_RENDERING_CONTROL_VARCOUNT 3
 
 #define UP_MAX_VAL_LEN 5
 
@@ -53,8 +71,18 @@ typedef struct {
 }UpDevice;
 
 typedef struct {
+	GSocketConnection *connection;
+	GSocketClient *client;
 	char ip_addr[20];
-	char port[8]; 
+        int port;
+	char group_id[20];
+	char group_role;
+	char flag_ip_info;
+	char flag_our_device;
+	char flag_group_id;
+	char flag_group_role;
+	char flag_our_group;
+	char flag_gst_pipeline;
 }UpDeviceUserData;
 
 struct UpDeviceNode{
@@ -107,7 +135,9 @@ int dev_node_print(struct UpDeviceNode *devnode);
 int dev_node_get_var(int service, struct UpDeviceNode *devnode, const char *varname, int is_lock);
 int dev_node_get_ip_info(struct UpDeviceNode *devnode);
 int dev_node_get_volume(struct UpDeviceNode *devnode);
-
+int dev_node_get_group_info(struct UpDeviceNode *devnode);
+void dev_node_get_var_handler(struct UpDeviceNode *devnode, const char *varName, const DOMString varValue);
+int dev_node_add_gst_pipeline(struct UpDeviceNode *devnode);
 
 int ctrl_point_remove_all(void);
 void ctrl_point_add_device(IXML_Document *DescDoc, const char *location, int expires);
@@ -118,7 +148,7 @@ void ctrl_point_handle_event(const char *sid, int evntkey, IXML_Document *change
 void ctrl_point_handle_subscribe_update(const char *eventURL, const Upnp_SID sid, int timeout);
 void ctrl_point_state_update(char *UDN, int Service, IXML_Document *ChangedVariables, char **State);
 int ctrl_point_get_device(int devnum, struct UpDeviceNode **devnode);
-
+char string_to_group_role(const char* string);
 
 char *util_get_element_value(IXML_Element *element);
 char *util_get_first_document_item(IXML_Document *doc, const char *item);

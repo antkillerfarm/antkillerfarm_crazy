@@ -2,9 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <gst/gst.h>
-#include <upnp/upnp.h>
-#include <upnp/ithread.h>
-#include <upnp/upnptools.h>
+
+#include "upnp_control_point.h"
 #include "output_module.h"
 #include "output_gstreamer.h"
 
@@ -113,7 +112,7 @@ int output_gstreamer_init_master(void)
 	GstElement *decode_bin;
 
 	player_ = gst_pipeline_new("audio_player_master");
-	source = gst_element_factory_make ("giosrc", "source");
+	source = gst_element_factory_make ("souphttpsrc", "source");
 	gst_data.tee = gst_element_factory_make ("tee", "tee");
 	queue0 = gst_element_factory_make ("queue", "queue");
 	decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
@@ -142,3 +141,10 @@ int output_gstreamer_init_master(void)
 	return 0;
 }
 #endif
+
+int add_slave_to_control(struct UpDeviceNode *devnode)
+{
+
+	return 0;
+}
+

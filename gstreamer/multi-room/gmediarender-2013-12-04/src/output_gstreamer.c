@@ -70,7 +70,7 @@ const gchar play_list_suffix[] = ".m3u .pls .xspf";
 AppState app_state = {0};
 GstData gst_data = {0};
 
-int g_device_play_mode = DEVICE_PLAY_MODE_SLAVE;
+int g_device_play_mode = DEVICE_PLAY_MODE_MASTER;
 
 void load_playlist(const  char* file_name);
 void load_playlist_file(const char* file_name);

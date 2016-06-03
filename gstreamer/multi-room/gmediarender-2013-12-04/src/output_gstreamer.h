@@ -25,6 +25,7 @@
 #define _OUTPUT_GSTREAMER_H
 
 #define MEDIA_PORT 1500
+#define CONTROL_PORT 1501
 
 #if 0
 typedef struct{
@@ -46,6 +47,8 @@ extern GstElement *player_;
 
 int output_gstreamer_init_master(void);
 int output_gstreamer_init_slave(void);
+int output_gstreamer_control_init_slave(void);
 int add_slave_to_pipeline(char* ip_addr);
+int add_slave_to_control(struct UpDeviceNode *devnode);
 
 #endif /*  _OUTPUT_GSTREAMER_H */

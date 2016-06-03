@@ -1,12 +1,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include <gst/gst.h>
-#include <upnp/upnp.h>
-#include <upnp/ithread.h>
-#include <upnp/upnptools.h>
+
+#include "upnp_control_point.h"
 #include "output_module.h"
 #include "output_gstreamer.h"
+
+typedef struct{
+  GSocketService *service;
+  GString *cmd_buf;
+}ControlServiceData;
+
+typedef struct{
+  gchar cmd_name[10];
+  gint arg_num;
+  void (*cmd_handler)(gchar **arg_strv, gint arg_num);
+}CommandFormat;
+
+ControlServiceData control_service_data;
 
 static void slave_pad_added_handler (GstElement *src, GstPad *new_pad, gpointer data)
 {
@@ -122,4 +135,187 @@ int output_gstreamer_init_slave(void)
 	return 0;
 }
 #endif
+
+static void cmd_do_play(gchar **arg_strv, gint arg_num)
+{
+	g_print ("%s\n", __func__);
+	/*if (gst_element_set_state(gst_data.playbin, GST_STATE_PLAYING) ==
+	  GST_STATE_CHANGE_FAILURE) {
+	  g_print("gstreamer setting play state failed (2)\n");
+	  }*/
+}
+
+static void cmd_do_pause(gchar **arg_strv, gint arg_num)
+{
+	g_print ("%s\n", __func__);
+	/*if (gst_element_set_state(gst_data.playbin, GST_STATE_PAUSED) ==
+	  GST_STATE_CHANGE_FAILURE) {
+	  g_print("gstreamer setting play state failed (3)\n");
+	  }*/
+}
+
+static void cmd_do_stop(gchar **arg_strv, gint arg_num)
+{
+	g_print ("%s\n", __func__);
+	//gst_element_set_state (gst_data.playbin, GST_STATE_NULL);
+	//gst_element_set_state (gst_data.playbin, GST_STATE_PLAYING);
+}
+
+static void cmd_do_eos(gchar **arg_strv, gint arg_num)
+{
+	//gst_element_send_event(gst_data.playbin, gst_event_new_eos());
+	g_print ("%s\n", __func__);
+}
+
+CommandFormat cmd_format[] =
+{
+	{"Play", 1, cmd_do_play},
+	{"Pause", 1, cmd_do_pause},
+	{"Stop", 1, cmd_do_stop},
+	{"EOS", 1, cmd_do_eos}
+};
+
+static gboolean are_cmd_args_valid(gchar **arg_strv, gint arg_num)
+{
+	gint i;
+	for (i = 0; i < arg_num; i++)
+	{
+		if (strlen(arg_strv[i]) == 0)
+		{
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
+#define ARG_PIECES 4
+
+static void cmd_handler(gchar* cmd_str)
+{
+	gchar **arg_strv;
+	gint strv_len, i, cmd_format_size;
+	arg_strv = g_strsplit(cmd_str, "#", ARG_PIECES);
+	strv_len = g_strv_length(arg_strv);
+	if (strv_len == 0)
+	{
+		g_strfreev(arg_strv);
+		return;
+	}
+	cmd_format_size = sizeof(cmd_format);
+	for (i = 0; i < cmd_format_size; i++)
+	{
+		if (g_strcmp0(arg_strv[0], cmd_format[i].cmd_name) == 0)
+		{
+			if (are_cmd_args_valid(arg_strv, cmd_format[i].arg_num))
+			{
+				cmd_format[i].cmd_handler(arg_strv, cmd_format[i].arg_num);
+			}
+		}
+	}
+
+	g_strfreev(arg_strv);
+}
+
+#define CMD_BUF_PIECES 4
+
+static void cmd_buf_handler()
+{
+	gchar **cmd_strv;
+	gint strv_len, i;
+
+	do
+	{
+		cmd_strv = g_strsplit(control_service_data.cmd_buf->str, "\n", CMD_BUF_PIECES);
+		strv_len = g_strv_length(cmd_strv);
+		if (strv_len == 0)
+		{
+			g_strfreev(cmd_strv);
+			return;
+		}
+		for (i = 0; i < strv_len - 1; i++)
+		{
+			if (strlen(cmd_strv[i]) > 0)
+			{
+				g_print("Cmd was : \"%s\"\n", cmd_strv[i]);
+				cmd_handler(cmd_strv[i]);
+			}
+		}
+		g_string_free(control_service_data.cmd_buf, TRUE);
+		control_service_data.cmd_buf = g_string_new_len(cmd_strv[strv_len - 1], strlen(cmd_strv[strv_len -1]));
+		g_strfreev(cmd_strv);
+	} while (strv_len == CMD_BUF_PIECES);
+}
+
+static gboolean incoming_callback  (GSocketService *service,
+                    GSocketConnection *connection,
+                    GObject *source_object,
+                    gpointer user_data)
+{
+	gint read_cnt;
+	g_print("Received Connection from client!\n");
+	GInputStream * istream = g_io_stream_get_input_stream (G_IO_STREAM (connection));
+	gchar message[1024];
+	do
+	{
+		memset(message, 0, sizeof(message));
+		read_cnt = g_input_stream_read  (istream,
+						 message,
+						 1024,
+						 NULL,
+						 NULL);
+		g_print("Message was %d: \"%s\"\n", read_cnt, message);
+		if (read_cnt > 0)
+		{
+			if (control_service_data.cmd_buf == NULL)
+			{
+				control_service_data.cmd_buf = g_string_new_len(message, read_cnt);
+			}
+			else
+			{
+				control_service_data.cmd_buf = g_string_append_len(control_service_data.cmd_buf, message, read_cnt);
+			}
+			cmd_buf_handler();
+		}
+	} while (read_cnt > 0);
+	g_print("Client disconnection!\n");
+	if (control_service_data.cmd_buf != NULL)
+	{
+		g_string_free(control_service_data.cmd_buf, TRUE);
+		control_service_data.cmd_buf = NULL;
+	}
+	return FALSE;
+}
+
+int output_gstreamer_control_init_slave(void)
+{
+	GError * error = NULL;
+	control_service_data.cmd_buf = NULL;
+
+	/* create the new socketservice */
+	control_service_data.service = g_socket_service_new ();
+
+	GInetAddress *address = g_inet_address_new_from_string(UpnpGetServerIpAddress());
+	GSocketAddress *socket_address = g_inet_socket_address_new(address, CONTROL_PORT);
+	g_socket_listener_add_address(G_SOCKET_LISTENER(control_service_data.service), socket_address, G_SOCKET_TYPE_STREAM,
+				      G_SOCKET_PROTOCOL_TCP, NULL, NULL, NULL);
+
+	/* don't forget to check for errors */
+	if (error != NULL)
+	{
+		g_error ("%s", error->message);
+	}
+
+	/* listen to the 'incoming' signal */
+	g_signal_connect (control_service_data.service,
+			  "incoming",
+			  G_CALLBACK (incoming_callback),
+			  NULL);
+
+	/* start the socket service */
+	g_socket_service_start (control_service_data.service);
+
+	/* enter mainloop */
+	g_print ("Waiting for client!\n");
+	return 0;
+}
 

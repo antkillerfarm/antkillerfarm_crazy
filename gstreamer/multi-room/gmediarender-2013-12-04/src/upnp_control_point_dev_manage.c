@@ -24,7 +24,7 @@ const char *UpServiceName[] = { "AVTransport", "ConnectionManager", "RenderingCo
 const char *UpVarName[UP_SERVICE_SERVCOUNT][UP_MAXVARS] = {
     {"", "", "", ""},
     {"", "", "", ""},
-    {"Volume", "", "", ""}
+    {"Volume", "GroupID", "GroupRole", ""}
 };
 char UpVarCount[UP_SERVICE_SERVCOUNT] =
 { UP_AV_TRANSPORT_VARCOUNT, UP_CONNECTION_MANAGER_VARCOUNT, UP_RENDERING_CONTROL_VARCOUNT};

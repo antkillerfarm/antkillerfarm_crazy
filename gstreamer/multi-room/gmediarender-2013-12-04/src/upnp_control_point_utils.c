@@ -1,11 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <glib.h>
-
-#include <upnp/upnp.h>
-#include <upnp/ithread.h>
-#include <upnp/upnptools.h>
 
 #include "upnp_control_point.h"
 
@@ -236,23 +231,22 @@ int ctrl_point_dev_node_operation(DevNodeOperation *dev_node_op)
 	return CP_SUCCESS;
 }
 
-void ctrl_point_handle_get_var(
-	const char *controlURL,
-	const char *varName,
-	const DOMString varValue)
+void ctrl_point_handle_get_var(const char *controlURL, const char *varName, const DOMString varValue)
 {
-
 	struct UpDeviceNode *tmpdevnode;
 	int service;
 
 	ithread_mutex_lock(&DeviceListMutex);
 
 	tmpdevnode = GlobalDeviceList;
-	while (tmpdevnode) {
-		for (service = 0; service < UP_SERVICE_SERVCOUNT; service++) {
-			if (strcmp
-			    (tmpdevnode->device.UpService[service].ControlURL,
-			     controlURL) == 0) {
+	while (tmpdevnode)
+	{
+		for (service = 0; service < UP_SERVICE_SERVCOUNT; service++)
+		{
+
+			if (strcmp(tmpdevnode->device.UpService[service].ControlURL, controlURL) == 0)
+			{
+				dev_node_get_var_handler(tmpdevnode, varName, varValue);
 				break;
 			}
 		}
@@ -262,10 +256,7 @@ void ctrl_point_handle_get_var(
 	ithread_mutex_unlock(&DeviceListMutex);
 }
 
-void ctrl_point_handle_event(
-	const char *sid,
-	int evntkey,
-	IXML_Document *changes)
+void ctrl_point_handle_event(const char *sid, int evntkey, IXML_Document *changes)
 {
 	struct UpDeviceNode *tmpdevnode;
 	int service;
@@ -294,10 +285,7 @@ void ctrl_point_handle_event(
 	ithread_mutex_unlock(&DeviceListMutex);
 }
 
-void ctrl_point_handle_subscribe_update(
-	const char *eventURL,
-	const Upnp_SID sid,
-	int timeout)
+void ctrl_point_handle_subscribe_update(const char *eventURL, const Upnp_SID sid, int timeout)
 {
 	struct UpDeviceNode *tmpdevnode;
 	int service;
@@ -346,5 +334,19 @@ int ctrl_point_get_device(int devnum, struct UpDeviceNode **devnode)
 	*devnode = tmpdevnode;
 
 	return CP_SUCCESS;
+}
+
+char string_to_group_role(const char* string)
+{
+	if (strcmp(string, "Master") == 0)
+	{
+		return DEVICE_PLAY_MODE_MASTER;
+	}
+	else if (strcmp(string, "Slave") == 0)
+	{
+		return DEVICE_PLAY_MODE_SLAVE;
+	}
+
+	return DEVICE_PLAY_MODE_SINGLE;
 }
 

@@ -59,38 +59,6 @@
 
 // Namespace, see UPnP-av-RenderingControl-v3-Service-20101231.pdf page 19
 #define CONTROL_EVENT_XML_NS "urn:schemas-upnp-org:metadata-1-0/RCS/"
-
-typedef enum {
-	CONTROL_VAR_G_GAIN,
-	CONTROL_VAR_B_BLACK,
-	CONTROL_VAR_VER_KEYSTONE,
-	CONTROL_VAR_G_BLACK,
-	CONTROL_VAR_VOLUME,
-	CONTROL_VAR_LOUDNESS,
-	CONTROL_VAR_AAT_INSTANCE_ID,
-	CONTROL_VAR_R_GAIN,
-	CONTROL_VAR_COLOR_TEMP,
-	CONTROL_VAR_SHARPNESS,
-	CONTROL_VAR_AAT_PRESET_NAME,
-	CONTROL_VAR_R_BLACK,
-	CONTROL_VAR_B_GAIN,
-	CONTROL_VAR_MUTE,
-	CONTROL_VAR_LAST_CHANGE,
-	CONTROL_VAR_AAT_CHANNEL,
-	CONTROL_VAR_HOR_KEYSTONE,
-	CONTROL_VAR_VOLUME_DB,
-	CONTROL_VAR_PRESET_NAME_LIST,
-	CONTROL_VAR_CONTRAST,
-	CONTROL_VAR_BRIGHTNESS,
-	//GROUP
-#ifdef GROUP
-	CONTROL_VAR_GROUPID,
-	CONTROL_VAR_GROUPROLE,
-#endif	
-	CONTROL_VAR_UNKNOWN,
-	CONTROL_VAR_COUNT
-} control_variable_t;
-
 typedef enum {
 	CONTROL_CMD_GET_BLUE_BLACK,
 	CONTROL_CMD_GET_BLUE_GAIN,
@@ -575,9 +543,18 @@ static struct argument **argument_list[] = {
 
 
 // Replace given variable without sending an state-change event.
-static void replace_var(control_variable_t varnum, const char *new_value) {
-	VariableContainer_change(state_variables_, varnum, new_value);
+static int replace_var(control_variable_t varnum, const char *new_value) {
+	return VariableContainer_change(state_variables_, varnum, new_value);
 }
+
+static const char *get_var(control_variable_t varnum) {
+	return VariableContainer_get(state_variables_, varnum, NULL);
+}
+
+const char *get_control_var(control_variable_t varnum) {
+  return get_var(varnum);
+}
+
 
 static void change_volume(const char *volume, const char *db_volume) {
 	replace_var(CONTROL_VAR_VOLUME, volume);
