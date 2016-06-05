@@ -4,6 +4,7 @@
 
 #include <gst/gst.h>
 
+#include "logging.h"
 #include "upnp_control_point.h"
 #include "output_module.h"
 #include "output_gstreamer.h"
@@ -104,8 +105,13 @@ int output_gstreamer_init_slave(void)
 #if 1
 int output_gstreamer_init_slave(void)
 {
-        GstElement *source;
+	GstBus *bus;
+	GstElement *source;
 	GstElement *decode_bin;
+
+	g_print ("%s\n", __func__);
+
+	output_gstreamer_control_init_slave();
 
 	player_ = gst_pipeline_new("audio_player_slave");
 	source = gst_element_factory_make ("tcpserversrc", "source");
@@ -131,6 +137,37 @@ int output_gstreamer_init_slave(void)
 	
 	g_signal_connect (player_, "pad-added", G_CALLBACK (slave_pad_added_handler), NULL);
 
+	bus = gst_pipeline_get_bus(GST_PIPELINE(player_));
+	gst_bus_add_watch(bus, my_bus_callback, NULL);
+	gst_object_unref(bus);
+
+	if (audio_sink != NULL) {
+		GstElement *sink = NULL;
+		Log_info("gstreamer", "Setting audio sink to %s; device=%s\n",
+			 audio_sink, audio_device ? audio_device : "");
+		sink = gst_element_factory_make (audio_sink, "sink");
+		if (sink == NULL) {
+		  Log_error("gstreamer", "Couldn't create sink '%s'",
+			    audio_sink);
+		} else {
+		  if (audio_device != NULL) {
+		    g_object_set (G_OBJECT(sink), "device", audio_device, NULL);
+		  }
+		  g_object_set (G_OBJECT (player_), "audio-sink", sink, NULL);
+		}
+	}
+	if (videosink != NULL) {
+		GstElement *sink = NULL;
+		Log_info("gstreamer", "Setting video sink to %s", videosink);
+		sink = gst_element_factory_make (videosink, "sink");
+		g_object_set (G_OBJECT (player_), "video-sink", sink, NULL);
+	}
+
+	if (gst_element_set_state(player_, GST_STATE_READY) ==
+	    GST_STATE_CHANGE_FAILURE) {
+		Log_error("gstreamer", "Error: pipeline doesn't become ready.");
+	}
+	
 	gst_element_set_state (player_, GST_STATE_PLAYING);
 	return 0;
 }

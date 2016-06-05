@@ -35,6 +35,7 @@
 
 #include "logging.h"
 #include "output_module.h"
+#include "upnp_control_point.h"
 #ifdef HAVE_GST
 #include <gst/gst.h>
 #include "output_gstreamer.h"

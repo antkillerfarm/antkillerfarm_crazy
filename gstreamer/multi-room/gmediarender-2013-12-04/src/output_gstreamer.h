@@ -44,11 +44,15 @@ typedef struct{
 extern struct output_module gstreamer_output;
 extern GstData gst_data;
 extern GstElement *player_;
+extern gchar *audio_sink;
+extern gchar *audio_device;
+extern gchar *videosink;
 
 int output_gstreamer_init_master(void);
 int output_gstreamer_init_slave(void);
 int output_gstreamer_control_init_slave(void);
 int add_slave_to_pipeline(char* ip_addr);
 int add_slave_to_control(struct UpDeviceNode *devnode);
+gboolean my_bus_callback(GstBus * bus, GstMessage * msg, gpointer data);
 
 #endif /*  _OUTPUT_GSTREAMER_H */

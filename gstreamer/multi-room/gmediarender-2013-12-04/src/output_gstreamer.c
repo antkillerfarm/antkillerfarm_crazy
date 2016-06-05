@@ -70,7 +70,8 @@ const gchar play_list_suffix[] = ".m3u .pls .xspf";
 AppState app_state = {0};
 GstData gst_data = {0};
 
-int g_device_play_mode = DEVICE_PLAY_MODE_MASTER;
+//int g_device_play_mode = DEVICE_PLAY_MODE_MASTER;
+int g_device_play_mode = DEVICE_PLAY_MODE_SLAVE;
 
 void load_playlist(const  char* file_name);
 void load_playlist_file(const char* file_name);
@@ -427,8 +428,7 @@ static void MetaModify_add_tag(const GstTagList *list, const gchar *tag,
 	}
 }
 
-static gboolean my_bus_callback(GstBus * bus, GstMessage * msg,
-				gpointer data)
+gboolean my_bus_callback(GstBus * bus, GstMessage * msg, gpointer data)
 {
 	//GMainLoop *loop = (GMainLoop *) data;
 	GstMessageType msgType;
@@ -559,9 +559,9 @@ static gboolean my_bus_callback(GstBus * bus, GstMessage * msg,
 	return TRUE;
 }
 
-static gchar *audio_sink = NULL;
-static gchar *audio_device = NULL;
-static gchar *videosink = NULL;
+gchar *audio_sink = NULL;
+gchar *audio_device = NULL;
+gchar *videosink = NULL;
 static double initial_db = 0.0;
 
 /* Options specific to output_gstreamer */
@@ -682,6 +682,8 @@ static void prepare_next_stream(GstElement *obj, gpointer userdata) {
 
 static int output_gstreamer_init_single(void)
 {
+	GstBus *bus;
+
 #if (GST_VERSION_MAJOR < 1)
 	const char player_element_name[] = "playbin2";
 #else
@@ -690,29 +692,6 @@ static int output_gstreamer_init_single(void)
 
 	player_ = gst_element_factory_make(player_element_name, "play");
 	assert(player_ != NULL);
-
-	return 0;
-}
-
-static int output_gstreamer_init(void)
-{
-	GstBus *bus;
-
-	SongMetaData_init(&song_meta_);
-	scan_mime_list();
-
-	if (g_device_play_mode == DEVICE_PLAY_MODE_MASTER)
-	{
-		output_gstreamer_init_single();
-	}
-	else if (g_device_play_mode == DEVICE_PLAY_MODE_SLAVE)
-	{
-		output_gstreamer_init_single();
-	}
-	else
-	{
-		output_gstreamer_init_single();
-	}
 
 	bus = gst_pipeline_get_bus(GST_PIPELINE(player_));
 	gst_bus_add_watch(bus, my_bus_callback, NULL);
@@ -750,6 +729,27 @@ static int output_gstreamer_init(void)
 	output_gstreamer_set_mute(0);
 	if (initial_db < 0) {
 		output_gstreamer_set_volume(exp(initial_db / 20 * log(10)));
+	}
+
+	return 0;
+}
+
+static int output_gstreamer_init(void)
+{
+	SongMetaData_init(&song_meta_);
+	scan_mime_list();
+
+	if (g_device_play_mode == DEVICE_PLAY_MODE_MASTER)
+	{
+		output_gstreamer_init_master();
+	}
+	else if (g_device_play_mode == DEVICE_PLAY_MODE_SLAVE)
+	{
+		output_gstreamer_init_slave();
+	}
+	else
+	{
+		output_gstreamer_init_single();
 	}
 
 	return 0;

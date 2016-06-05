@@ -253,13 +253,6 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	rc = output_init(output);
-	if (rc != 0) {
-		Log_error("main",
-			  "ERROR: Failed to initialize Output subsystem");
-		return EXIT_FAILURE;
-	}
-
 	struct upnp_device *device;
 	if (listen_port != 0 &&
 	    (listen_port < 49152 || listen_port > 65535)) {
@@ -278,13 +271,20 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
+	rc = output_init(output);
+	if (rc != 0) {
+		Log_error("main",
+			  "ERROR: Failed to initialize Output subsystem");
+		return EXIT_FAILURE;
+	}
+	
 	upnp_transport_init(device);
 	upnp_control_init(device);
 	if (g_device_play_mode == DEVICE_PLAY_MODE_MASTER)
 	{
 	    upnp_ctrl_point_start();
 	}
-
+	
 	if (show_devicedesc) {
 		// This can only be run after all services have been
 		// initialized.
