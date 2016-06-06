@@ -1,0 +1,11 @@
+#msg{
+	border-radius: 15px;
+	width: 600px;
+	margin: 100px auto;
+	text-align: center;
+	font-size: 38px;
+	font-weight: bold;
+	font-family: Arial;
+	background: #333;
+	color: #EEEEEE;
+}
