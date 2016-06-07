@@ -37,7 +37,7 @@ typedef struct{
 #if 1
 typedef struct{
   	GstElement *source;
-	GstElement *audio_sink;
+	GstElement *convert;
 	GstElement *tee;
 }GstData;
 #endif

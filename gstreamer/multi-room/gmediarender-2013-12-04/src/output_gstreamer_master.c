@@ -10,7 +10,7 @@
 
 static void master_pad_added_handler (GstElement *src, GstPad *new_pad, gpointer data)
 {
-	GstPad *sink_pad = gst_element_get_static_pad (gst_data.audio_sink, "sink");
+	GstPad *sink_pad = gst_element_get_static_pad (gst_data.convert, "sink");
 	GstPadLinkReturn ret;
 	GstCaps *new_pad_caps = NULL;
 	GstStructure *new_pad_struct = NULL;
@@ -111,20 +111,22 @@ int output_gstreamer_init_master(void)
 	GstBus *bus;
 	GstElement *queue0;
 	GstElement *decode_bin;
+	GstElement *audio_sink0;
 
 	player_ = gst_pipeline_new("audio_player_master");
 	gst_data.source = gst_element_factory_make ("souphttpsrc", "source");
 	gst_data.tee = gst_element_factory_make ("tee", "tee");
 	queue0 = gst_element_factory_make ("queue", "queue");
 	decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
-	gst_data.audio_sink = gst_element_factory_make ("autoaudiosink", "audio_sink");
+	gst_data.convert = gst_element_factory_make("audioconvert", "convert");
+        audio_sink0 = gst_element_factory_make ("autoaudiosink", "audio_sink");
 
-	if (!player_ || !gst_data.source || !gst_data.tee || !queue0 || !decode_bin || !gst_data.audio_sink)
+	if (!player_ || !gst_data.source || !gst_data.tee || !queue0 || !decode_bin || !gst_data.convert || !audio_sink0)
 	{
 		g_print ("Not all elements could be created.\n");
 	}
 
-	gst_bin_add_many (GST_BIN (player_), gst_data.source, gst_data.tee, queue0, decode_bin, gst_data.audio_sink, NULL);
+	gst_bin_add_many (GST_BIN (player_), gst_data.source, gst_data.tee, queue0, decode_bin, gst_data.convert, audio_sink0, NULL);
 
 	if (gst_element_link_many (gst_data.source, gst_data.tee, NULL) != TRUE)
 	{
@@ -135,6 +137,12 @@ int output_gstreamer_init_master(void)
 	if (gst_element_link_many (gst_data.tee, queue0, decode_bin, NULL) != TRUE)
 	{
 		g_print ("Elements could not be linked. 2\n");
+		//gst_object_unref (player_);
+	}
+
+	if (gst_element_link_many (gst_data.convert, audio_sink0, NULL) != TRUE)
+	{
+		g_print ("Elements could not be linked. 3\n");
 		//gst_object_unref (player_);
 	}
 	
