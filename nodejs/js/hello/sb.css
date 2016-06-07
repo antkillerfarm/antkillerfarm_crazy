@@ -1,12 +1,20 @@
+#sb_group{
+	width: 25%;
+	float: left;
+}
+
 .super_button{
 	border-radius: 15px;
-	width: 600px;
 	margin: 30px auto;
-	float: left;
 	text-align: center;
 	font-size: 38px;
 	font-weight: bold;
 	font-family: Arial;
 	background: #333;
 	color: #EEEEEE;
+}
+
+#plus_btn{
+    float: left;
+    margin: 30px auto;
 }
