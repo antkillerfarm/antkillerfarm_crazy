@@ -1274,6 +1274,15 @@ void upnp_transport_init(struct upnp_device *device) {
 
 	pthread_t thread;
 	pthread_create(&thread, NULL, thread_update_track_time, NULL);
+	//we auto play when device start
+
+	output_set_playlist(M3U_STREAMINGPLAYLIST_PATH);
+	replace_var(TRANSPORT_VAR_AAT_PLAYLIST_STEP, "Reset");
+	if(!output_play(NULL))
+		change_transport_state(TRANSPORT_PLAYING);
+	
+	//auto play end
+	
 }
 
 void upnp_transport_register_variable_listener(variable_change_listener_t cb,

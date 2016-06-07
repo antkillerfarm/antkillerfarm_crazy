@@ -13,6 +13,10 @@
 
 #define EVENT_TYPE_DATA_MACRO(x) x, #x
 
+#define SINGLE "Single"
+#define MASTER "Master"
+#define SLAVE "Slave"
+
 #define DEVICE_PLAY_MODE_SINGLE 0
 #define DEVICE_PLAY_MODE_MASTER 1
 #define DEVICE_PLAY_MODE_SLAVE 2

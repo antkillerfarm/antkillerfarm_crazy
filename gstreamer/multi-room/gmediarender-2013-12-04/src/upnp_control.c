@@ -831,7 +831,7 @@ static int get_grouprole(struct action_event *event)
 
 }
 
-static int set_grouprole(struct action_event *event)
+static int set_grouprole(struct action_event *event)   //we need restart to init new role
 {
 	const char *grouprole = upnp_get_string(event, "DesiredGroupRole");
 	if (grouprole == NULL || !strlen(grouprole)) return -1;	
@@ -918,6 +918,7 @@ void upnp_control_init(struct upnp_device *device) {
 			 "control variables accordingly.", volume_fraction);
 		change_volume_decibel(20 * log(volume_fraction) / log(10));
 	}
+	
 	groupid = output_get_groupid();
 	if(groupid){
 		change_groupid(groupid);

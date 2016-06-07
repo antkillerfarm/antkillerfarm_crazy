@@ -48,9 +48,9 @@ struct output_module {
 	int (*set_volume)(float);
 	int (*get_mute)(int *);
 	int (*set_mute)(int);	
-	int (*get_groupid)(char *);
+	char* (*get_groupid)(void);
 	int (*set_groupid)(const char *);
-	int (*get_grouprole)(char *);
+	char* (*get_grouprole)(void);
 	int (*set_grouprole)(const char *);
 };
 

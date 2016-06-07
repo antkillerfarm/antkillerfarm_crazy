@@ -303,7 +303,6 @@ int main(int argc, char **argv)
 
 	// Write both to the log (which might be disabled) and console.
 	Log_info("main", "Ready for rendering.");
-	fprintf(stderr, "Ready for rendering.\n");
 //	#ifdef RMSG
 	initMsgRcv();
 //#endif

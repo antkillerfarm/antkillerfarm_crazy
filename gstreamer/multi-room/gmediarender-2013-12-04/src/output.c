@@ -43,6 +43,7 @@
 #include "output.h"
 #include "xmldoc.h"
 
+
 static struct output_module *modules[] = {
 #ifdef HAVE_GST
 	&gstreamer_output,
@@ -227,68 +228,32 @@ void output_set_playlist(const char *playlist) {
 
 char *output_get_groupid(void)
 {
-	char *groupid = NULL;
-	struct xmldoc *doc = xmldoc_fromdoc(RENDERXML);
-	if(doc){
-		struct xmlelement *render_node = find_element_in_doc(doc, "Gmediarender");
-		struct xmlelement *group_node = find_element_in_element(render_node, "Group");
-		struct xmlelement *value_node = find_element_in_element(group_node, "GroupID");
-		groupid = get_node_value(value_node);
-		xmldoc_free(doc);
+	if(output_module && output_module->get_groupid){
+		return output_module->get_groupid();
 	}
-	return groupid;
+	return NULL;
 }
 int output_set_groupid(const char*groupid)
 {
-	int ret = -1;
-	struct xmldoc *doc = xmldoc_fromdoc(RENDERXML);
-	char *xmlstring;
-	if(doc){
-		struct xmlelement *render_node = find_element_in_doc(doc, "Gmediarender");
-		struct xmlelement *group_node = find_element_in_element(render_node, "Group");
-		struct xmlelement *value_node = find_element_in_element(group_node, "GroupID");
-		if(value_node)
-			ret = set_node_value(value_node, groupid);
-		xmlstring = xmldoc_tostring(doc);
-		xmlstringtofile(RENDERXML, xmlstring);
-		xmldoc_free(doc);
-		free(xmlstring);
+	if(output_module && output_module->set_groupid){
+		return output_module->set_groupid(groupid);
 	}
-
-	return ret;
+	return -1;
 }
 
 char * output_get_grouprole(void)
 {
-	char *grouprole = NULL;
-	struct xmldoc *doc = xmldoc_fromdoc(RENDERXML);
-	if(doc){
-		struct xmlelement *render_node = find_element_in_doc(doc, "Gmediarender");
-		struct xmlelement *group_node = find_element_in_element(render_node, "Group");
-		struct xmlelement *value_node = find_element_in_element(group_node, "GroupRole");
-		grouprole = get_node_value(value_node);
-		xmldoc_free(doc);
+	if(output_module && output_module->get_grouprole){
+		return output_module->get_grouprole();
 	}
-	return grouprole;
+	return NULL;
 }
 int output_set_grouprole(const char*grouprole)
 {
-	int ret = -1;
-	struct xmldoc *doc = xmldoc_fromdoc(RENDERXML);
-	char *xmlstring;
-	if(doc){
-		struct xmlelement *render_node = find_element_in_doc(doc, "Gmediarender");
-		struct xmlelement *group_node = find_element_in_element(render_node, "Group");
-		struct xmlelement *value_node = find_element_in_element(group_node, "GroupRole");
-		if(value_node)
-			ret = set_node_value(value_node, grouprole);
-		xmlstring = xmldoc_tostring(doc);
-		xmlstringtofile(RENDERXML, xmlstring);
-		xmldoc_free(doc);
-		free(xmlstring);
+	if(output_module && output_module->set_grouprole){
+		return output_module->set_grouprole(grouprole);
 	}
-	return ret;
-
+	return -1;
 }
 
 

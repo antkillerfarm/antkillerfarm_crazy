@@ -1,5 +1,6 @@
 #!/bin/sh
-
+set -x
+START=99
 ### BEGIN INIT INFO
 # Provides: gmediarender
 # Required-Start: $remote_fs $syslog $all 
@@ -12,11 +13,26 @@
 
 # User and group the daemon will be running as. On the Raspberry Pi, let's use
 # the default user.
-DAEMON_USER="pi:audio"
+DAEMON_USER="root"
+
+#We get device role 
+
+XMLPATH=/etc/config/gmediarender.xml
+
+XMLCONTENT="<?xml version=\"1.0\"?> \n<Gmediarender>\n<Group>\n<GroupID>$UUID</GroupID>\n<GroupRole>Signle</GroupRole>\n</Group>\n</Gmediarender>"
+if [ ! -f $XMLPATH ]
+	then
+	echo "$XMLCONTENT" > $XMLPATH
+fi
+GROUP_ROLE=$(sed -n 's/.*>\(.*\)<\/GroupRole>/\1/p' $XMLPATH)
+
+#UPNP UUID
+
+UPNP_UUID=`ip link show | awk '/ether/ {print "salt:)-" $2}' | head -1 | md5sum | awk '{print $1}'`
 
 # Device name as it will be advertised to and shown in the UPnP controller UI.
 # Some string that helps you recognize the player, e.g. "Livingroom Player"
-UPNP_DEVICE_NAME="Raspberry"
+UPNP_DEVICE_NAME="HuShanSpeaker"_"$GROUP_ROLE"_"$UUID"
 
 # Initial volume in decibel. 0.0 is 'full volume', -10 correspondents to '75' on
 # the exported volume scale (Note, this does not change the ALSA volume, only
@@ -31,7 +47,7 @@ ALSA_DEVICE="sysdefault"
 #ALSA_DEVICE="iec958"
 
 # Path to the gmediarender binary.
-BINARY_PATH=/usr/local/bin/gmediarender
+BINARY_PATH=/usr/sbin/gmediarender
 
 if [ -n "$ALSA_DEVICE" ] ; then
 	GS_SINK_PARAM="--gstout-audiosink=alsasink"
@@ -40,26 +56,49 @@ fi
 
 # A simple stable UUID, based on this systems' first ethernet devices MAC address,
 # only using tools readily available to generate.
-UPNP_UUID=`ip link show | awk '/ether/ {print "salt:)-" $2}' | head -1 | md5sum | awk '{print $1}'`
 
+
+IFNAME="br-lan"
+IP_ADDR=$(ifconfig br-lan |sed -rn 's#^.*dr:(.*)B.*$#\1#gp')
 USER=root
-HOME=/root
+HOME=/upnp
 export USER HOME
+
+start() {
+
+	echo "Starting GMediaRender"                                                                
+        	start-stop-daemon -x $BINARY_PATH  -S -m -p /var/run/gmediarender.pid -- -f "$UPNP_DEVICE_NAME"  -d \
+                    -u "$UPNP_UUID" $GS_SINK_PARAM $GS_DEVICE_PARAM --gstout-initial-volume-db=$INITIAL_VOLUME_DB \
+                    -I $IP_ADDR 
+
+}
+
+stop() {
+
+	echo "Stopping GMediaRender"                                                                               
+       	start-stop-daemon -x $BINARY_PATH -K
+	rm -f /var/run/gmediarender.pid
+
+}
+
+restart() {
+
+	stop
+	start
+}
+
 case "$1" in
-	start)
-		echo "Starting GMediaRender"
-		start-stop-daemon -x $BINARY_PATH -c "$DAEMON_USER" -S -- -f "$UPNP_DEVICE_NAME" -d -u "$UPNP_UUID" $GS_SINK_PARAM $GS_DEVICE_PARAM --gstout-initial-volume-db=$INITIAL_VOLUME_DB
-		;;
-
 	stop)
-		echo "Stopping GMediaRender"
-		start-stop-daemon -x $BINARY_PATH -K
-		;;
+		stop	
+   	;;
+	restart)
+		restart
 
+	;;		
 	*)
-		echo "Usage: /etc/init.d/gmediarender {start|stop}"
-		exit 1
-		;;
+		echo "Usage: /etc/init.d/gmediarender {start|stop|restart}"
+		exit 3
+	;;
 esac
 
 exit 0

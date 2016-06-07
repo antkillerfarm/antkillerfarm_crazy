@@ -47,6 +47,10 @@
 #include "output.h"
 #include "output_module.h"
 #include "output_gstreamer.h"
+#include "xmldoc.h"
+
+int g_device_play_mode = DEVICE_PLAY_MODE_SINGLE;
+
 
 #define MAX_PATH 256
 #define MAX_TITLE_LENGTH 64
@@ -70,11 +74,8 @@ const gchar play_list_suffix[] = ".m3u .pls .xspf";
 AppState app_state = {0};
 GstData gst_data = {0};
 
-int g_device_play_mode = DEVICE_PLAY_MODE_MASTER;
-//int g_device_play_mode = DEVICE_PLAY_MODE_SLAVE;
-
-void load_playlist(const  char* file_name);
-void load_playlist_file(const char* file_name);
+//void load_playlist(const  char* file_name);
+//void load_playlist_file(const char* file_name);
 gint get_next_current_idx(void);
 
 static void scan_caps(const GstCaps * caps)
@@ -250,26 +251,27 @@ static void playlist_entry_parsed (TotemPlParser *parser, const gchar *uri, GHas
 		Log_error("gstreamer", "%s: Entry (URI: %s) has no title.", __func__, uri0);
 	}
 	play_list_info.play_list = g_slist_append(play_list_info.play_list, p_media_info);
+//	p_media_info; we will free it next parsed time;
+	free(uri0);
 }
 
-void load_playlist(const char* file_name)
+static int load_playlist(const char* file_name)
 {
 	gchar *uri;
-	if (play_list_info.play_list != NULL)
-	{
+	gint ret = 0;
+	if (play_list_info.play_list != NULL){
 		g_slist_free_full(play_list_info.play_list, free_media_info);
-		memset(&play_list_info, 0, sizeof(play_list_info));
+		play_list_info.play_list = NULL;
+		play_list_info.current_idx = 0;
+		//memset(&play_list_info, 0, sizeof(play_list_info));
 	}
-	if (gst_uri_is_valid (file_name))
-	{
+	if (gst_uri_is_valid (file_name)){
 		uri = g_strdup (file_name);
 	}
-	else
-	{
+	else{
 		uri = gst_filename_to_uri (file_name, NULL);
 	}
 	//g_print ("%s: %s\n", __func__, uri);
-	Log_error("gstreamer", "%s: %s", __func__, uri);
 	TotemPlParser *pl = totem_pl_parser_new ();
 	g_object_set (pl, "recurse", FALSE, "disable-unsafe", TRUE, NULL);
 	//g_signal_connect (G_OBJECT (pl), "playlist-started", G_CALLBACK (playlist_started), NULL);
@@ -279,27 +281,31 @@ void load_playlist(const char* file_name)
 	{
 		//g_print ("Playlist parsing failed.\n");
 		Log_error("gstreamer", "%s: Playlist parsing failed.%x", __func__, res);
+		ret = -1;
 	}
 	//g_print ("Playlist parsing finished.\n");
 	Log_error("gstreamer", "%s: Playlist parsing finished.", __func__);
+	free(uri);
 	g_object_unref (pl);
+	return ret;
 }
 
-void load_playlist_file(const char* file_name)
+static int load_playlist_file(const char* file_name)
 {
-	gchar *p = g_strrstr(file_name, ".");
+	gchar *p = g_strrstr(file_name, ".");   //get suffix
+	gint ret;
 	if (g_strstr_len(play_list_suffix, sizeof(play_list_suffix), p) != NULL)
 	{
-		Log_error("gstreamer", "%s: TRUE", __func__);
 		app_state.is_play_list = TRUE;
-		load_playlist(file_name);
+		ret = load_playlist(file_name);
 	}
 	else
 	{
-		Log_error("gstreamer", "%s: FALSE", __func__);
 		app_state.is_play_list = FALSE;
 		g_print ("Invalid playlist file.\n");
+		ret = -1;
 	}
+	return ret;
 }
 
 gint get_next_current_idx(void)
@@ -312,17 +318,19 @@ gint get_next_current_idx(void)
 
 static void output_gstreamer_set_playlist(const char *uri) 
 {
-	load_playlist_file(uri);
-	if(app_state.is_play_list == FALSE)
+	gint ret;
+	ret = load_playlist_file(uri);
+	if(ret)
 		return;
 	MediaInfo *p_media_info = g_slist_nth_data(play_list_info.play_list, play_list_info.current_idx);
-	Log_error("gstreamer", "%s: set", __func__);
 	if (p_media_info)
 	{
 		char * uri0 = p_media_info->uri;
 		free(gsuri_);
 		gsuri_ = (uri0 && *uri0) ? strdup(uri0) : NULL;
 	}
+	meta_update_callback_ = NULL;
+	//free((gpointer)p_media_info);
 }
 
 static int output_gstreamer_play(output_transition_cb_t callback) {
@@ -715,6 +723,125 @@ static void prepare_next_stream(GstElement *obj, gpointer userdata) {
 	}
 }
 
+/*
+
+static struct xmlelement *gen_group_info(struct xmldoc *doc,
+                                          const char* groupid, const char* grouprole)
+{
+        struct xmlelement *top;
+
+        top=xmlelement_new(doc, "Group");
+
+        add_value_element(doc, top, "GroupID", groupid);
+        add_value_element(doc, top, "GroupRole", grouprole);
+
+        return top;
+}
+
+static struct xmldoc *generate_gmediarender(void)
+{
+	struct xmldoc *doc;
+	struct xmlelement *root;
+	struct xmlelement *child;
+
+	doc = xmldoc_new();
+
+	root=xmldoc_new_topelement(doc, "Gmediarender", "gmediarender-1-0");
+	child=gen_group_info(doc, "groupid", "grouprole");
+	xmlelement_add_element(doc, root, child);
+	fprintf(stdout, "\n%s\n", xmldoc_tostring(doc));
+	return doc;
+}
+*/
+
+
+
+static char *output_gstreamer_get_groupid(void)
+{
+	char *groupid = NULL;
+	struct xmldoc *doc = xmldoc_fromdoc(RENDERXML);
+	if(doc){
+		struct xmlelement *render_node = find_element_in_doc(doc, "Gmediarender");
+		struct xmlelement *group_node = find_element_in_element(render_node, "Group");
+		struct xmlelement *value_node = find_element_in_element(group_node, "GroupID");
+		groupid = get_node_value(value_node);
+		xmldoc_free(doc);
+	}
+	return groupid;
+}
+static int output_gstreamer_set_groupid(const char*groupid)
+{
+	int ret = -1;
+	struct xmldoc *doc = xmldoc_fromdoc(RENDERXML);
+	char *xmlstring;
+	if(doc){
+		struct xmlelement *render_node = find_element_in_doc(doc, "Gmediarender");
+		struct xmlelement *group_node = find_element_in_element(render_node, "Group");
+		struct xmlelement *value_node = find_element_in_element(group_node, "GroupID");
+		if(value_node)
+			ret = set_node_value(value_node, groupid);
+		xmlstring = xmldoc_tostring(doc);
+		xmlstringtofile(RENDERXML, xmlstring);
+		xmldoc_free(doc);
+		free(xmlstring);
+	}
+
+	return ret;
+}
+
+static char * output_gstreamer_get_grouprole(void)
+{
+	char *grouprole = NULL;
+	struct xmldoc *doc = xmldoc_fromdoc(RENDERXML);
+	if(doc){
+		struct xmlelement *render_node = find_element_in_doc(doc, "Gmediarender");
+		struct xmlelement *group_node = find_element_in_element(render_node, "Group");
+		struct xmlelement *value_node = find_element_in_element(group_node, "GroupRole");
+		grouprole = get_node_value(value_node);
+		xmldoc_free(doc);
+	}
+	return grouprole;
+}
+static int output_gstreamer_set_grouprole(const char*grouprole)
+{
+	int ret = -1;
+	struct xmldoc *doc = xmldoc_fromdoc(RENDERXML);
+	char *xmlstring;
+	if(doc){
+		struct xmlelement *render_node = find_element_in_doc(doc, "Gmediarender");
+		struct xmlelement *group_node = find_element_in_element(render_node, "Group");
+		struct xmlelement *value_node = find_element_in_element(group_node, "GroupRole");
+		if(value_node)
+			ret = set_node_value(value_node, grouprole);
+		xmlstring = xmldoc_tostring(doc);
+		xmlstringtofile(RENDERXML, xmlstring);
+		xmldoc_free(doc);
+		free(xmlstring);
+	}
+	return ret;
+
+}
+
+static int output_gstreamer_get_device_role()
+{
+	char *p;
+	int ret = -1;
+	p = output_gstreamer_get_grouprole();
+	if(p){
+		if(!strcasecmp (p, SINGLE))
+			ret = DEVICE_PLAY_MODE_SINGLE;
+		else if(!strcasecmp (p, MASTER))
+			ret = DEVICE_PLAY_MODE_MASTER;
+		else if(!strcasecmp (p, SLAVE))
+			ret = DEVICE_PLAY_MODE_SINGLE;
+	}else{
+		
+		ret = DEVICE_PLAY_MODE_SINGLE;
+	}
+	free(p);
+	return ret;
+}
+
 static int output_gstreamer_init_single(void)
 {
 	GstBus *bus;
@@ -773,7 +900,8 @@ static int output_gstreamer_init(void)
 {
 	SongMetaData_init(&song_meta_);
 	scan_mime_list();
-
+//	generate_gmediarender();
+	g_device_play_mode = output_gstreamer_get_device_role();
 	if (g_device_play_mode == DEVICE_PLAY_MODE_MASTER)
 	{
 		output_gstreamer_init_master();
@@ -807,4 +935,8 @@ struct output_module gstreamer_output = {
 	.set_volume  = output_gstreamer_set_volume,
 	.get_mute  = output_gstreamer_get_mute,
 	.set_mute  = output_gstreamer_set_mute,
+	.get_groupid = output_gstreamer_get_groupid,
+	.set_groupid = output_gstreamer_set_groupid,
+	.get_grouprole = output_gstreamer_get_grouprole,
+	.set_grouprole = output_gstreamer_set_grouprole,
 };
