@@ -16,6 +16,7 @@ typedef struct{
   GstElement *playbin;
   GstElement *source;
   GstElement *decode_bin;
+  GstElement *convert;
   GstElement *audio_sink;
 }GstData;
 
@@ -64,7 +65,7 @@ static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 
 static void pad_added_handler (GstElement *src, GstPad *new_pad, gpointer data)
 {
-  GstPad *sink_pad = gst_element_get_static_pad (gst_data.audio_sink, "sink");
+  GstPad *sink_pad = gst_element_get_static_pad (gst_data.convert, "sink");
   GstPadLinkReturn ret;
   GstCaps *new_pad_caps = NULL;
   GstStructure *new_pad_struct = NULL;
@@ -139,21 +140,27 @@ void media_init()
   gst_data.playbin = gst_pipeline_new("audio_player_server");
   gst_data.source = gst_element_factory_make ("tcpserversrc", "source");
   gst_data.decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
+  gst_data.convert = gst_element_factory_make("audioconvert", "convert");
   gst_data.audio_sink = gst_element_factory_make ("autoaudiosink", "audio_sink");
 
-  if (!gst_data.playbin || !gst_data.source || !gst_data.decode_bin || !gst_data.audio_sink)
+  if (!gst_data.playbin || !gst_data.source || !gst_data.decode_bin || !gst_data.convert || !gst_data.audio_sink)
     {
       g_print ("Not all elements could be created.\n");
     }
 
-  gst_bin_add_many (GST_BIN (gst_data.playbin), gst_data.source, gst_data.decode_bin, gst_data.audio_sink, NULL);
+  gst_bin_add_many (GST_BIN (gst_data.playbin), gst_data.source, gst_data.decode_bin, gst_data.convert, gst_data.audio_sink, NULL);
 
   if (gst_element_link_many (gst_data.source, gst_data.decode_bin, NULL) != TRUE)
     {
-      g_print ("Elements could not be linked.\n");
+      g_print ("Elements could not be linked. 0\n");
       gst_object_unref (gst_data.playbin);
     }
 
+  if (gst_element_link_many (gst_data.convert, gst_data.audio_sink, NULL) != TRUE)
+    {
+      g_print ("Elements could not be linked. 1\n");
+      gst_object_unref (gst_data.playbin);
+    }
   g_object_set (gst_data.source, "host", inet_ntoa(local_ip), NULL);
   g_object_set (gst_data.source, "port", MEDIA_PORT, NULL);
   g_signal_connect (gst_data.decode_bin, "pad-added", G_CALLBACK (pad_added_handler), NULL);

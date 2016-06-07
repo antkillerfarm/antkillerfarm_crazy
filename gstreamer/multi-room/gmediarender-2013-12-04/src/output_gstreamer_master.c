@@ -109,25 +109,24 @@ int add_slave_to_pipeline(char* ip_addr)
 int output_gstreamer_init_master(void)
 {
 	GstBus *bus;
-	GstElement *source;
 	GstElement *queue0;
 	GstElement *decode_bin;
 
 	player_ = gst_pipeline_new("audio_player_master");
-	source = gst_element_factory_make ("souphttpsrc", "source");
+	gst_data.source = gst_element_factory_make ("souphttpsrc", "source");
 	gst_data.tee = gst_element_factory_make ("tee", "tee");
 	queue0 = gst_element_factory_make ("queue", "queue");
 	decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
 	gst_data.audio_sink = gst_element_factory_make ("autoaudiosink", "audio_sink");
 
-	if (!player_ || !source || !gst_data.tee || !queue0 || !decode_bin || !gst_data.audio_sink)
+	if (!player_ || !gst_data.source || !gst_data.tee || !queue0 || !decode_bin || !gst_data.audio_sink)
 	{
 		g_print ("Not all elements could be created.\n");
 	}
 
-	gst_bin_add_many (GST_BIN (player_), source, gst_data.tee, queue0, decode_bin, gst_data.audio_sink, NULL);
+	gst_bin_add_many (GST_BIN (player_), gst_data.source, gst_data.tee, queue0, decode_bin, gst_data.audio_sink, NULL);
 
-	if (gst_element_link_many (source, gst_data.tee, NULL) != TRUE)
+	if (gst_element_link_many (gst_data.source, gst_data.tee, NULL) != TRUE)
 	{
 		g_print ("Elements could not be linked. 1\n");
 		//gst_object_unref (player_);
@@ -139,7 +138,7 @@ int output_gstreamer_init_master(void)
 		//gst_object_unref (player_);
 	}
 	
-	g_signal_connect (player_, "pad-added", G_CALLBACK (master_pad_added_handler), NULL);
+	g_signal_connect (decode_bin, "pad-added", G_CALLBACK (master_pad_added_handler), NULL);
 
 	bus = gst_pipeline_get_bus(GST_PIPELINE(player_));
 	gst_bus_add_watch(bus, my_bus_callback, NULL);
@@ -178,16 +177,17 @@ int output_gstreamer_init_master(void)
 int add_slave_to_control(struct UpDeviceNode *devnode)
 {
 	GError * error = NULL;
+	g_print ("%s\n", __FUNCTION__);
 
 	devnode->user_data.client = g_socket_client_new();
 	devnode->user_data.connection = g_socket_client_connect_to_host (devnode->user_data.client, devnode->user_data.ip_addr, CONTROL_PORT, NULL, &error);
 	if (error != NULL)
 	{
-		g_print ("%s", error->message);
+		g_print ("%s\n", error->message);
 	}
 	else
 	{
-		g_print ("Connection successful!\n");
+		g_print ("Connect to %s is successful!\n", devnode->user_data.ip_addr);
 	}
 	return 0;
 }

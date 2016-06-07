@@ -2,8 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <gst/gst.h>
+
 #include "upnp_control.h"
 #include "upnp_control_point.h"
+#include "output_gstreamer.h"
 
 int dev_node_get_var(int service, struct UpDeviceNode *devnode, const char *varname, int is_lock)
 {
@@ -125,14 +128,28 @@ void dev_node_get_var_handler(struct UpDeviceNode *devnode, const char *varName,
 
 int dev_node_add_gst_pipeline(struct UpDeviceNode *devnode)
 {
-	if (devnode->user_data.flag_our_group == DEVICE_GROUP_ID_SAME && devnode->user_data.group_role == DEVICE_PLAY_MODE_SLAVE)
+	if (devnode->user_data.flag_gst_pipeline == TRUE)
 	{
-		if (devnode->user_data.flag_ip_info == TRUE)
-		{
-			//add_slave_to_pipeline(devnode->user_data.ip_addr);
-			g_print("%s: %s\n", __FUNCTION__, devnode->user_data.ip_addr);
-		}
+		return CP_SUCCESS;
 	}
+	if (devnode->user_data.flag_our_group != DEVICE_GROUP_ID_SAME)
+	{
+		return CP_SUCCESS;
+	}
+	if (devnode->user_data.group_role != DEVICE_PLAY_MODE_SLAVE)
+	{
+		return CP_SUCCESS;
+	}
+	if (devnode->user_data.flag_ip_info != TRUE)
+	{
+		return CP_SUCCESS;
+	}
+	
+	g_print("%s: %s\n", __FUNCTION__, devnode->user_data.ip_addr);
+	add_slave_to_pipeline(devnode->user_data.ip_addr);
+	add_slave_to_control(devnode);
+	devnode->user_data.flag_gst_pipeline = TRUE;
+	
 	return CP_SUCCESS;
 }
 

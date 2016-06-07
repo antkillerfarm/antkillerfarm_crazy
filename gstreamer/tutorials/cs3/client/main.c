@@ -5,11 +5,19 @@
 #define MAX_PATH 256
 #define MEDIA_PORT 1500
 #define CONTROL_PORT 1501
-//#define SERVER_IP "192.168.3.125"
+
+#define SRC_TYPE_FILE 0
+#define SRC_TYPE_HTTP 1
+#define SRC_TYPE SRC_TYPE_FILE
+
+#define TRANS_TYPE_TCP 0
+#define TRANS_TYPE_RTP 1
+#define TRANS_TYPE TRANS_TYPE_TCP
 
 typedef struct{
   GtkStatusbar *statusbar;
   gint contextId;
+  GtkEntry *entry1;
 }MainWindowSubWidget;
 
 typedef struct{
@@ -18,6 +26,7 @@ typedef struct{
   GstElement *tee;
   GstElement *queue0;
   GstElement *decode_bin;
+  GstElement *convert;
   GstElement *audio_sink;
 }GstData;
 
@@ -32,12 +41,12 @@ char g_filename[MAX_PATH];
 MainWindowSubWidget main_window_sub_widget;
 GstData gst_data;
 
-#define SERVER_LIST_NUM 2
+#define SERVER_LIST_NUM 1
 
 ControlServiceData control_service_data[] =
 {
   {"192.168.3.102", NULL, NULL},
-  {"192.168.3.103", NULL, NULL},
+  //{"192.168.3.103", NULL, NULL},
 };
 
 static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
@@ -108,9 +117,10 @@ G_MODULE_EXPORT void do_button_open_clicked(GtkButton *button, gpointer data)
       gchar *filename;
 
       filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER (dialog));
-      g_strlcpy(g_filename, filename, MAX_PATH);
+      //g_strlcpy(g_filename, filename, MAX_PATH);
       gtk_statusbar_push(GTK_STATUSBAR(main_window_sub_widget.statusbar), 
-		     main_window_sub_widget.contextId, g_filename);
+		     main_window_sub_widget.contextId, filename);
+      gtk_entry_set_text(main_window_sub_widget.entry1, filename);
       g_free (filename);
     }
 
@@ -121,6 +131,9 @@ G_MODULE_EXPORT void do_button_open_clicked(GtkButton *button, gpointer data)
 G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
 {
   gchar *uri;
+  const gchar * content = gtk_entry_get_text(main_window_sub_widget.entry1);
+  g_strlcpy(g_filename, content, MAX_PATH);
+  g_print("%s\n", g_filename);
   /*if (gst_uri_is_valid (g_filename))
     uri = g_strdup (g_filename);
   else
@@ -149,8 +162,8 @@ G_MODULE_EXPORT void do_button_pause_clicked(GtkButton *button, gpointer data)
 
 G_MODULE_EXPORT void do_button_continue_clicked(GtkButton *button, gpointer data)
 {
-  gchar *cmd = "Play\n";
-  send_cmd_to_server(cmd);
+  //gchar *cmd = "Play\n";
+  //send_cmd_to_server(cmd);
   gst_element_set_state(gst_data.playbin, GST_STATE_PLAYING);
 }
 
@@ -162,6 +175,7 @@ void ui_init()
   gchar *exec_name = NULL;
   gchar *tmp = NULL;
   gchar exe_path[MAX_PATH];
+  GtkEntry *entry;
 
   gtk_init(NULL, NULL);
 
@@ -183,6 +197,9 @@ void ui_init()
   main_window_sub_widget.contextId = gtk_statusbar_get_context_id(
                    GTK_STATUSBAR(main_window_sub_widget.statusbar), "Editor Messages");
 
+  entry = GTK_ENTRY(gtk_builder_get_object(builder, "entry1"));
+  main_window_sub_widget.entry1 = entry;
+
   g_signal_connect(window, "destroy",
 		   G_CALLBACK (gtk_main_quit), &window);
 
@@ -193,7 +210,7 @@ void ui_init()
 
 static void pad_added_handler (GstElement *src, GstPad *new_pad, gpointer data)
 {
-  GstPad *sink_pad = gst_element_get_static_pad (gst_data.audio_sink, "sink");
+  GstPad *sink_pad = gst_element_get_static_pad (gst_data.convert, "sink");
   GstPadLinkReturn ret;
   GstCaps *new_pad_caps = NULL;
   GstStructure *new_pad_struct = NULL;
@@ -273,18 +290,23 @@ void media_init()
   //gst_debug_set_default_threshold(GST_LEVEL_MEMDUMP);
 
   gst_data.playbin = gst_pipeline_new("audio_player_client");
+#if (SRC_TYPE==SRC_TYPE_HTTP)
+  gst_data.source = gst_element_factory_make ("souphttpsrc", "source");
+#else
   gst_data.source = gst_element_factory_make ("filesrc", "source");
+#endif
   gst_data.tee = gst_element_factory_make ("tee", "tee");
   gst_data.queue0 = gst_element_factory_make ("queue", "queue");
   gst_data.decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
+  gst_data.convert = gst_element_factory_make("audioconvert", "convert");
   gst_data.audio_sink = gst_element_factory_make ("autoaudiosink", "audio_sink");
 
-  if (!gst_data.playbin || !gst_data.source || !gst_data.tee || !gst_data.queue0 || !gst_data.decode_bin || !gst_data.audio_sink)
+  if (!gst_data.playbin || !gst_data.source || !gst_data.tee || !gst_data.queue0 || !gst_data.decode_bin || !gst_data.convert || !gst_data.audio_sink)
     {
       g_print ("Not all elements could be created.\n");
     }
 
-  gst_bin_add_many (GST_BIN (gst_data.playbin), gst_data.source, gst_data.tee, gst_data.queue0, gst_data.decode_bin, gst_data.audio_sink, NULL);
+  gst_bin_add_many (GST_BIN (gst_data.playbin), gst_data.source, gst_data.tee, gst_data.queue0, gst_data.decode_bin, gst_data.convert, gst_data.audio_sink, NULL);
 
   if (gst_element_link_many (gst_data.source, gst_data.tee, NULL) != TRUE)
     {
@@ -297,7 +319,13 @@ void media_init()
       g_print ("Elements could not be linked. 2\n");
       gst_object_unref (gst_data.playbin);
     }
-
+  
+  if (gst_element_link_many (gst_data.convert, gst_data.audio_sink, NULL) != TRUE)
+    {
+      g_print ("Elements could not be linked. 3\n");
+      gst_object_unref (gst_data.playbin);
+    }
+  
   int i;
   for (i = 0; i < SERVER_LIST_NUM; i++)
     {

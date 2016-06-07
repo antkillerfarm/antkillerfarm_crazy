@@ -135,7 +135,7 @@ int output_gstreamer_init_slave(void)
 	g_print ("tcpserversrc %s\n", UpnpGetServerIpAddress());
 	g_object_set (source, "port", MEDIA_PORT, NULL);
 	
-	g_signal_connect (player_, "pad-added", G_CALLBACK (slave_pad_added_handler), NULL);
+	g_signal_connect (decode_bin, "pad-added", G_CALLBACK (slave_pad_added_handler), NULL);
 
 	bus = gst_pipeline_get_bus(GST_PIPELINE(player_));
 	gst_bus_add_watch(bus, my_bus_callback, NULL);
@@ -167,7 +167,8 @@ int output_gstreamer_init_slave(void)
 	    GST_STATE_CHANGE_FAILURE) {
 		Log_error("gstreamer", "Error: pipeline doesn't become ready.");
 	}
-	
+	gstreamer_output.get_volume = NULL;
+	gstreamer_output.set_volume = NULL;
 	gst_element_set_state (player_, GST_STATE_PLAYING);
 	return 0;
 }

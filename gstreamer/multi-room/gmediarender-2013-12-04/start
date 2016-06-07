@@ -1,9 +1,10 @@
 #!/bin/sh
 BINARY_PATH=./src/gmediarender
+GROUP_ROLE="Master"
 IFNAME="enp0s8"
 UUID=$(openssl rand -hex 6)
 IPADDR=$(ip addr show $IFNAME | grep 'inet ' | awk  '{print $2}' | sed 's/\/.*//g')
-DEVICE_NAME="MuiltSpeaker_"$UUID
+DEVICE_NAME="MuiltSpeaker_"$GROUP_ROLE"_"$UUID
 
 #echo $UUID
 echo $IPADDR

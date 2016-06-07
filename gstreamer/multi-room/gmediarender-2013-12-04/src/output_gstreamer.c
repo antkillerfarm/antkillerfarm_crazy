@@ -70,8 +70,8 @@ const gchar play_list_suffix[] = ".m3u .pls .xspf";
 AppState app_state = {0};
 GstData gst_data = {0};
 
-//int g_device_play_mode = DEVICE_PLAY_MODE_MASTER;
-int g_device_play_mode = DEVICE_PLAY_MODE_SLAVE;
+int g_device_play_mode = DEVICE_PLAY_MODE_MASTER;
+//int g_device_play_mode = DEVICE_PLAY_MODE_SLAVE;
 
 void load_playlist(const  char* file_name);
 void load_playlist_file(const char* file_name);
@@ -333,7 +333,15 @@ static int output_gstreamer_play(output_transition_cb_t callback) {
 			Log_error("gstreamer", "setting play state failed (1)");
 			// Error, but continue; can't get worse :)
 		}
-		g_object_set(G_OBJECT(player_), "uri", gsuri_, NULL);
+		if (g_device_play_mode == DEVICE_PLAY_MODE_MASTER)
+		{
+			g_object_set(G_OBJECT(gst_data.source), "location", gsuri_, NULL);
+			Log_info("gstreamer", "setting play state location");
+		}
+		else
+		{
+			g_object_set(G_OBJECT(player_), "uri", gsuri_, NULL);
+		}
 	}
 	if (gst_element_set_state(player_, GST_STATE_PLAYING) ==
 	    GST_STATE_CHANGE_FAILURE) {
@@ -476,7 +484,14 @@ gboolean my_bus_callback(GstBus * bus, GstMessage * msg, gpointer data)
 			if (play_flag)
 			{
 				gst_element_set_state(player_, GST_STATE_READY);
-				g_object_set(G_OBJECT(player_), "uri", gsuri_, NULL);
+				if (g_device_play_mode == DEVICE_PLAY_MODE_MASTER)
+				{
+					g_object_set(G_OBJECT(gst_data.source), "location", gsuri_, NULL);
+				}
+				else
+				{
+					g_object_set(G_OBJECT(player_), "uri", gsuri_, NULL);
+				}
 				gst_element_set_state(player_, GST_STATE_PLAYING);
 				if (play_trans_callback_) {
 					play_trans_callback_(PLAY_STARTED_NEXT_STREAM);
@@ -670,7 +685,15 @@ static void prepare_next_stream(GstElement *obj, gpointer userdata) {
 	}
 
 	if (gsuri_ != NULL) {
-		g_object_set(G_OBJECT(player_), "uri", gsuri_, NULL);
+		if (g_device_play_mode == DEVICE_PLAY_MODE_MASTER)
+		{
+			g_object_set(G_OBJECT(gst_data.source), "location", gsuri_, NULL);
+		}
+		else
+		{
+			g_object_set(G_OBJECT(player_), "uri", gsuri_, NULL);
+		}
+
 		if (play_trans_callback_) {
 			// TODO(hzeller): can we figure out when we _actually_
 			// start playing this ? there are probably a couple
