@@ -10,7 +10,11 @@
 #define MAX_PATH 256
 #define MEDIA_PORT 1500
 #define CONTROL_PORT 1501
-#define NET_DEV "enp0s8"
+#define NET_DEV "eth0"
+
+#define TRANS_TYPE_TCP 0
+#define TRANS_TYPE_RTP 1
+#define TRANS_TYPE TRANS_TYPE_RTP
 
 typedef struct{
   GstElement *playbin;

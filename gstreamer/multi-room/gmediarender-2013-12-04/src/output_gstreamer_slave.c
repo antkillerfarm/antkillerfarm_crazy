@@ -125,7 +125,7 @@ int output_gstreamer_init_slave(void)
 		g_print ("Not all elements could be created.\n");
 	}
 
-	gst_bin_add_many (GST_BIN (player_), source, decode_bin, gst_data.convert, audio_sink, NULL);
+	gst_bin_add_many (GST_BIN (player_), source, decode_bin, gst_data.convert, audio_sink0, NULL);
 
 	if (gst_element_link_many (source, decode_bin, NULL) != TRUE)
 	{

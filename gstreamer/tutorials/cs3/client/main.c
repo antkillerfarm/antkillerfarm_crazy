@@ -12,7 +12,7 @@
 
 #define TRANS_TYPE_TCP 0
 #define TRANS_TYPE_RTP 1
-#define TRANS_TYPE TRANS_TYPE_TCP
+#define TRANS_TYPE TRANS_TYPE_RTP
 
 typedef struct{
   GtkStatusbar *statusbar;
@@ -210,7 +210,11 @@ void ui_init()
 
 static void pad_added_handler (GstElement *src, GstPad *new_pad, gpointer data)
 {
+#if (TRANS_TYPE == TRANS_TYPE_TCP)
   GstPad *sink_pad = gst_element_get_static_pad (gst_data.convert, "sink");
+#else
+  GstPad *sink_pad = gst_element_get_static_pad (gst_data.tee, "sink");
+#endif
   GstPadLinkReturn ret;
   GstCaps *new_pad_caps = NULL;
   GstStructure *new_pad_struct = NULL;
@@ -256,7 +260,7 @@ exit:
 
 int server_num = 0;
 
-int add_server_to_pipeline(char* ip_addr)
+int add_server_to_pipeline_tcp(char* ip_addr)
 {
 	GstElement *queue1;
 	GstElement *tcp_sink;
@@ -277,20 +281,44 @@ int add_server_to_pipeline(char* ip_addr)
 	}
 
 	g_object_set (tcp_sink, "host", ip_addr, NULL);
-	g_print ("add_server_to_pipeline %s\n", ip_addr);
+	g_print("%s: %s\n", __FUNCTION__, ip_addr);
 	g_object_set (tcp_sink, "port", MEDIA_PORT, NULL);
 	return 0;
 }
 
-void media_init()
+int add_server_to_pipeline_rtp(char* ip_addr)
 {
-  GstBus *bus;
+	GstElement *queue1;
+	GstElement *udp_sink;
+	GstElement *rtppay;
+	char name[20];
+	
+	sprintf(name, "queue%d", server_num);
+	queue1 = gst_element_factory_make ("queue", name);
+	sprintf(name, "rtppay%d", server_num);
+	rtppay = gst_element_factory_make ("rtpgstpay", name);
+	sprintf(name, "udp_sink%d", server_num);
+	udp_sink = gst_element_factory_make ("udpsink", name);
+	server_num++;
 
-  gst_init (NULL, NULL);
-  //gst_debug_set_default_threshold(GST_LEVEL_MEMDUMP);
+	gst_bin_add_many (GST_BIN (gst_data.playbin), queue1, rtppay, udp_sink, NULL);
+	
+	if (gst_element_link_many (gst_data.tee, queue1, rtppay, udp_sink, NULL) != TRUE)
+	{
+		g_print ("Elements could not be linked. 1\n");
+		//gst_object_unref (player_);
+	}
 
+	g_object_set (udp_sink, "host", ip_addr, NULL);
+        g_print("%s: %s\n", __FUNCTION__, ip_addr);
+	g_object_set (udp_sink, "port", MEDIA_PORT, NULL);
+	return 0;
+}
+
+void gst_pipeline_tcp_init()
+{
   gst_data.playbin = gst_pipeline_new("audio_player_client");
-#if (SRC_TYPE==SRC_TYPE_HTTP)
+#if (SRC_TYPE == SRC_TYPE_HTTP)
   gst_data.source = gst_element_factory_make ("souphttpsrc", "source");
 #else
   gst_data.source = gst_element_factory_make ("filesrc", "source");
@@ -325,14 +353,58 @@ void media_init()
       g_print ("Elements could not be linked. 3\n");
       gst_object_unref (gst_data.playbin);
     }
+
+    g_signal_connect (gst_data.decode_bin, "pad-added", G_CALLBACK (pad_added_handler), NULL);
+}
+
+void gst_pipeline_rtp_init()
+{
+  gst_data.playbin = gst_pipeline_new("audio_player_client");
+  gst_data.source = gst_element_factory_make ("uridecodebin", "source");
+  gst_data.tee = gst_element_factory_make ("tee", "tee");
+  gst_data.queue0 = gst_element_factory_make ("queue", "queue");
+
+  gst_data.convert = gst_element_factory_make("audioconvert", "convert");
+  gst_data.audio_sink = gst_element_factory_make ("autoaudiosink", "audio_sink");
+
+  if (!gst_data.playbin || !gst_data.source || !gst_data.tee || !gst_data.queue0 || !gst_data.convert || !gst_data.audio_sink)
+    {
+      g_print ("Not all elements could be created.\n");
+    }
+
+  gst_bin_add_many (GST_BIN (gst_data.playbin), gst_data.source, gst_data.tee, gst_data.queue0, gst_data.convert, gst_data.audio_sink, NULL);
+
+  if (gst_element_link_many (gst_data.tee, gst_data.queue0, gst_data.convert, gst_data.audio_sink, NULL) != TRUE)
+    {
+      g_print ("Elements could not be linked.\n");
+      gst_object_unref (gst_data.playbin);
+    }
+
+  g_signal_connect (gst_data.source, "pad-added", G_CALLBACK (pad_added_handler), NULL);
+}
+
+void media_init()
+{
+  GstBus *bus;
+
+  gst_init (NULL, NULL);
+  //gst_debug_set_default_threshold(GST_LEVEL_MEMDUMP);
+
+#if (TRANS_TYPE == TRANS_TYPE_TCP)
+  gst_pipeline_tcp_init();
+#else
+  gst_pipeline_rtp_init();
+#endif
   
   int i;
   for (i = 0; i < SERVER_LIST_NUM; i++)
     {
-      add_server_to_pipeline(control_service_data[i].server_ip);
+#if (TRANS_TYPE == TRANS_TYPE_TCP)
+      add_server_to_pipeline_tcp(control_service_data[i].server_ip);
+#else
+      add_server_to_pipeline_rtp(control_service_data[i].server_ip);
+#endif
     }
-  
-  g_signal_connect (gst_data.decode_bin, "pad-added", G_CALLBACK (pad_added_handler), NULL);
   
   bus = gst_element_get_bus (gst_data.playbin);
   gst_bus_add_watch (bus, bus_call, NULL);

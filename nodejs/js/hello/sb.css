@@ -1,7 +1,8 @@
-#msg{
+.super_button{
 	border-radius: 15px;
 	width: 600px;
-	margin: 100px auto;
+	margin: 30px auto;
+	float: left;
 	text-align: center;
 	font-size: 38px;
 	font-weight: bold;
