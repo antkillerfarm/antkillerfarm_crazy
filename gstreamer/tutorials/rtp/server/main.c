@@ -238,7 +238,7 @@ void cmd_handler(gchar* cmd_str)
       g_strfreev(arg_strv);
       return;
     }
-  cmd_format_size = sizeof(cmd_format);
+  cmd_format_size = sizeof(cmd_format) / sizeof(CommandFormat);
   for (i = 0; i < cmd_format_size; i++)
     {
       if (g_strcmp0(arg_strv[0], cmd_format[i].cmd_name) == 0)

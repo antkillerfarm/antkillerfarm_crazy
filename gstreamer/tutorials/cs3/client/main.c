@@ -45,7 +45,7 @@ GstData gst_data;
 
 ControlServiceData control_service_data[] =
 {
-  {"192.168.3.102", NULL, NULL},
+  {"192.168.3.119", NULL, NULL},
   //{"192.168.3.103", NULL, NULL},
 };
 
@@ -133,15 +133,20 @@ G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
   gchar *uri;
   const gchar * content = gtk_entry_get_text(main_window_sub_widget.entry1);
   g_strlcpy(g_filename, content, MAX_PATH);
-  g_print("%s\n", g_filename);
-  /*if (gst_uri_is_valid (g_filename))
+  gst_element_set_state(gst_data.playbin, GST_STATE_READY);
+
+#if (TRANS_TYPE == TRANS_TYPE_TCP)
+  uri = g_strdup (g_filename);
+  g_object_set (gst_data.source, "location", uri, NULL);
+#else
+  if (gst_uri_is_valid (g_filename))
     uri = g_strdup (g_filename);
   else
-  uri = gst_filename_to_uri (g_filename, NULL);*/
-  uri = g_strdup (g_filename);
-  //g_object_set (gst_data.playbin, "uri", uri, NULL);
-  gst_element_set_state(gst_data.playbin, GST_STATE_READY);
-  g_object_set (gst_data.source, "location", uri, NULL);
+    uri = gst_filename_to_uri (g_filename, NULL);
+  g_object_set (gst_data.source, "uri", uri, NULL);
+#endif
+
+  g_print("%s: %s", __FUNCTION__, uri);
   g_free (uri);
 
   gst_element_set_state (gst_data.playbin, GST_STATE_PLAYING);
@@ -155,15 +160,19 @@ G_MODULE_EXPORT void do_button_next_clicked(GtkButton *button, gpointer data)
 
 G_MODULE_EXPORT void do_button_pause_clicked(GtkButton *button, gpointer data)
 {
+#if (TRANS_TYPE == TRANS_TYPE_TCP)
   gchar *cmd = "Pause\n";
   send_cmd_to_server(cmd);
+#endif
   gst_element_set_state(gst_data.playbin, GST_STATE_PAUSED);
 }
 
 G_MODULE_EXPORT void do_button_continue_clicked(GtkButton *button, gpointer data)
 {
-  //gchar *cmd = "Play\n";
-  //send_cmd_to_server(cmd);
+#if (TRANS_TYPE == TRANS_TYPE_TCP)
+  gchar *cmd = "Play\n";
+  send_cmd_to_server(cmd);
+#endif
   gst_element_set_state(gst_data.playbin, GST_STATE_PLAYING);
 }
 

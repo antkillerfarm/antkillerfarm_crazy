@@ -19,6 +19,7 @@
 typedef struct{
   GstElement *playbin;
   GstElement *source;
+  GstElement *rtpdepay;
   GstElement *decode_bin;
   GstElement *convert;
   GstElement *audio_sink;
@@ -134,13 +135,8 @@ void get_local_ip_addr(void)
   close(fd);
 }
 
-void media_init()
+void gst_pipeline_tcp_init()
 {
-  GstBus *bus;
-
-  get_local_ip_addr();
-  gst_init (NULL, NULL);
-
   gst_data.playbin = gst_pipeline_new("audio_player_server");
   gst_data.source = gst_element_factory_make ("tcpserversrc", "source");
   gst_data.decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
@@ -167,6 +163,61 @@ void media_init()
     }
   g_object_set (gst_data.source, "host", inet_ntoa(local_ip), NULL);
   g_object_set (gst_data.source, "port", MEDIA_PORT, NULL);
+}
+
+void gst_pipeline_rtp_init()
+{
+  gst_data.playbin = gst_pipeline_new("audio_player_server");
+  gst_data.source = gst_element_factory_make ("udpsrc", "source");
+  gst_data.rtpdepay = gst_element_factory_make ("rtpgstdepay", "rtpdepay");
+  gst_data.decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
+  gst_data.convert = gst_element_factory_make("audioconvert", "convert");
+  gst_data.audio_sink = gst_element_factory_make ("autoaudiosink", "audio_sink");
+
+  if (!gst_data.playbin || !gst_data.source || !gst_data.rtpdepay || !gst_data.decode_bin || !gst_data.convert || !gst_data.audio_sink)
+    {
+      g_print ("Not all elements could be created.\n");
+    }
+
+  gst_bin_add_many (GST_BIN (gst_data.playbin), gst_data.source, gst_data.rtpdepay, gst_data.decode_bin, gst_data.convert, gst_data.audio_sink, NULL);
+
+  if (gst_element_link_many (gst_data.source, gst_data.rtpdepay, gst_data.decode_bin, NULL) != TRUE)
+    {
+      g_print ("Elements could not be linked. 0\n");
+      gst_object_unref (gst_data.playbin);
+    }
+  
+  if (gst_element_link_many (gst_data.convert, gst_data.audio_sink, NULL) != TRUE)
+    {
+      g_print ("Elements could not be linked. 1\n");
+      gst_object_unref (gst_data.playbin);
+    }
+  GstCaps *caps = gst_caps_new_simple ("application/x-rtp",
+				       "media", G_TYPE_STRING, "application",
+				       "payload", G_TYPE_INT, 96,
+				       "clock-rate", G_TYPE_INT, 90000,
+				       "encoding-name", G_TYPE_STRING, "X-GST",
+				       NULL);
+  g_object_set (gst_data.source, "caps", caps, NULL);
+  gst_caps_unref (caps);
+
+  g_object_set (gst_data.source, "address", inet_ntoa(local_ip), NULL);
+  g_object_set (gst_data.source, "port", MEDIA_PORT, NULL);
+}
+
+void media_init()
+{
+  GstBus *bus;
+
+  get_local_ip_addr();
+  gst_init (NULL, NULL);
+
+#if (TRANS_TYPE == TRANS_TYPE_TCP)
+  gst_pipeline_tcp_init();
+#else
+  gst_pipeline_rtp_init();
+#endif
+  
   g_signal_connect (gst_data.decode_bin, "pad-added", G_CALLBACK (pad_added_handler), NULL);
 
   bus = gst_element_get_bus (gst_data.playbin);
@@ -276,7 +327,7 @@ void cmd_handler(gchar* cmd_str)
       g_strfreev(arg_strv);
       return;
     }
-  cmd_format_size = sizeof(cmd_format);
+  cmd_format_size = sizeof(cmd_format) / sizeof(CommandFormat);
   for (i = 0; i < cmd_format_size; i++)
     {
       if (g_strcmp0(arg_strv[0], cmd_format[i].cmd_name) == 0)
