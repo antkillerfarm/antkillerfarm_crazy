@@ -10,10 +10,40 @@
         <property name="can_focus">False</property>
         <property name="orientation">vertical</property>
         <child>
-          <object class="GtkScale" id="scale1">
+          <object class="GtkBox" id="box3">
             <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="round_digits">1</property>
+            <property name="can_focus">False</property>
+            <child>
+              <object class="GtkScale" id="scale1">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="lower_stepper_sensitivity">off</property>
+                <property name="round_digits">1</property>
+                <property name="digits">2</property>
+                <property name="draw_value">False</property>
+                <signal name="change-value" handler="slider_change_value" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="label1">
+                <property name="width_request">60</property>
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="opacity">0.85999999999999999</property>
+                <property name="label" translatable="yes">0:00</property>
+                <property name="ellipsize">end</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="expand">False</property>

@@ -27,6 +27,10 @@
 #define MEDIA_PORT 1500
 #define CONTROL_PORT 1501
 
+#define TRANS_TYPE_TCP 0
+#define TRANS_TYPE_RTP 1
+#define TRANS_TYPE TRANS_TYPE_RTP
+
 #if 0
 typedef struct{
 	GstElement *audio_sink;

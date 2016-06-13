@@ -18,6 +18,8 @@ typedef struct{
   GtkStatusbar *statusbar;
   gint contextId;
   GtkEntry *entry1;
+  GtkScale *slider;
+  GtkLabel *label;
 }MainWindowSubWidget;
 
 typedef struct{
@@ -48,6 +50,13 @@ ControlServiceData control_service_data[] =
   {"192.168.3.119", NULL, NULL},
   //{"192.168.3.103", NULL, NULL},
 };
+
+static GstState get_current_player_state() {
+	GstState state = GST_STATE_PLAYING;
+	GstState pending = GST_STATE_NULL;
+	gst_element_get_state(gst_data.playbin, &state, &pending, 0);
+	return state;
+}
 
 static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 {
@@ -128,6 +137,31 @@ G_MODULE_EXPORT void do_button_open_clicked(GtkButton *button, gpointer data)
 
 }
 
+gboolean update_slider(gpointer user_data)
+{
+  gint64 nanosecs, duration_nanosecs;
+  double duration, position;
+  char str[64];
+  if (get_current_player_state() != GST_STATE_PLAYING)
+    {
+      return FALSE;
+    }
+
+  gst_element_query_position(gst_data.playbin, GST_FORMAT_TIME, &nanosecs);
+  gst_element_query_duration(gst_data.playbin, GST_FORMAT_TIME, &duration_nanosecs);
+
+  duration = (double)(duration_nanosecs) / GST_SECOND;
+  position = (double)(nanosecs) / GST_SECOND;
+
+  gtk_range_set_range(GTK_RANGE(main_window_sub_widget.slider), 0, duration);
+  gtk_range_set_value(GTK_RANGE(main_window_sub_widget.slider), position);
+  sprintf(str, "%d:%02d", (int)(position / 60), (int)(position) % 60);
+
+  g_print("%s:%f %s\n", __FUNCTION__, duration, str);
+  gtk_label_set_text(GTK_LABEL(main_window_sub_widget.label), str);
+  return TRUE;
+}
+
 G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
 {
   gchar *uri;
@@ -150,6 +184,7 @@ G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
   g_free (uri);
 
   gst_element_set_state (gst_data.playbin, GST_STATE_PLAYING);
+  g_timeout_add(1000, update_slider, NULL);
 }
 
 G_MODULE_EXPORT void do_button_next_clicked(GtkButton *button, gpointer data)
@@ -174,6 +209,17 @@ G_MODULE_EXPORT void do_button_continue_clicked(GtkButton *button, gpointer data
   send_cmd_to_server(cmd);
 #endif
   gst_element_set_state(gst_data.playbin, GST_STATE_PLAYING);
+}
+
+G_MODULE_EXPORT gboolean slider_change_value (GtkRange *range, GtkScrollType scroll, gdouble value, gpointer user_data)
+{
+  gint64 position_nanos = (gint64)(value * GST_SECOND);
+  g_print("%s:%f\n", __FUNCTION__, value);
+  gst_element_seek(gst_data.playbin, 1.0, GST_FORMAT_TIME,
+		   GST_SEEK_FLAG_FLUSH,
+		   GST_SEEK_TYPE_SET, position_nanos,
+		   GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
+  return FALSE;
 }
 
 void ui_init()
@@ -208,6 +254,12 @@ void ui_init()
 
   entry = GTK_ENTRY(gtk_builder_get_object(builder, "entry1"));
   main_window_sub_widget.entry1 = entry;
+
+  main_window_sub_widget.slider = GTK_SCALE(gtk_builder_get_object(builder, "scale1"));
+  gtk_range_set_range(GTK_RANGE(main_window_sub_widget.slider), 0, 100);
+  //gtk_scale_set_draw_value(GTK_SCALE(main_window_sub_widget.slider), FALSE);
+  
+  main_window_sub_widget.label = GTK_LABEL(gtk_builder_get_object(builder, "label1"));
 
   g_signal_connect(window, "destroy",
 		   G_CALLBACK (gtk_main_quit), &window);
@@ -271,57 +323,57 @@ int server_num = 0;
 
 int add_server_to_pipeline_tcp(char* ip_addr)
 {
-	GstElement *queue1;
-	GstElement *tcp_sink;
-	char name[20];
+  GstElement *queue1;
+  GstElement *tcp_sink;
+  char name[20];
 	
-	sprintf(name, "queue%d", server_num);
-	queue1 = gst_element_factory_make ("queue", name);
-	sprintf(name, "tcp_sink%d", server_num);
-	tcp_sink = gst_element_factory_make ("tcpclientsink", name);
-	server_num++;
+  sprintf(name, "queue%d", server_num);
+  queue1 = gst_element_factory_make ("queue", name);
+  sprintf(name, "tcp_sink%d", server_num);
+  tcp_sink = gst_element_factory_make ("tcpclientsink", name);
+  server_num++;
 
-	gst_bin_add_many (GST_BIN (gst_data.playbin), queue1, tcp_sink, NULL);
+  gst_bin_add_many (GST_BIN (gst_data.playbin), queue1, tcp_sink, NULL);
 	
-	if (gst_element_link_many (gst_data.tee, queue1, tcp_sink, NULL) != TRUE)
-	{
-		g_print ("Elements could not be linked. 2\n");
-		//gst_object_unref (player_);
-	}
+  if (gst_element_link_many (gst_data.tee, queue1, tcp_sink, NULL) != TRUE)
+    {
+      g_print ("Elements could not be linked. 2\n");
+      //gst_object_unref (player_);
+    }
 
-	g_object_set (tcp_sink, "host", ip_addr, NULL);
-	g_print("%s: %s\n", __FUNCTION__, ip_addr);
-	g_object_set (tcp_sink, "port", MEDIA_PORT, NULL);
-	return 0;
+  g_object_set (tcp_sink, "host", ip_addr, NULL);
+  g_print("%s: %s\n", __FUNCTION__, ip_addr);
+  g_object_set (tcp_sink, "port", MEDIA_PORT, NULL);
+  return 0;
 }
 
 int add_server_to_pipeline_rtp(char* ip_addr)
 {
-	GstElement *queue1;
-	GstElement *udp_sink;
-	GstElement *rtppay;
-	char name[20];
+  GstElement *queue1;
+  GstElement *udp_sink;
+  GstElement *rtppay;
+  char name[20];
 	
-	sprintf(name, "queue%d", server_num);
-	queue1 = gst_element_factory_make ("queue", name);
-	sprintf(name, "rtppay%d", server_num);
-	rtppay = gst_element_factory_make ("rtpgstpay", name);
-	sprintf(name, "udp_sink%d", server_num);
-	udp_sink = gst_element_factory_make ("udpsink", name);
-	server_num++;
+  sprintf(name, "queue%d", server_num);
+  queue1 = gst_element_factory_make ("queue", name);
+  sprintf(name, "rtppay%d", server_num);
+  rtppay = gst_element_factory_make ("rtpgstpay", name);
+  sprintf(name, "udp_sink%d", server_num);
+  udp_sink = gst_element_factory_make ("udpsink", name);
+  server_num++;
 
-	gst_bin_add_many (GST_BIN (gst_data.playbin), queue1, rtppay, udp_sink, NULL);
+  gst_bin_add_many (GST_BIN (gst_data.playbin), queue1, rtppay, udp_sink, NULL);
 	
-	if (gst_element_link_many (gst_data.tee, queue1, rtppay, udp_sink, NULL) != TRUE)
-	{
-		g_print ("Elements could not be linked. 1\n");
-		//gst_object_unref (player_);
-	}
+  if (gst_element_link_many (gst_data.tee, queue1, rtppay, udp_sink, NULL) != TRUE)
+    {
+      g_print ("Elements could not be linked. 1\n");
+      //gst_object_unref (player_);
+    }
 
-	g_object_set (udp_sink, "host", ip_addr, NULL);
-        g_print("%s: %s\n", __FUNCTION__, ip_addr);
-	g_object_set (udp_sink, "port", MEDIA_PORT, NULL);
-	return 0;
+  g_object_set (udp_sink, "host", ip_addr, NULL);
+  g_print("%s: %s\n", __FUNCTION__, ip_addr);
+  g_object_set (udp_sink, "port", MEDIA_PORT, NULL);
+  return 0;
 }
 
 void gst_pipeline_tcp_init()

@@ -10,7 +10,11 @@
 
 static void master_pad_added_handler (GstElement *src, GstPad *new_pad, gpointer data)
 {
+#if (TRANS_TYPE==TRANS_TYPE_RTP)
+	GstPad *sink_pad = gst_element_get_static_pad (gst_data.source, "sink");
+#else
 	GstPad *sink_pad = gst_element_get_static_pad (gst_data.convert, "sink");
+#endif
 	GstPadLinkReturn ret;
 	GstCaps *new_pad_caps = NULL;
 	GstStructure *new_pad_struct = NULL;
@@ -54,49 +58,115 @@ exit:
 	gst_object_unref (sink_pad);
 }
 
-# if 0
+int slave_num = 0;
+
+#if (TRANS_TYPE==TRANS_TYPE_RTP)
 int add_slave_to_pipeline(char* ip_addr)
 {
+	GstElement *queue1;
+	GstElement *rtppay;
+	GstElement *udp_sink;
+	char name[20];
+
+	sprintf(name, "queue%d", slave_num);
+	queue1 = gst_element_factory_make ("queue", name);
+	sprintf(name, "rtppay%d", slave_num);
+	rtppay = gst_element_factory_make ("rtpgstpay", name);
+	sprintf(name, "udp_sink%d", slave_num);
+        udp_sink = gst_element_factory_make ("udpsink", name);
+	slave_num++;
+
+	gst_bin_add_many (GST_BIN (player_), queue1, rtppay, udp_sink, NULL);
+	
+	if (gst_element_link_many (gst_data.tee, queue1, rtppay, udp_sink, NULL) != TRUE)
+	{
+		g_print ("Elements could not be linked. 4\n");
+		//gst_object_unref (player_);
+	}
+
+	g_object_set (udp_sink, "host", ip_addr, NULL);
+	g_print ("add_slave_to_pipeline %s\n", ip_addr);
+	g_object_set (udp_sink, "port", MEDIA_PORT, NULL);
 	return 0;
 }
 
 int output_gstreamer_init_master(void)
 {
-	GstElement *source;
-	GstElement *rtppay;
-	GstElement *decode_bin;
+	GstBus *bus;
+	GstElement *queue0;
+	GstElement *audio_sink0;
 
 	player_ = gst_pipeline_new("audio_player_master");
-	source = gst_element_factory_make ("uridecodebin", "source");
-	rtppay = gst_element_factory_make ("rtpgstpay", "rtppay");
-	decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
-        gst_data.udp_sink = gst_element_factory_make ("udpsink", "udp_sink");
+	gst_data.source = gst_element_factory_make ("uridecodebin", "source");
+	gst_data.tee = gst_element_factory_make ("tee", "tee");
+	queue0 = gst_element_factory_make ("queue", "queue");
+	gst_data.convert = gst_element_factory_make("audioconvert", "convert");
+        audio_sink0 = gst_element_factory_make ("autoaudiosink", "audio_sink");
 
-	if (!player_ || !source || !rtppay || !decode_bin || !gst_data.udp_sink)
+	if (!player_ || !gst_data.source || !gst_data.tee || !queue0 || !gst_data.convert || !audio_sink0)
 	{
 		g_print ("Not all elements could be created.\n");
 	}
 
-	gst_bin_add_many (GST_BIN (player_), source, rtppay, decode_bin, gst_data.udp_sink, NULL);
+	gst_bin_add_many (GST_BIN (player_), gst_data.source, gst_data.tee, queue0, gst_data.convert, audio_sink0, NULL);
+
+	if (gst_element_link_many (gst_data.tee, queue0, gst_data.convert, audio_sink0, NULL) != TRUE)
+	{
+		g_print ("Elements could not be linked. 1\n");
+		//gst_object_unref (player_);
+	}
 	
-	g_signal_connect (player_, "pad-added", G_CALLBACK (master_pad_added_handler), NULL);
+	g_signal_connect (gst_data.source, "pad-added", G_CALLBACK (master_pad_added_handler), NULL);
+	bus = gst_pipeline_get_bus(GST_PIPELINE(player_));
+	gst_bus_add_watch(bus, my_bus_callback, NULL);
+	gst_object_unref(bus);
+
+	if (audio_sink != NULL) {
+		GstElement *sink = NULL;
+		Log_info("gstreamer", "Setting audio sink to %s; device=%s\n",
+			 audio_sink, audio_device ? audio_device : "");
+		sink = gst_element_factory_make (audio_sink, "sink");
+		if (sink == NULL) {
+		  Log_error("gstreamer", "Couldn't create sink '%s'",
+			    audio_sink);
+		} else {
+		  if (audio_device != NULL) {
+		    g_object_set (G_OBJECT(sink), "device", audio_device, NULL);
+		  }
+		  g_object_set (G_OBJECT (player_), "audio-sink", sink, NULL);
+		}
+	}
+	if (videosink != NULL) {
+		GstElement *sink = NULL;
+		Log_info("gstreamer", "Setting video sink to %s", videosink);
+		sink = gst_element_factory_make (videosink, "sink");
+		g_object_set (G_OBJECT (player_), "video-sink", sink, NULL);
+	}
+
+	if (gst_element_set_state(player_, GST_STATE_READY) ==
+	    GST_STATE_CHANGE_FAILURE) {
+		Log_error("gstreamer", "Error: pipeline doesn't become ready.");
+	}
 	return 0;
 }
-#endif
-
-# if 1
+#else
 int add_slave_to_pipeline(char* ip_addr)
 {
 	GstElement *queue1;
 	GstElement *tcp_sink;
-        queue1 = gst_element_factory_make ("queue", "queue1");
-	tcp_sink = gst_element_factory_make ("tcpclientsink", "tcp_sink");
+	char name[20];
+
+	sprintf(name, "queue%d", slave_num);
+        queue1 = gst_element_factory_make ("queue", name);
+	sprintf(name, "tcp_sink%d", slave_num);
+	tcp_sink = gst_element_factory_make ("tcpclientsink", name);
+	slave_num++;
 
 	gst_bin_add_many (GST_BIN (player_), queue1, tcp_sink, NULL);
 	
 	if (gst_element_link_many (gst_data.tee, queue1, tcp_sink, NULL) != TRUE)
 	{
-		g_print ("Elements could not be linked. 2\n");
+		g_print ("Elements could not be linked. 4\n");
 		//gst_object_unref (player_);
 	}
 
