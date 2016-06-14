@@ -11,7 +11,7 @@
 static void master_pad_added_handler (GstElement *src, GstPad *new_pad, gpointer data)
 {
 #if (TRANS_TYPE==TRANS_TYPE_RTP)
-	GstPad *sink_pad = gst_element_get_static_pad (gst_data.source, "sink");
+	GstPad *sink_pad = gst_element_get_static_pad (gst_data.tee, "sink");
 #else
 	GstPad *sink_pad = gst_element_get_static_pad (gst_data.convert, "sink");
 #endif
@@ -147,6 +147,8 @@ int output_gstreamer_init_master(void)
 	    GST_STATE_CHANGE_FAILURE) {
 		Log_error("gstreamer", "Error: pipeline doesn't become ready.");
 	}
+	gstreamer_output.get_volume = NULL;
+	gstreamer_output.set_volume = NULL;
 	return 0;
 }
 #else
@@ -248,6 +250,8 @@ int output_gstreamer_init_master(void)
 	    GST_STATE_CHANGE_FAILURE) {
 		Log_error("gstreamer", "Error: pipeline doesn't become ready.");
 	}
+	gstreamer_output.get_volume = NULL;
+	gstreamer_output.set_volume = NULL;
 	return 0;
 }
 #endif
@@ -269,4 +273,3 @@ int add_slave_to_control(struct UpDeviceNode *devnode)
 	}
 	return 0;
 }
-

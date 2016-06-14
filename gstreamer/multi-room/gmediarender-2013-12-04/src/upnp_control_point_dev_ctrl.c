@@ -37,7 +37,7 @@ int dev_node_get_var(int service, struct UpDeviceNode *devnode, const char *varn
 	return rc;
 }
 
-int dev_node_get_ip_info(struct UpDeviceNode *devnode)
+int dev_node_get_ip_info(struct UpDeviceNode *devnode, gpointer data)
 {
 	if (devnode->user_data.flag_ip_info == FALSE)
 	{
@@ -71,17 +71,17 @@ int dev_node_get_ip_info(struct UpDeviceNode *devnode)
 	return CP_SUCCESS;
 }
 
-int dev_node_get_volume(struct UpDeviceNode *devnode)
+int dev_node_get_volume(struct UpDeviceNode *devnode, gpointer data)
 {
 	return dev_node_get_var(UP_SERVICE_RENDERING_CONTROL, devnode, "Volume", FALSE);
 }
 
-int dev_node_get_group_info(struct UpDeviceNode *devnode)
+int dev_node_get_group_info(struct UpDeviceNode *devnode, gpointer data)
 {
-	/*if (devnode->user_data.flag_our_device == TRUE)
+	if (devnode->user_data.flag_our_device == TRUE)
 	{
 		return CP_SUCCESS;
-		}*/
+	}
 	if (devnode->user_data.flag_group_id == DEVICE_GROUP_ID_FLAG_INIT)
 	{
 		dev_node_get_var(UP_SERVICE_RENDERING_CONTROL, devnode, "GroupID", FALSE);
@@ -95,7 +95,7 @@ int dev_node_get_group_info(struct UpDeviceNode *devnode)
 	return CP_SUCCESS;
 }
 
-int dev_node_print(struct UpDeviceNode *devnode)
+int dev_node_print(struct UpDeviceNode *devnode, gpointer data)
 {
 	g_print(" -- %s\n", devnode->device.UDN);
 	return CP_SUCCESS;
@@ -126,7 +126,7 @@ void dev_node_get_var_handler(struct UpDeviceNode *devnode, const char *varName,
 	}
 }
 
-int dev_node_add_gst_pipeline(struct UpDeviceNode *devnode)
+int dev_node_add_gst_pipeline(struct UpDeviceNode *devnode, gpointer data)
 {
 	if (devnode->user_data.flag_gst_pipeline == TRUE)
 	{
@@ -153,3 +153,28 @@ int dev_node_add_gst_pipeline(struct UpDeviceNode *devnode)
 	return CP_SUCCESS;
 }
 
+int dev_node_send_cmd(struct UpDeviceNode *devnode, gpointer data)
+{
+	GError * error = NULL;
+	char* cmd = (char*)data;
+        if (devnode->user_data.flag_gst_pipeline != TRUE)
+	{
+		return CP_SUCCESS;
+	}
+	GOutputStream * ostream = g_io_stream_get_output_stream (G_IO_STREAM (devnode->user_data.connection));
+	g_output_stream_write(ostream, cmd, strlen(cmd), NULL, &error);
+	/* don't forget to check for errors */
+	if (error != NULL)
+	{
+		g_print ("%s", error->message);
+	}
+	return CP_SUCCESS;
+}
+
+void send_cmd_to_server(gchar *cmd)
+{
+	DevNodeOperation dev_node_op;
+	dev_node_op.operation = dev_node_print;
+	dev_node_op.data = cmd;
+        ctrl_point_dev_node_operation(&dev_node_op);
+}

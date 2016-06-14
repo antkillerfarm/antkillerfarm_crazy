@@ -221,7 +221,7 @@ int ctrl_point_dev_node_operation(DevNodeOperation *dev_node_op)
 	while (tmpdevnode) {
 		if (dev_node_op->operation)
 		{
-			dev_node_op->operation(tmpdevnode);
+			dev_node_op->operation(tmpdevnode, dev_node_op->data);
 		}
 		tmpdevnode = tmpdevnode->next;
 	}

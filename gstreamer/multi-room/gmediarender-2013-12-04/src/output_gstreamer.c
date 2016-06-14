@@ -335,7 +335,11 @@ static int output_gstreamer_play(output_transition_cb_t callback) {
 		}
 		if (g_device_play_mode == DEVICE_PLAY_MODE_MASTER)
 		{
+#if (TRANS_TYPE==TRANS_TYPE_RTP)
+			g_object_set(G_OBJECT(gst_data.source), "uri", gsuri_, NULL);
+#else
 			g_object_set(G_OBJECT(gst_data.source), "location", gsuri_, NULL);
+#endif
 			Log_info("gstreamer", "setting play state location");
 		}
 		else
@@ -486,7 +490,11 @@ gboolean my_bus_callback(GstBus * bus, GstMessage * msg, gpointer data)
 				gst_element_set_state(player_, GST_STATE_READY);
 				if (g_device_play_mode == DEVICE_PLAY_MODE_MASTER)
 				{
+#if (TRANS_TYPE==TRANS_TYPE_RTP)
+					g_object_set(G_OBJECT(gst_data.source), "uri", gsuri_, NULL);
+#else
 					g_object_set(G_OBJECT(gst_data.source), "location", gsuri_, NULL);
+#endif
 				}
 				else
 				{
@@ -687,7 +695,11 @@ static void prepare_next_stream(GstElement *obj, gpointer userdata) {
 	if (gsuri_ != NULL) {
 		if (g_device_play_mode == DEVICE_PLAY_MODE_MASTER)
 		{
+#if (TRANS_TYPE==TRANS_TYPE_RTP)
+			g_object_set(G_OBJECT(gst_data.source), "uri", gsuri_, NULL);
+#else
 			g_object_set(G_OBJECT(gst_data.source), "location", gsuri_, NULL);
+#endif
 		}
 		else
 		{

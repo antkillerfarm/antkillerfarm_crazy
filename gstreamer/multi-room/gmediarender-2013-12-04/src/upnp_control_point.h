@@ -99,7 +99,8 @@ typedef enum {
 }eventType;
 
 typedef struct {
-	int (*operation)(struct UpDeviceNode *devnode);
+	int (*operation)(struct UpDeviceNode *devnode, gpointer data);
+	gpointer data;
 }DevNodeOperation;
 
 ///////////////////////////////////
@@ -131,13 +132,15 @@ int upnp_event_subscription_expired_handler(Upnp_EventType EventType, void *Even
 
 
 int ctrl_point_dev_node_operation(DevNodeOperation *dev_node_op);
-int dev_node_print(struct UpDeviceNode *devnode);
+int dev_node_print(struct UpDeviceNode *devnode, gpointer data);
 int dev_node_get_var(int service, struct UpDeviceNode *devnode, const char *varname, int is_lock);
-int dev_node_get_ip_info(struct UpDeviceNode *devnode);
-int dev_node_get_volume(struct UpDeviceNode *devnode);
-int dev_node_get_group_info(struct UpDeviceNode *devnode);
+int dev_node_get_ip_info(struct UpDeviceNode *devnode, gpointer data);
+int dev_node_get_volume(struct UpDeviceNode *devnode, gpointer data);
+int dev_node_get_group_info(struct UpDeviceNode *devnode, gpointer data);
 void dev_node_get_var_handler(struct UpDeviceNode *devnode, const char *varName, const DOMString varValue);
-int dev_node_add_gst_pipeline(struct UpDeviceNode *devnode);
+int dev_node_add_gst_pipeline(struct UpDeviceNode *devnode, gpointer data);
+int dev_node_send_cmd(struct UpDeviceNode *devnode, gpointer data);
+void send_cmd_to_server(gchar *cmd);
 
 int ctrl_point_remove_all(void);
 void ctrl_point_add_device(IXML_Document *DescDoc, const char *location, int expires);

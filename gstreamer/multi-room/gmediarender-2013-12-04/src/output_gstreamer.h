@@ -31,20 +31,11 @@
 #define TRANS_TYPE_RTP 1
 #define TRANS_TYPE TRANS_TYPE_RTP
 
-#if 0
-typedef struct{
-	GstElement *audio_sink;
-	GstElement *udp_sink;
-}GstData;
-#endif
-
-#if 1
 typedef struct{
   	GstElement *source;
 	GstElement *convert;
 	GstElement *tee;
 }GstData;
-#endif
 
 extern struct output_module gstreamer_output;
 extern GstData gst_data;
@@ -56,6 +47,7 @@ extern gchar *videosink;
 int output_gstreamer_init_master(void);
 int output_gstreamer_init_slave(void);
 int output_gstreamer_control_init_slave(void);
+void send_cmd_to_server(gchar *cmd);
 int add_slave_to_pipeline(char* ip_addr);
 int add_slave_to_control(struct UpDeviceNode *devnode);
 gboolean my_bus_callback(GstBus * bus, GstMessage * msg, gpointer data);
