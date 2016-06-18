@@ -10,11 +10,11 @@ function super_button_animation(divs) {
 	delay = parseFloat(0.15 * i) + "s";
 	if (flag)
 	{
-	    $(divs[i]).css({"display":"inherit", "animation-delay":delay, "-webkit-animation-delay":delay}).addClass('fadeOutLeft');
+	    $(divs[i]).css({"animation-delay":delay, "-webkit-animation-delay":delay}).addClass('fadeOutLeft');
 	}
 	else
 	{
-	    $(divs[i]).css({"display":"inherit", "animation-delay":delay, "-webkit-animation-delay":delay}).addClass('fadeInLeft');
+	    $(divs[i]).css({"animation-delay":delay, "-webkit-animation-delay":delay}).addClass('fadeInLeft');
 	}
 	animation_cnt++;
 	console.log(animation_cnt + ":" + delay);
@@ -41,11 +41,11 @@ function sb_cb_init() {
     $('.super_button').on('animationend webkitAnimationEnd MSAnimationEnd oAnimationEnd', function(e) {
 	if (flag)
 	{
-	    $(this).removeClass('fadeOutLeft').css({"display":"none"});
+	    $(this).removeClass('fadeOutLeft').css({"opacity":"0", "animation-delay":""});
 	}
 	else
 	{
-	    $(this).removeClass('fadeInLeft').css({"display":"inherit"});
+	    $(this).removeClass('fadeInLeft').css({"opacity":"1", "animation-delay":""});
 	}
 	animation_cnt--;
 	console.log(animation_cnt);
