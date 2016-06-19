@@ -1,6 +1,8 @@
 #include <gtk/gtk.h>
 #include <gst/gst.h>
 #include <string.h>
+#include <gst/net/gstnetclientclock.h>
+#include <gst/net/gstnettimeprovider.h>
 
 #define MAX_PATH 256
 #define MEDIA_PORT 1500
@@ -44,10 +46,11 @@ MainWindowSubWidget main_window_sub_widget;
 GstData gst_data;
 
 #define SERVER_LIST_NUM 1
+#define CLIENT_IP "192.168.1.105"
 
 ControlServiceData control_service_data[] =
 {
-  {"192.168.3.119", NULL, NULL},
+  {"192.168.1.105", NULL, NULL},
   //{"192.168.3.103", NULL, NULL},
 };
 
@@ -56,6 +59,19 @@ static GstState get_current_player_state() {
 	GstState pending = GST_STATE_NULL;
 	gst_element_get_state(gst_data.playbin, &state, &pending, 0);
 	return state;
+}
+
+static GstNetTimeProvider* create_net_clock (gint *port)
+{
+  GstClock *clock;
+  GstNetTimeProvider *net_time;
+
+  clock = gst_system_clock_obtain ();
+  net_time = gst_net_time_provider_new (clock, NULL, 0);
+  g_object_get (net_time, "port", port, NULL);
+  gst_object_unref (clock);
+
+  return net_time;
 }
 
 static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
@@ -209,6 +225,13 @@ G_MODULE_EXPORT void do_button_continue_clicked(GtkButton *button, gpointer data
   send_cmd_to_server(cmd);
 #endif
   gst_element_set_state(gst_data.playbin, GST_STATE_PLAYING);
+}
+
+G_MODULE_EXPORT void do_button_clock_clicked(GtkButton *button, gpointer data)
+{
+  gchar cmd[64];
+  sprintf(cmd, "Clock#%s\n", CLIENT_IP);
+  send_cmd_to_server(cmd);
 }
 
 G_MODULE_EXPORT gboolean slider_change_value (GtkRange *range, GtkScrollType scroll, gdouble value, gpointer user_data)
@@ -447,15 +470,27 @@ void gst_pipeline_rtp_init()
 void media_init()
 {
   GstBus *bus;
+  GstClock *client_clock;
+  GstNetTimeProvider *prov_clock;
+  gint clock_port;
 
   gst_init (NULL, NULL);
   //gst_debug_set_default_threshold(GST_LEVEL_MEMDUMP);
+
+  prov_clock = create_net_clock(&clock_port);
+  g_print("clock port: %d\n", clock_port);
+  client_clock = gst_net_client_clock_new(NULL, CLIENT_IP, clock_port, 0);
+  //g_usleep (G_USEC_PER_SEC / 2);
 
 #if (TRANS_TYPE == TRANS_TYPE_TCP)
   gst_pipeline_tcp_init();
 #else
   gst_pipeline_rtp_init();
 #endif
+
+  //gst_pipeline_use_clock (GST_PIPELINE (gst_data.playbin), client_clock);
+  //gst_element_set_start_time (gst_data.playbin, GST_CLOCK_TIME_NONE);
+  //gst_pipeline_set_latency (GST_PIPELINE (gst_data.playbin), GST_SECOND / 2);
   
   int i;
   for (i = 0; i < SERVER_LIST_NUM; i++)

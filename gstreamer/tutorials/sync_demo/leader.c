@@ -19,7 +19,7 @@
 GstElement *playbin;
 
 static GstNetTimeProvider *
-create_net_clock (guint16 *port)
+create_net_clock (gint *port)
 {
   GstClock *clock;
   GstNetTimeProvider *net_time;
@@ -54,9 +54,9 @@ share_base_time (guint16 clock_port, GstNetTimeProvider *prov_clock)
 
 int main(int argc, char *argv[]) {
   GMainLoop *main_loop;
-  GstClock *client_clock, *tmp_clock;
+  GstClock *client_clock;
   GstNetTimeProvider *prov_clock;
-  guint16 clock_port;
+  gint clock_port;
   GstClockTime base_time;
 
   /* Initialize GStreamer */
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 
   /* Create the elements */
   playbin = gst_element_factory_make ("playbin", "playbin");
-  g_object_set (playbin, "uri", "file:///home/luisbg/samples/big_buck_bunny_1080p_h264.mov", NULL);
+  g_object_set (playbin, "uri", "file:///home/data/tj/my/03.flac", NULL);
 
   gst_pipeline_use_clock (GST_PIPELINE (playbin), client_clock);
   gst_element_set_base_time (playbin, base_time);
@@ -88,5 +88,6 @@ int main(int argc, char *argv[]) {
   g_main_loop_unref (main_loop);
   gst_element_set_state (playbin, GST_STATE_NULL);
   gst_object_unref (playbin);
+  gst_object_unref (prov_clock);
   return 0;
 }

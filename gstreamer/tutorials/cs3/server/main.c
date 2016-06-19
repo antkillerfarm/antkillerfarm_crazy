@@ -6,11 +6,14 @@
 #include <glib.h>
 #include <gio/gio.h>
 #include <gst/gst.h>
+#include <gst/net/gstnetclientclock.h>
+#include <gst/net/gstnettimeprovider.h>
 
 #define MAX_PATH 256
 #define MEDIA_PORT 1500
 #define CONTROL_PORT 1501
-#define NET_DEV "eth0"
+//#define NET_DEV "eth0"
+#define NET_DEV "wlp3s0"
 
 #define TRANS_TYPE_TCP 0
 #define TRANS_TYPE_RTP 1
@@ -208,6 +211,8 @@ void gst_pipeline_rtp_init()
 void media_init()
 {
   GstBus *bus;
+  GstClock *client_clock;
+  guint16 clock_port;
 
   get_local_ip_addr();
   gst_init (NULL, NULL);
@@ -293,12 +298,18 @@ void cmd_do_eos(gchar **arg_strv, gint arg_num)
   g_print ("%s\n", __func__);
 }
 
+void cmd_do_clock(gchar **arg_strv, gint arg_num)
+{
+  g_print ("%s %s %s\n", __func__, arg_strv[0], arg_strv[1]);
+}
+
 CommandFormat cmd_format[] =
   {
     {"Play", 1, cmd_do_play},
     {"Pause", 1, cmd_do_pause},
     {"Stop", 1, cmd_do_stop},
-    {"EOS", 1, cmd_do_eos}
+    {"EOS", 1, cmd_do_eos},
+    {"Clock", 2, cmd_do_clock},
   };
 
 gboolean are_cmd_args_valid(gchar **arg_strv, gint arg_num)
@@ -448,7 +459,7 @@ void cortrol_service_init()
   g_socket_service_start (control_service_data.service);
 
   /* enter mainloop */
-  g_print ("Waiting for client!\n");
+  g_print ("Waiting for client! %s\n", inet_ntoa(local_ip));
 }
 
 gint main (gint argc, gchar * argv[])

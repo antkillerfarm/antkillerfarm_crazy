@@ -23,12 +23,13 @@ get_base_time (guint16 *clock_port)
 {
   GstClockTime base_time;
   FILE *fp;
+  int res;
 
   fp = fopen ("/tmp/shared_time", "rb");
   if (!fp)
     g_print ("problem reading shared_time file");
-  fread (clock_port, sizeof (guint16), 1, fp);
-  fread (&base_time, sizeof (GstClockTime), 1, fp);
+  res = fread (clock_port, sizeof (guint16), 1, fp);
+  res = fread (&base_time, sizeof (GstClockTime), 1, fp);
   fclose (fp);
 
   return base_time;
@@ -36,8 +37,8 @@ get_base_time (guint16 *clock_port)
 
 int main(int argc, char *argv[]) {
   GMainLoop *main_loop;
-  GstClock *client_clock, *tmp_clock;
-  guint16 clock_port;
+  GstClock *client_clock;
+  gint clock_port;
   GstClockTime base_time;
 
   /* Initialize GStreamer */
@@ -51,7 +52,7 @@ int main(int argc, char *argv[]) {
 
   /* Create the elements */
   playbin = gst_element_factory_make ("playbin", "playbin");
-  g_object_set (playbin, "uri", "file:///home/luisbg/samples/big_buck_bunny_1080p_h264.mov", NULL);
+  g_object_set (playbin, "uri", "file:///home/data/tj/my/03.flac", NULL);
 
   gst_pipeline_use_clock (GST_PIPELINE (playbin), client_clock);
   gst_element_set_base_time (playbin, base_time);
