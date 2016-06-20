@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <stdio.h>
 #include <gtk/gtk.h>
 #include <gst/gst.h>
 #include <string.h>
@@ -44,21 +46,22 @@ char g_filename[MAX_PATH];
 
 MainWindowSubWidget main_window_sub_widget;
 GstData gst_data;
+gint clock_port;
 
 #define SERVER_LIST_NUM 1
-#define CLIENT_IP "192.168.1.105"
+#define CLIENT_IP "192.168.3.105"
 
 ControlServiceData control_service_data[] =
 {
-  {"192.168.1.105", NULL, NULL},
+  {"192.168.3.105", NULL, NULL},
   //{"192.168.3.103", NULL, NULL},
 };
 
 static GstState get_current_player_state() {
-	GstState state = GST_STATE_PLAYING;
-	GstState pending = GST_STATE_NULL;
-	gst_element_get_state(gst_data.playbin, &state, &pending, 0);
-	return state;
+  GstState state = GST_STATE_PLAYING;
+  GstState pending = GST_STATE_NULL;
+  gst_element_get_state(gst_data.playbin, &state, &pending, 0);
+  return state;
 }
 
 static GstNetTimeProvider* create_net_clock (gint *port)
@@ -150,7 +153,6 @@ G_MODULE_EXPORT void do_button_open_clicked(GtkButton *button, gpointer data)
     }
 
   gtk_widget_destroy (dialog);
-
 }
 
 gboolean update_slider(gpointer user_data)
@@ -230,7 +232,7 @@ G_MODULE_EXPORT void do_button_continue_clicked(GtkButton *button, gpointer data
 G_MODULE_EXPORT void do_button_clock_clicked(GtkButton *button, gpointer data)
 {
   gchar cmd[64];
-  sprintf(cmd, "Clock#%s\n", CLIENT_IP);
+  sprintf(cmd, "Clock#%s#%d\n", CLIENT_IP, clock_port);
   send_cmd_to_server(cmd);
 }
 
@@ -472,7 +474,6 @@ void media_init()
   GstBus *bus;
   GstClock *client_clock;
   GstNetTimeProvider *prov_clock;
-  gint clock_port;
 
   gst_init (NULL, NULL);
   //gst_debug_set_default_threshold(GST_LEVEL_MEMDUMP);
@@ -480,7 +481,7 @@ void media_init()
   prov_clock = create_net_clock(&clock_port);
   g_print("clock port: %d\n", clock_port);
   client_clock = gst_net_client_clock_new(NULL, CLIENT_IP, clock_port, 0);
-  //g_usleep (G_USEC_PER_SEC / 2);
+  g_usleep (G_USEC_PER_SEC / 2);
 
 #if (TRANS_TYPE == TRANS_TYPE_TCP)
   gst_pipeline_tcp_init();
@@ -488,9 +489,9 @@ void media_init()
   gst_pipeline_rtp_init();
 #endif
 
-  //gst_pipeline_use_clock (GST_PIPELINE (gst_data.playbin), client_clock);
-  //gst_element_set_start_time (gst_data.playbin, GST_CLOCK_TIME_NONE);
-  //gst_pipeline_set_latency (GST_PIPELINE (gst_data.playbin), GST_SECOND / 2);
+  gst_pipeline_use_clock (GST_PIPELINE (gst_data.playbin), client_clock);
+  gst_element_set_start_time (gst_data.playbin, GST_CLOCK_TIME_NONE);
+  gst_pipeline_set_latency (GST_PIPELINE (gst_data.playbin), GST_SECOND / 2);
   
   int i;
   for (i = 0; i < SERVER_LIST_NUM; i++)

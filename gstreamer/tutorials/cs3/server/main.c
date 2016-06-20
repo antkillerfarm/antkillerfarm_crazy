@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <netinet/in.h>
@@ -13,7 +15,8 @@
 #define MEDIA_PORT 1500
 #define CONTROL_PORT 1501
 //#define NET_DEV "eth0"
-#define NET_DEV "wlp3s0"
+//#define NET_DEV "wlp3s0"
+#define NET_DEV "enp0s8"
 
 #define TRANS_TYPE_TCP 0
 #define TRANS_TYPE_RTP 1
@@ -42,6 +45,7 @@ typedef struct{
 GstData gst_data;
 ControlServiceData control_service_data;
 struct in_addr local_ip;
+GstClock *client_clock;
 
 static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 {
@@ -211,8 +215,6 @@ void gst_pipeline_rtp_init()
 void media_init()
 {
   GstBus *bus;
-  GstClock *client_clock;
-  guint16 clock_port;
 
   get_local_ip_addr();
   gst_init (NULL, NULL);
@@ -300,7 +302,13 @@ void cmd_do_eos(gchar **arg_strv, gint arg_num)
 
 void cmd_do_clock(gchar **arg_strv, gint arg_num)
 {
-  g_print ("%s %s %s\n", __func__, arg_strv[0], arg_strv[1]);
+  g_print ("%s %s %s %s\n", __func__, arg_strv[0], arg_strv[1], arg_strv[2]);
+  client_clock = gst_net_client_clock_new (NULL, arg_strv[1], atoi(arg_strv[2]), 0);
+  g_usleep (G_USEC_PER_SEC / 2);
+
+  gst_pipeline_use_clock (GST_PIPELINE (gst_data.playbin), client_clock);
+  gst_element_set_start_time (gst_data.playbin, GST_CLOCK_TIME_NONE);
+  gst_pipeline_set_latency (GST_PIPELINE (gst_data.playbin), GST_SECOND / 2);
 }
 
 CommandFormat cmd_format[] =
@@ -309,7 +317,7 @@ CommandFormat cmd_format[] =
     {"Pause", 1, cmd_do_pause},
     {"Stop", 1, cmd_do_stop},
     {"EOS", 1, cmd_do_eos},
-    {"Clock", 2, cmd_do_clock},
+    {"Clock", 3, cmd_do_clock},
   };
 
 gboolean are_cmd_args_valid(gchar **arg_strv, gint arg_num)
