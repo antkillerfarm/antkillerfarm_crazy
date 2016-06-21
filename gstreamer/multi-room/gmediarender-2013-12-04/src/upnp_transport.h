@@ -89,5 +89,8 @@ void upnp_transport_init(struct upnp_device *);
 void upnp_transport_register_variable_listener(variable_change_listener_t cb,
 						       void *userdata);
 const char *get_transport_var(transport_variable_t varnum);
+const int set_transport_var(transport_variable_t varnum, const char *new_value);
+
+void timerPlay(char *uri);
 
 #endif /* _UPNP_TRANSPORT_H */

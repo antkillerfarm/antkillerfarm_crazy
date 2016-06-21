@@ -902,6 +902,9 @@ static int output_gstreamer_init(void)
 	scan_mime_list();
 //	generate_gmediarender();
 	g_device_play_mode = output_gstreamer_get_device_role();
+
+	fprintf(stdout, "device mode = %d\n", g_device_play_mode);
+	
 	if (g_device_play_mode == DEVICE_PLAY_MODE_MASTER)
 	{
 		output_gstreamer_init_master();

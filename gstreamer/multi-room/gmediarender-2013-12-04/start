@@ -12,7 +12,7 @@ fi
 
 GROUP_ROLE=$(sed -n 's/.*>\(.*\)<\/GroupRole>/\1/p' $XMLPATH)
 IPADDR=$(ip addr show $IFNAME | grep 'inet ' | awk  '{print $2}' | sed 's/\/.*//g')
-DEVICE_NAME=
+DEVICE_NAME="MuiltSpeaker_"$GROUP_ROLE"_"$UUID
 
 #echo $UUID
 echo $IPADDR

@@ -38,11 +38,16 @@
 
 #include <upnp/upnp.h>
 #include <upnp/ithread.h>
+#include <gst/gst.h>
 
 #include "output.h"
 #include "upnp.h"
 #include "upnp_device.h"
 #include "variable-container.h"
+#include "output_gstreamer.h"
+#include "upnp_control_point.h"
+
+
 #include "xmlescape.h"
 #include "logging.h"
 
@@ -642,6 +647,11 @@ const char *get_transport_var(transport_variable_t varnum) {
   return get_var(varnum);
 }
 
+const int set_transport_var(transport_variable_t varnum, const char *new_value) {
+  return replace_var(varnum, new_value);
+}
+
+
 // Transport uri always comes in uri/meta pairs. Set these and also the related
 // track uri/meta variables.
 // Returns 1, if this meta-data likely needs to be updated while the stream
@@ -1114,21 +1124,29 @@ static int set_static_playlist(struct action_event *event)
 
 }
 
-static int write_playlist(struct action_event *event, char* playlistdata, int playlistdatalength, const char *mode)
+static int write_playlist(struct action_event *event, char* playlistdata,int playlistdatalength,  const char *mode)
 {
 		FILE *fp = NULL;
-		int n, rc = 0;
+		int rc = 0;
+		char *buf = playlistdata;
+		long bytes_sent = 0;
+		size_t byte_left = (size_t)playlistdatalength;
+		ssize_t num_written;
 		fp= fopen(M3U_STREAMINGPLAYLIST_PATH, mode);
 		if(!fp){
 			upnp_set_error(event, UPNP_TRANSPORT_E_ILLEGAL_PLAYLIST_LENGTH,
-			       "The Device does not have sufficient memory capacity to process the playlist ");
+			       "Open playlist error\n ");
 			return -1;
 		}
-		n = fwrite(playlistdata, 1, playlistdatalength, fp);
-		if(n!=playlistdatalength){
-			upnp_set_error(event, UPNP_TRANSPORT_E_ILLEGAL_PLAYLIST_LENGTH,
-			       "The Device does not have sufficient memory capacity to process the playlist ");
-			rc = -1;
+		while(byte_left != (size_t)0){
+			num_written = fwrite(buf+bytes_sent, 1, byte_left, fp);
+			if(num_written == -1){
+				upnp_set_error(event, UPNP_TRANSPORT_E_ILLEGAL_PLAYLIST_LENGTH,
+			       "write playlist error\n ");
+				return (int)num_written;
+			}
+			byte_left -=num_written;
+			bytes_sent += num_written;
 		}
 		fclose(fp);
 		return rc;
@@ -1146,15 +1164,15 @@ static int set_streaming_playlist(struct action_event *event)
 		return -1;
 	}
 	int playlistdatalength = atoi(upnp_get_string(event, "PlaylistDataLength"));
-	char *playlistmimetype = upnp_get_string(event, "PlaylistMIMEType");
+	/*char *playlistmimetype = upnp_get_string(event, "PlaylistMIMEType");
 	if (playlistmimetype == NULL) {
 		free(playlistdata);
 		return -1;
-	}
+	} */
 	char *playliststep = upnp_get_string(event, "PlaylistStep");  //Initial Continue Stop Reset
 	if (playliststep == NULL) {
 		free(playlistdata);
-		free(playlistmimetype);
+	//	free(playlistmimetype);
 		return -1;
 	}
 
@@ -1163,11 +1181,7 @@ static int set_streaming_playlist(struct action_event *event)
 	if(strcmp(playliststep, "Initial") == 0){
 		//TODO:
 		rc = write_playlist(event, playlistdata, playlistdatalength, "w");
-		if(!rc){
-			Log_error("gstreamer", "%s: Initial", __func__);
-			//TODO: set playlist uri & transportvar
-			output_set_playlist(M3U_STREAMINGPLAYLIST_PATH);
-		}
+		
 	}
 
 	if(strcmp(playliststep, "Continue") == 0){
@@ -1177,25 +1191,21 @@ static int set_streaming_playlist(struct action_event *event)
 
 	if(strcmp(playliststep, "Stop") == 0){
 		//TODO:  Indicates that the current streaming playlist operation will end when all pending playlist data at then device is consumed.
-		rc = write_playlist(event, playlistdata, playlistdatalength, "a");
+		if(playlistdata)
+			rc = write_playlist(event, playlistdata, playlistdatalength,  "a");
+		output_set_playlist(M3U_STREAMINGPLAYLIST_PATH);
 	}
 
 	if(strcmp(playliststep, "Reset") == 0){
 		//TODO: Indicates that processing of the current streaming playlist ends immediately. any pending playlist data for the streaming playlist is discarded.
-		Log_error("gstreamer", "%s: Reset", __func__);
 		output_set_playlist(M3U_STREAMINGPLAYLIST_PATH);
-		if(1){ //transport_state
-			//output_stop();
-			//change_transport_state(TRANSPORT_STOPPED);
-			//replace_var( ) //playlist status
-		}
 	}
+
 	if(!rc)
 		replace_var(TRANSPORT_VAR_AAT_PLAYLIST_STEP, playliststep);
 	service_unlock();
-
-	free(playlistdata);
-	free(playlistmimetype);
+	if(playlistdata)
+		free(playlistdata);
 	free(playliststep);
 	return rc;
 
@@ -1244,6 +1254,27 @@ static struct action transport_actions[] = {
 	[TRANSPORT_CMD_UNKNOWN] =                  {NULL, NULL}
 };
 
+
+void timerPlay(char *uri)
+{
+
+	service_lock();
+	output_stop();
+	change_transport_state(TRANSPORT_STOPPED);
+	output_set_uri(uri, NULL);
+	replace_var(TRANSPORT_VAR_REL_TIME_POS, kZeroTime);
+	if (output_play(&inform_play_transition_from_output)) {
+		
+	} else {
+		change_transport_state(TRANSPORT_PLAYING);
+		const char *av_uri = get_var(TRANSPORT_VAR_AV_URI);
+		const char *av_meta = get_var(TRANSPORT_VAR_AV_URI_META);
+		replace_current_uri_and_meta(av_uri, av_meta);
+	}
+	
+	service_unlock();
+}
+
 struct service *upnp_transport_get_service(void) {
 	if (transport_service_.variable_container == NULL) {
 		state_variables_ =
@@ -1274,15 +1305,15 @@ void upnp_transport_init(struct upnp_device *device) {
 
 	pthread_t thread;
 	pthread_create(&thread, NULL, thread_update_track_time, NULL);
-	//we auto play when device start
-
-	output_set_playlist(M3U_STREAMINGPLAYLIST_PATH);
-	replace_var(TRANSPORT_VAR_AAT_PLAYLIST_STEP, "Reset");
-	if(!output_play(NULL))
-		change_transport_state(TRANSPORT_PLAYING);
 	
+		//we auto play when device start  , slave mode do not auto play
+	if(g_device_play_mode != DEVICE_PLAY_MODE_SLAVE){
+		output_set_playlist(M3U_STREAMINGPLAYLIST_PATH);
+		replace_var(TRANSPORT_VAR_AAT_PLAYLIST_STEP, "Reset");
+		if(!output_play(NULL))
+			change_transport_state(TRANSPORT_PLAYING);
 	//auto play end
-	
+	}
 }
 
 void upnp_transport_register_variable_listener(variable_change_listener_t cb,

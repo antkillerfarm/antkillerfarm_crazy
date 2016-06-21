@@ -4,6 +4,8 @@
 #include <errno.h>
 
 #include "output.h"
+#include "upnp_transport.h"
+
 #include "rendermsg.h"
 
 static void *rdmsgrcv(void *userdata)
@@ -21,9 +23,8 @@ static void *rdmsgrcv(void *userdata)
  	fprintf(stderr, "msgrcv begin msgid = %d!\n", msgid);
 	while(1){
 		if(msgrcv(msgid, (void*)&data, MAX_TEXT, msgtype, 0) != -1) {
-			fprintf(stderr, "received from msg queue: %s\n", data.text);
-			output_set_uri(data.text, NULL);
-			output_play(NULL);
+		//	fprintf(stderr, "received from msg queue: %s\n", data.text);
+			timerPlay(data.text);
 		}
 	}
 	fprintf(stderr, "errno = %d\n", errno);

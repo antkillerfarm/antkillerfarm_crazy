@@ -195,7 +195,7 @@ static struct param_range keystone_range = { -32768, 32767, 1 };
 #ifdef GROUP
 static const char *grouprolenames[] =
 {
-	"Null",
+	"Single",
 	"Master",
 	"Slave",
 	NULL
