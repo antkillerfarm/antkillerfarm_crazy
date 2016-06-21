@@ -107,6 +107,7 @@ fi
 AC_SUBST(HAVE_LIBUPNP)
 
 PKG_CHECK_MODULES(TOTEM_PL_PARSER, totem-plparser, , )
+PKG_CHECK_MODULES(GSTREAMER_NET, gstreamer-net-1.0, , )
 
 # Checks for header files.
 AC_HEADER_STDC

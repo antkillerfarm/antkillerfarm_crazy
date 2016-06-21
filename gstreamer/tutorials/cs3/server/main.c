@@ -307,8 +307,8 @@ void cmd_do_clock(gchar **arg_strv, gint arg_num)
   g_usleep (G_USEC_PER_SEC / 2);
 
   gst_pipeline_use_clock (GST_PIPELINE (gst_data.playbin), client_clock);
-  gst_element_set_start_time (gst_data.playbin, GST_CLOCK_TIME_NONE);
-  gst_pipeline_set_latency (GST_PIPELINE (gst_data.playbin), GST_SECOND / 2);
+  //gst_element_set_start_time (gst_data.playbin, GST_CLOCK_TIME_NONE);
+  //gst_pipeline_set_latency (GST_PIPELINE (gst_data.playbin), GST_SECOND / 2);
 }
 
 CommandFormat cmd_format[] =

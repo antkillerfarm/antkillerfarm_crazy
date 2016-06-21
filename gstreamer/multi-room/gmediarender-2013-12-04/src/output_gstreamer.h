@@ -35,6 +35,7 @@ typedef struct{
   	GstElement *source;
 	GstElement *convert;
 	GstElement *tee;
+	gint clock_port;
 }GstData;
 
 extern struct output_module gstreamer_output;

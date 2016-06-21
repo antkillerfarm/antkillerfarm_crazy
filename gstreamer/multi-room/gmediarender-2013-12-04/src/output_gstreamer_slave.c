@@ -1,8 +1,11 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <gst/gst.h>
+#include <gst/net/gstnetclientclock.h>
+#include <gst/net/gstnettimeprovider.h>
 
 #include "logging.h"
 #include "upnp_control_point.h"
@@ -265,12 +268,25 @@ static void cmd_do_eos(gchar **arg_strv, gint arg_num)
 	g_print ("%s\n", __func__);
 }
 
+static void cmd_do_clock(gchar **arg_strv, gint arg_num)
+{
+  GstClock *client_clock;
+  g_print ("%s %s %s %s\n", __func__, arg_strv[0], arg_strv[1], arg_strv[2]);
+  client_clock = gst_net_client_clock_new (NULL, arg_strv[1], atoi(arg_strv[2]), 0);
+  //g_usleep (G_USEC_PER_SEC / 2);
+
+  gst_pipeline_use_clock (GST_PIPELINE (player_), client_clock);
+  //gst_element_set_start_time (gst_data.playbin, GST_CLOCK_TIME_NONE);
+  //gst_pipeline_set_latency (GST_PIPELINE (gst_data.playbin), GST_SECOND / 2);
+}
+
 CommandFormat cmd_format[] =
 {
 	{"Play", 1, cmd_do_play},
 	{"Pause", 1, cmd_do_pause},
 	{"Stop", 1, cmd_do_stop},
-	{"EOS", 1, cmd_do_eos}
+	{"EOS", 1, cmd_do_eos},
+	{"Clock", 3, cmd_do_clock}
 };
 
 static gboolean are_cmd_args_valid(gchar **arg_strv, gint arg_num)

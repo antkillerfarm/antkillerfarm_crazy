@@ -173,8 +173,9 @@ int dev_node_send_cmd(struct UpDeviceNode *devnode, gpointer data)
 
 void send_cmd_to_server(gchar *cmd)
 {
+	g_print("%s: %s", __FUNCTION__, cmd);
 	DevNodeOperation dev_node_op;
-	dev_node_op.operation = dev_node_print;
+	dev_node_op.operation = dev_node_send_cmd;
 	dev_node_op.data = cmd;
         ctrl_point_dev_node_operation(&dev_node_op);
 }

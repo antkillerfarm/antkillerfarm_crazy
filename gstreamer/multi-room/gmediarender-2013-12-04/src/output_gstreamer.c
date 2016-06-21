@@ -74,7 +74,7 @@ const gchar play_list_suffix[] = ".m3u .pls .xspf";
 AppState app_state = {0};
 GstData gst_data = {0};
 
-//void load_playlist(const  char* file_name);
+//void load_playlist(const char* file_name);
 //void load_playlist_file(const char* file_name);
 gint get_next_current_idx(void);
 
@@ -833,7 +833,7 @@ static int output_gstreamer_get_device_role()
 		else if(!strcasecmp (p, MASTER))
 			ret = DEVICE_PLAY_MODE_MASTER;
 		else if(!strcasecmp (p, SLAVE))
-			ret = DEVICE_PLAY_MODE_SINGLE;
+			ret = DEVICE_PLAY_MODE_SLAVE;
 	}else{
 		
 		ret = DEVICE_PLAY_MODE_SINGLE;

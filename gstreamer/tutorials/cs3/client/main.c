@@ -49,11 +49,11 @@ GstData gst_data;
 gint clock_port;
 
 #define SERVER_LIST_NUM 1
-#define CLIENT_IP "192.168.3.105"
+#define CLIENT_IP "192.168.3.102"
 
 ControlServiceData control_service_data[] =
 {
-  {"192.168.3.105", NULL, NULL},
+  {"192.168.3.102", NULL, NULL},
   //{"192.168.3.103", NULL, NULL},
 };
 
@@ -70,7 +70,7 @@ static GstNetTimeProvider* create_net_clock (gint *port)
   GstNetTimeProvider *net_time;
 
   clock = gst_system_clock_obtain ();
-  net_time = gst_net_time_provider_new (clock, NULL, 0);
+  net_time = gst_net_time_provider_new (clock, CLIENT_IP, 0);
   g_object_get (net_time, "port", port, NULL);
   gst_object_unref (clock);
 
@@ -490,8 +490,8 @@ void media_init()
 #endif
 
   gst_pipeline_use_clock (GST_PIPELINE (gst_data.playbin), client_clock);
-  gst_element_set_start_time (gst_data.playbin, GST_CLOCK_TIME_NONE);
-  gst_pipeline_set_latency (GST_PIPELINE (gst_data.playbin), GST_SECOND / 2);
+  //gst_element_set_start_time (gst_data.playbin, GST_CLOCK_TIME_NONE);
+  //gst_pipeline_set_latency (GST_PIPELINE (gst_data.playbin), GST_SECOND / 2);
   
   int i;
   for (i = 0; i < SERVER_LIST_NUM; i++)
