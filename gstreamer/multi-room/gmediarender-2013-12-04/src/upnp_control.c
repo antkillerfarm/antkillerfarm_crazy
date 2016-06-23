@@ -104,6 +104,7 @@ typedef enum {
 
 	CONTROL_CMD_SET_GROUPID,
 	CONTROL_CMD_SET_GROUPROLE,
+	CONTROL_CMD_GET_DEVICETYPE,
 
 #endif
 	CONTROL_CMD_UNKNOWN,
@@ -138,6 +139,7 @@ static const char *control_variable_names[] = {
 #ifdef GROUP
 	[CONTROL_VAR_GROUPID] = "GroupID",
 	[CONTROL_VAR_GROUPROLE] = "GroupRole",
+	[CONTROL_VAR_DEVICETYPE] = "DeviceType",
 #endif	
 	[CONTROL_VAR_UNKNOWN] = NULL
 };
@@ -200,6 +202,13 @@ static const char *grouprolenames[] =
 	"Slave",
 	NULL
 };
+
+static const char *devicetypenames[] = 
+{
+	"raspberrypi",
+	"smartmodule",
+	NULL
+};
 #endif
 
 static struct var_meta control_var_meta[] = {
@@ -227,6 +236,8 @@ static struct var_meta control_var_meta[] = {
 #ifdef GROUP	
 	[CONTROL_VAR_GROUPID] =			{ SENDEVENT_NO, DATATYPE_STRING, NULL, NULL },
 	[CONTROL_VAR_GROUPROLE] =			{ SENDEVENT_NO, DATATYPE_STRING, grouprolenames, NULL },
+	[CONTROL_VAR_DEVICETYPE] =			{ SENDEVENT_NO, DATATYPE_STRING, devicetypenames, NULL },
+	
 #endif
 	[CONTROL_VAR_UNKNOWN] =			{ SENDEVENT_NO, DATATYPE_UNKNOWN, NULL, NULL }
 };
@@ -254,8 +265,9 @@ static const char *control_default_values[] = {
 	[CONTROL_VAR_VOLUME_DB] = "0",
 	[CONTROL_VAR_LOUDNESS] = "0",
 #ifdef GROUP
-	[CONTROL_VAR_GROUPID] = "Null",
-	[CONTROL_VAR_GROUPROLE] = "Null",
+	[CONTROL_VAR_GROUPID] = "123456",
+	[CONTROL_VAR_GROUPROLE] = "Single",
+	[CONTROL_VAR_DEVICETYPE] = "unknown",
 #endif
 	[CONTROL_VAR_UNKNOWN] = NULL
 };
@@ -494,6 +506,15 @@ static struct argument *arguments_get_grouprole[] = {
 	& (struct argument) { "CurrentGroupRole", PARAM_DIR_OUT, CONTROL_VAR_GROUPROLE },
 	NULL
 };
+
+static struct argument *arguments_get_devicetype[] = {
+	& (struct argument) { "InstanceID", PARAM_DIR_IN, CONTROL_VAR_AAT_INSTANCE_ID },
+	& (struct argument) { "CurrentDeviceType", PARAM_DIR_OUT, CONTROL_VAR_DEVICETYPE},
+	NULL
+};
+
+
+
 #endif
 
 static struct argument **argument_list[] = {
@@ -537,6 +558,7 @@ static struct argument **argument_list[] = {
 	[CONTROL_CMD_SET_GROUPID] =				arguments_set_groupid,
 	[CONTROL_CMD_GET_GROUPROLE] =			arguments_get_grouprole,
 	[CONTROL_CMD_SET_GROUPROLE] =			arguments_set_grouprole,
+	[CONTROL_CMD_GET_DEVICETYPE] =			arguments_get_devicetype,
 #endif
 	[CONTROL_CMD_UNKNOWN] =					NULL			
 };
@@ -842,10 +864,22 @@ static int set_grouprole(struct action_event *event)   //we need restart to init
 	} 
 	free((char *)grouprole);
 	service_unlock();
+	//TODO: restart
 
+	execl("/bin/sh", "sh", "/etc/init.d/gmediarender", "restart", (char *)0);
+	
 	return 0;
 
 }
+
+
+static int get_devicetype(struct action_event *event)
+{
+	return cmd_obtain_variable(event, CONTROL_VAR_DEVICETYPE, "CurrentDeviceType");
+
+}
+
+
 #endif
 
 
@@ -891,6 +925,7 @@ static struct action control_actions[] = {
 	[CONTROL_CMD_SET_GROUPID] =				{"SetGroupID", set_groupid},
 	[CONTROL_CMD_GET_GROUPROLE] = 			{"GetGroupRole", get_grouprole},
 	[CONTROL_CMD_SET_GROUPROLE] =			{"SetGroupRole", set_grouprole},
+	[CONTROL_CMD_GET_DEVICETYPE] =			{"GetDeviceType", get_devicetype},
 #endif	
 	[CONTROL_CMD_UNKNOWN] =			{NULL, NULL}
 };
@@ -907,27 +942,42 @@ struct service *upnp_control_get_service(void) {
 	return &control_service_;
 }
 
+static void device_meta_init(void)
+{
+
+	char *groupid, *grouprole, *devicetype;
+	
+	groupid = output_get_groupid();
+	if(groupid){
+		change_groupid(groupid);
+		free(groupid);
+	}
+	grouprole = output_get_grouprole();
+	if(grouprole){
+		change_grouprole(grouprole);
+		free(grouprole);
+	}
+	devicetype = output_get_devicetype();
+	if(devicetype){
+		replace_var(CONTROL_VAR_DEVICETYPE, devicetype);
+		free(devicetype);
+	}
+}
+
+
 void upnp_control_init(struct upnp_device *device) {
 	upnp_control_get_service();
 
 	// Set initial volume.
 	float volume_fraction = 0;
-	char *groupid, *grouprole;
+	
 	if (output_get_volume(&volume_fraction) == 0) {
 		Log_info("control", "Output inital volume is %f; setting "
 			 "control variables accordingly.", volume_fraction);
 		change_volume_decibel(20 * log(volume_fraction) / log(10));
 	}
 	
-	groupid = output_get_groupid();
-	if(groupid){
-		change_groupid(groupid);
-	}
-	grouprole = output_get_grouprole();
-	if(grouprole){
-		change_grouprole(grouprole);
-	}
-	
+	device_meta_init();
 
 	assert(control_service_.last_change == NULL);
 	control_service_.last_change =

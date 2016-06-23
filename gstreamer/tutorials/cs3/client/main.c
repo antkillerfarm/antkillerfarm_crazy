@@ -49,11 +49,11 @@ GstData gst_data;
 gint clock_port;
 
 #define SERVER_LIST_NUM 1
-#define CLIENT_IP "192.168.3.102"
+#define CLIENT_IP "192.168.3.105"
 
 ControlServiceData control_service_data[] =
 {
-  {"192.168.3.102", NULL, NULL},
+  {"192.168.3.105", NULL, NULL},
   //{"192.168.3.103", NULL, NULL},
 };
 

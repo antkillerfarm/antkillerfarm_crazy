@@ -316,21 +316,25 @@ gint get_next_current_idx(void)
 	return next_current_idx;
 }
 
-static void output_gstreamer_set_playlist(const char *uri) 
+static int output_gstreamer_set_playlist(const char *uri) 
 {
 	gint ret;
 	ret = load_playlist_file(uri);
 	if(ret)
-		return;
+		return -1;
 	MediaInfo *p_media_info = g_slist_nth_data(play_list_info.play_list, play_list_info.current_idx);
 	if (p_media_info)
 	{
 		char * uri0 = p_media_info->uri;
 		free(gsuri_);
 		gsuri_ = (uri0 && *uri0) ? strdup(uri0) : NULL;
+		ret = 0;
+	}else
+	{
+		ret = -1;
 	}
 	meta_update_callback_ = NULL;
-	//free((gpointer)p_media_info);
+	return ret;
 }
 
 static int output_gstreamer_play(output_transition_cb_t callback) {
@@ -822,6 +826,20 @@ static int output_gstreamer_set_grouprole(const char*grouprole)
 
 }
 
+static char * output_gstreamer_get_devicetype(void)
+{
+	char *grouprole = NULL;
+	struct xmldoc *doc = xmldoc_fromdoc(RENDERXML);
+	if(doc){
+		struct xmlelement *render_node = find_element_in_doc(doc, "Gmediarender");
+		struct xmlelement *group_node = find_element_in_element(render_node, "Group");
+		struct xmlelement *value_node = find_element_in_element(group_node, "DeviceType");
+		grouprole = get_node_value(value_node);
+		xmldoc_free(doc);
+	}
+	return grouprole;
+}
+
 static int output_gstreamer_get_device_role()
 {
 	char *p;
@@ -942,4 +960,5 @@ struct output_module gstreamer_output = {
 	.set_groupid = output_gstreamer_set_groupid,
 	.get_grouprole = output_gstreamer_get_grouprole,
 	.set_grouprole = output_gstreamer_set_grouprole,
+	.get_devicetype = output_gstreamer_get_devicetype,
 };

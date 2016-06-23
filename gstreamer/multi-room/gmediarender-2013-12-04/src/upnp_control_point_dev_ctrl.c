@@ -161,6 +161,19 @@ int dev_node_send_cmd(struct UpDeviceNode *devnode, gpointer data)
 	{
 		return CP_SUCCESS;
 	}
+	if (strstr(cmd,"Clock"))
+	{
+		if (devnode->user_data.flag_gst_clock == TRUE)
+		{
+			return CP_SUCCESS;
+		}
+		else
+		{
+			devnode->user_data.flag_gst_clock = TRUE;
+		}
+	}
+
+	g_print("%s: %s %d", __FUNCTION__, cmd, devnode->user_data.flag_gst_clock);
 	GOutputStream * ostream = g_io_stream_get_output_stream (G_IO_STREAM (devnode->user_data.connection));
 	g_output_stream_write(ostream, cmd, strlen(cmd), NULL, &error);
 	/* don't forget to check for errors */
@@ -173,7 +186,6 @@ int dev_node_send_cmd(struct UpDeviceNode *devnode, gpointer data)
 
 void send_cmd_to_server(gchar *cmd)
 {
-	g_print("%s: %s", __FUNCTION__, cmd);
 	DevNodeOperation dev_node_op;
 	dev_node_op.operation = dev_node_send_cmd;
 	dev_node_op.data = cmd;

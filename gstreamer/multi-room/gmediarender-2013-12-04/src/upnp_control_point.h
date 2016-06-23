@@ -87,6 +87,7 @@ typedef struct {
 	char flag_group_role;
 	char flag_our_group;
 	char flag_gst_pipeline;
+	char flag_gst_clock;
 }UpDeviceUserData;
 
 struct UpDeviceNode{

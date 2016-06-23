@@ -63,13 +63,13 @@ int output_get_volume(float *v);
 int output_set_volume(float v);
 int output_get_mute(int *m);
 int output_set_mute(int m);
-void output_set_playlist(const char *playlist) ;
+int output_set_playlist(const char *playlist) ;
 char *output_get_groupid(void);
 int output_set_groupid(const char*groupid);
 
 char * output_get_grouprole(void);
 int output_set_grouprole(const char*grouprole);
-
+char * output_get_devicetype(void);
 
 
 

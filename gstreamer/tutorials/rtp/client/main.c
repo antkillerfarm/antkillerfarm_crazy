@@ -123,20 +123,22 @@ G_MODULE_EXPORT void do_button_play_clicked(GtkButton *button, gpointer data)
 
 G_MODULE_EXPORT void do_button_next_clicked(GtkButton *button, gpointer data)
 {
-  gchar *cmd = "Stop\n";
+  gchar *cmd = "XYZ\n";
   send_cmd_to_server(cmd);
 }
 
 G_MODULE_EXPORT void do_button_pause_clicked(GtkButton *button, gpointer data)
 {
-  gchar *cmd = "Pause\n";
-  send_cmd_to_server(cmd);
+  //gchar *cmd = "Pause\n";
+  //send_cmd_to_server(cmd);
+  gst_element_set_state(gst_data.playbin, GST_STATE_PAUSED);
 }
 
 G_MODULE_EXPORT void do_button_continue_clicked(GtkButton *button, gpointer data)
 {
-  gchar *cmd = "Play\n";
-  send_cmd_to_server(cmd);
+  //gchar *cmd = "Play\n";
+  //send_cmd_to_server(cmd);
+  gst_element_set_state(gst_data.playbin, GST_STATE_PLAYING);
 }
 
 void ui_init()

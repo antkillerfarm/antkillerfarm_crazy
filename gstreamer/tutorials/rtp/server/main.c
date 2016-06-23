@@ -13,6 +13,7 @@ typedef struct{
   GstElement *rtpdepay;
   GstElement *decode_bin;
   GstElement *audio_sink;
+  GstElement *queue;
 }GstData;
 
 typedef struct{
@@ -28,6 +29,8 @@ typedef struct{
 
 GstData gst_data;
 ControlServiceData control_service_data;
+guint source_id = 0;
+GTimer *queue_timer = NULL;
 
 static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 {
@@ -54,6 +57,53 @@ static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
       break;
   }
   return TRUE;
+}
+
+gboolean queue_underrun_timeout_handler(gpointer user_data)
+{
+  g_print("%s\n", __FUNCTION__);
+  source_id = 0;
+  gst_element_set_state (gst_data.playbin, GST_STATE_NULL);
+  gst_element_set_state (gst_data.playbin, GST_STATE_PLAYING);
+  return FALSE;
+}
+
+#define IDLE_TIME 1 //unit:s
+gint underrun_idx = 0;
+void queue_underrun_handler(GstElement *queue, gpointer user_data)
+{
+  gdouble timer_elapse;
+  g_print("%s 0\n", __FUNCTION__);
+  if (queue_timer == NULL)
+    {
+      queue_timer = g_timer_new();
+    }
+  else
+    {
+      timer_elapse = g_timer_elapsed(queue_timer, NULL);
+      g_print("%s : %f\n", __FUNCTION__, timer_elapse);
+      g_timer_start(queue_timer);
+      if (timer_elapse < IDLE_TIME)
+	{
+	  underrun_idx++;
+	  if (underrun_idx > 8)
+	    {
+	      if (source_id)
+		{
+		  g_source_remove(source_id);
+		}
+	      source_id = g_timeout_add(IDLE_TIME * 1000, queue_underrun_timeout_handler, NULL);
+	      g_print("%s 1\n", __FUNCTION__);
+	    }
+	}
+      else
+	{
+	  underrun_idx = 0;
+	  g_print("%s 2\n", __FUNCTION__);
+	}
+    }
+
+
 }
 
 static void pad_added_handler (GstElement *src, GstPad *new_pad, gpointer data)
@@ -110,18 +160,19 @@ void media_init()
 
   gst_data.playbin = gst_pipeline_new("audio_player_server");
   gst_data.source = gst_element_factory_make ("udpsrc", "source");
+  gst_data.queue = gst_element_factory_make ("queue", "queue");
   gst_data.rtpdepay = gst_element_factory_make ("rtpgstdepay", "rtpdepay");
   gst_data.decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
   gst_data.audio_sink = gst_element_factory_make ("autoaudiosink", "audio_sink");
 
-  if (!gst_data.playbin || !gst_data.source || !gst_data.rtpdepay || !gst_data.decode_bin || !gst_data.audio_sink)
+  if (!gst_data.playbin || !gst_data.source || !gst_data.queue || !gst_data.rtpdepay || !gst_data.decode_bin || !gst_data.audio_sink)
     {
       g_print ("Not all elements could be created.\n");
     }
 
-  gst_bin_add_many (GST_BIN (gst_data.playbin), gst_data.source, gst_data.rtpdepay, gst_data.decode_bin, gst_data.audio_sink, NULL);
+  gst_bin_add_many (GST_BIN (gst_data.playbin), gst_data.source, gst_data.queue, gst_data.rtpdepay, gst_data.decode_bin, gst_data.audio_sink, NULL);
 
-  if (gst_element_link_many (gst_data.source, gst_data.rtpdepay, gst_data.decode_bin, NULL) != TRUE)
+  if (gst_element_link_many (gst_data.source, gst_data.queue, gst_data.rtpdepay, gst_data.decode_bin, NULL) != TRUE)
     {
       g_print ("Elements could not be linked.\n");
       gst_object_unref (gst_data.playbin);
@@ -138,6 +189,7 @@ void media_init()
   g_object_set (gst_data.source, "caps", caps, NULL);
   gst_caps_unref (caps);
   g_signal_connect (gst_data.decode_bin, "pad-added", G_CALLBACK (pad_added_handler), NULL);
+  g_signal_connect (gst_data.queue, "underrun", G_CALLBACK (queue_underrun_handler), NULL);
 
   bus = gst_element_get_bus (gst_data.playbin);
   gst_bus_add_watch (bus, bus_call, NULL);
@@ -284,6 +336,7 @@ void cmd_buf_handler()
 }
 
 /* this function will get called everytime a client attempts to connect */
+#define MSG_LEN 256
 gboolean incoming_callback  (GSocketService *service,
                     GSocketConnection *connection,
                     GObject *source_object,
@@ -292,13 +345,13 @@ gboolean incoming_callback  (GSocketService *service,
   gint read_cnt;
   g_print("Received Connection from client!\n");
   GInputStream * istream = g_io_stream_get_input_stream (G_IO_STREAM (connection));
-  gchar message[1024];
+  gchar message[MSG_LEN];
   do
     {
-      memset(message, 0, sizeof(message));
+      memset(message, 0, MSG_LEN);
       read_cnt = g_input_stream_read  (istream,
 			    message,
-			    1024,
+			    MSG_LEN,
 			    NULL,
 			    NULL);
       g_print("Message was %d: \"%s\"\n", read_cnt, message);
@@ -330,7 +383,7 @@ void cortrol_service_init()
   control_service_data.cmd_buf = NULL;
 
   /* create the new socketservice */
-  control_service_data.service = g_socket_service_new ();
+  control_service_data.service = g_threaded_socket_service_new(1);
 
   /* connect to the port */
   g_socket_listener_add_inet_port ((GSocketListener*)control_service_data.service,
@@ -346,7 +399,7 @@ void cortrol_service_init()
 
   /* listen to the 'incoming' signal */
   g_signal_connect (control_service_data.service,
-                    "incoming",
+                    "run",
                     G_CALLBACK (incoming_callback),
                     NULL);
 

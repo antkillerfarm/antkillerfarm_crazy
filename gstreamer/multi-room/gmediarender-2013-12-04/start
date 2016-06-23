@@ -2,7 +2,7 @@
 
 BINARY_PATH=./src/gmediarender
 XMLPATH=/etc/config/gmediarender.xml
-IFNAME="eth0"
+IFNAME="enp0s8"
 UUID=$(openssl rand -hex 6)
 XMLCONTENT="<?xml version=\"1.0\"?> \n<Gmediarender>\n<Group>\n<GroupID>$UUID</GroupID>\n<GroupRole>Signle</GroupRole>\n</Group>\n</Gmediarender>"
 if [ ! -f $XMLPATH ]

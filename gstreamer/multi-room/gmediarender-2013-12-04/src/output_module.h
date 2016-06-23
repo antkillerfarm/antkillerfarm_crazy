@@ -35,7 +35,7 @@ struct output_module {
 	int (*init)(void);
 	void (*set_uri)(const char *uri, output_update_meta_cb_t meta_info);
 	void (*set_next_uri)(const char *uri);
-	void (*set_playlist)(const char *uri);
+	int (*set_playlist)(const char *uri);
 	int (*play)(output_transition_cb_t transition_callback);
 	int (*stop)(void);
 	int (*pause)(void);
@@ -52,6 +52,7 @@ struct output_module {
 	int (*set_groupid)(const char *);
 	char* (*get_grouprole)(void);
 	int (*set_grouprole)(const char *);
+	char* (*get_devicetype)(void);
 };
 
 #endif

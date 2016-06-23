@@ -220,10 +220,11 @@ int output_set_mute(int value) {
 	return -1;
 }
 
-void output_set_playlist(const char *playlist) {
+int output_set_playlist(const char *playlist) {
 	if(output_module && output_module->set_playlist) {
-		output_module->set_playlist(playlist);
+		return output_module->set_playlist(playlist);
 	}
+	return -1;
 }
 
 char *output_get_groupid(void)
@@ -254,6 +255,15 @@ int output_set_grouprole(const char*grouprole)
 		return output_module->set_grouprole(grouprole);
 	}
 	return -1;
+}
+
+
+char * output_get_devicetype(void)
+{
+	if(output_module && output_module->get_devicetype){
+		return output_module->get_devicetype();
+	}
+	return NULL;
 }
 
 

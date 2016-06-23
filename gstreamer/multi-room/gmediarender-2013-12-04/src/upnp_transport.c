@@ -1307,11 +1307,12 @@ void upnp_transport_init(struct upnp_device *device) {
 	pthread_create(&thread, NULL, thread_update_track_time, NULL);
 	
 		//we auto play when device start  , slave mode do not auto play
-	if(g_device_play_mode != DEVICE_PLAY_MODE_SLAVE){
-		output_set_playlist(M3U_STREAMINGPLAYLIST_PATH);
-		replace_var(TRANSPORT_VAR_AAT_PLAYLIST_STEP, "Reset");
-		if(!output_play(NULL))
-			change_transport_state(TRANSPORT_PLAYING);
+	if(g_device_play_mode != DEVICE_PLAY_MODE_SLAVE && !access(M3U_STREAMINGPLAYLIST_PATH, 0)){
+		if(!output_set_playlist(M3U_STREAMINGPLAYLIST_PATH)){
+			replace_var(TRANSPORT_VAR_AAT_PLAYLIST_STEP, "Reset");
+			if(!output_play(NULL))
+				change_transport_state(TRANSPORT_PLAYING);
+		}
 	//auto play end
 	}
 }

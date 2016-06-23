@@ -49,11 +49,22 @@ GstClock *client_clock;
 
 static gboolean bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 {
-  switch (GST_MESSAGE_TYPE (msg)) {
+  switch (GST_MESSAGE_TYPE (msg))
+    {
     case GST_MESSAGE_EOS:{
       gst_element_set_state (gst_data.playbin, GST_STATE_NULL);
       gst_element_set_state (gst_data.playbin, GST_STATE_PLAYING);
       g_print ("End-of-stream\n");
+      break;
+    }
+    case GST_MESSAGE_STATE_CHANGED: {
+      GstState old_state, new_state;
+      
+      gst_message_parse_state_changed (msg, &old_state, &new_state, NULL);
+      g_print ("Element %s changed state from %s to %s.\n",
+          GST_OBJECT_NAME (msg->src),
+          gst_element_state_get_name (old_state),
+          gst_element_state_get_name (new_state));
       break;
     }
     case GST_MESSAGE_ERROR:{
