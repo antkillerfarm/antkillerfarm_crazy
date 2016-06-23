@@ -72,40 +72,36 @@ exit:
 }
 
 #if (TRANS_TYPE==TRANS_TYPE_RTP)
-int output_gstreamer_init_slave(void)
+void output_gstreamer_pipeline_init_slave(GstElement *player, gchar* ip_addr)
 {
-	GstBus *bus;
         GstElement *source;
 	GstElement *rtpdepay;
 	GstElement *decode_bin;
 	GstElement *audio_sink0;
 	GstElement *convert;
 
-	output_gstreamer_control_init_slave();
-
-	player_ = gst_pipeline_new("audio_player_slave");
 	source = gst_element_factory_make ("udpsrc", "source");
 	rtpdepay = gst_element_factory_make ("rtpgstdepay", "rtpdepay");
 	decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
         convert = gst_element_factory_make("audioconvert", "convert");
         audio_sink0 = gst_element_factory_make ("autoaudiosink", "audio_sink");
 	
-	if (!player_ || !source || !rtpdepay || !decode_bin || !convert || !audio_sink0)
+	if (!player || !source || !rtpdepay || !decode_bin || !convert || !audio_sink0)
 	{
 		g_print ("Not all elements could be created.\n");
 	}
 
-	gst_bin_add_many (GST_BIN (player_), source, rtpdepay, decode_bin, convert, audio_sink0, NULL);
+	gst_bin_add_many (GST_BIN (player), source, rtpdepay, decode_bin, convert, audio_sink0, NULL);
 
 	if (gst_element_link_many (source, rtpdepay, decode_bin, NULL) != TRUE)
 	{
 		g_print ("Elements could not be linked.\n");
-		//gst_object_unref (player_);
+		//gst_object_unref (player);
 	}
 	if (gst_element_link_many (convert, audio_sink0, NULL) != TRUE)
 	{
 		g_print ("Elements could not be linked. 1\n");
-		//gst_object_unref (player_);
+		//gst_object_unref (player);
 	}
 
 	GstCaps *caps = gst_caps_new_simple ("application/x-rtp",
@@ -117,89 +113,57 @@ int output_gstreamer_init_slave(void)
 	g_object_set(source, "caps", caps, NULL);
 	gst_caps_unref(caps);
 
-	g_object_set(source, "address", UpnpGetServerIpAddress(), NULL);
+	g_object_set(source, "address", ip_addr, NULL);
 	g_object_set(source, "port", MEDIA_PORT, NULL);
-	g_signal_connect(decode_bin, "pad-added", G_CALLBACK (pad_added_handler), convert);
-
-	bus = gst_pipeline_get_bus(GST_PIPELINE(player_));
-	gst_bus_add_watch(bus, my_bus_callback, NULL);
-	gst_object_unref(bus);
-
-	if (audio_sink != NULL) {
-		GstElement *sink = NULL;
-		Log_info("gstreamer", "Setting audio sink to %s; device=%s\n",
-			 audio_sink, audio_device ? audio_device : "");
-		sink = gst_element_factory_make (audio_sink, "sink");
-		if (sink == NULL) {
-		  Log_error("gstreamer", "Couldn't create sink '%s'",
-			    audio_sink);
-		} else {
-		  if (audio_device != NULL) {
-		    g_object_set (G_OBJECT(sink), "device", audio_device, NULL);
-		  }
-		  g_object_set (G_OBJECT (player_), "audio-sink", sink, NULL);
-		}
-	}
-	if (videosink != NULL) {
-		GstElement *sink = NULL;
-		Log_info("gstreamer", "Setting video sink to %s", videosink);
-		sink = gst_element_factory_make (videosink, "sink");
-		g_object_set (G_OBJECT (player_), "video-sink", sink, NULL);
-	}
-
-	if (gst_element_set_state(player_, GST_STATE_READY) ==
-	    GST_STATE_CHANGE_FAILURE) {
-		Log_error("gstreamer", "Error: pipeline doesn't become ready.");
-	}
-	gstreamer_output.get_volume = NULL;
-	gstreamer_output.set_volume = NULL;
-	gst_element_set_state (player_, GST_STATE_PLAYING);
-
-	return 0;
+	g_signal_connect(decode_bin, "pad-added", G_CALLBACK (pad_added_handler), convert);	
 }
 #else
-int output_gstreamer_init_slave(void)
+void output_gstreamer_pipeline_init_slave(GstElement *player, gchar* ip_addr)
 {
-	GstBus *bus;
 	GstElement *source;
 	GstElement *decode_bin;
 	GstElement *audio_sink0;
 
-	g_print ("%s\n", __func__);
-
-	output_gstreamer_control_init_slave();
-
-	player_ = gst_pipeline_new("audio_player_slave");
 	source = gst_element_factory_make ("tcpserversrc", "source");
 	decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
         convert = gst_element_factory_make("audioconvert", "convert");
         audio_sink0 = gst_element_factory_make ("autoaudiosink", "audio_sink");
 	
-	if (!player_ || !source || !decode_bin || !gst_data.convert || !audio_sink0)
+	if (!player || !source || !decode_bin || !gst_data.convert || !audio_sink0)
 	{
 		g_print ("Not all elements could be created.\n");
 	}
 
-	gst_bin_add_many (GST_BIN (player_), source, decode_bin, gst_data.convert, audio_sink0, NULL);
+	gst_bin_add_many (GST_BIN (player), source, decode_bin, gst_data.convert, audio_sink0, NULL);
 
 	if (gst_element_link_many (source, decode_bin, NULL) != TRUE)
 	{
 		g_print ("Elements could not be linked. 1\n");
-		gst_object_unref (player_);
+		//gst_object_unref (player);
 	}
 
 	if (gst_element_link_many (gst_data.convert, audio_sink0, NULL) != TRUE)
 	{
 		g_print ("Elements could not be linked. 2\n");
-		//gst_object_unref (player_);
+		//gst_object_unref (player);
 	}
 
-	g_object_set(source, "host", UpnpGetServerIpAddress(), NULL);
-	g_print("tcpserversrc %s\n", UpnpGetServerIpAddress());
+	g_object_set(source, "host", ip_addr, NULL);
+	g_print("tcpserversrc %s\n", ip_addr);
 	g_object_set(source, "port", MEDIA_PORT, NULL);
 
 	g_signal_connect(decode_bin, "pad-added", G_CALLBACK (pad_added_handler), convert);
+}
+#endif
 
+int output_gstreamer_init_slave(void)
+{
+	GstBus *bus;
+	output_gstreamer_control_init_slave();
+
+	player_ = gst_pipeline_new("audio_player_slave");
+	output_gstreamer_pipeline_init_slave(player_, UpnpGetServerIpAddress());
+	
 	bus = gst_pipeline_get_bus(GST_PIPELINE(player_));
 	gst_bus_add_watch(bus, my_bus_callback, NULL);
 	gst_object_unref(bus);
@@ -225,7 +189,7 @@ int output_gstreamer_init_slave(void)
 		sink = gst_element_factory_make (videosink, "sink");
 		g_object_set (G_OBJECT (player_), "video-sink", sink, NULL);
 	}
-
+	
 	if (gst_element_set_state(player_, GST_STATE_READY) ==
 	    GST_STATE_CHANGE_FAILURE) {
 		Log_error("gstreamer", "Error: pipeline doesn't become ready.");
@@ -236,7 +200,6 @@ int output_gstreamer_init_slave(void)
 
 	return 0;
 }
-#endif
 
 static void cmd_do_play(gchar **arg_strv, gint arg_num)
 {
