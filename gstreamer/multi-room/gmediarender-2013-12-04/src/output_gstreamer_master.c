@@ -55,7 +55,6 @@ int add_slave_to_pipeline(char* ip_addr)
 	g_object_set (udp_sink, "port", MEDIA_PORT, NULL);
 	return 0;
 }
-
 int output_gstreamer_init_master(void)
 {
 	GstBus *bus;
@@ -131,6 +130,99 @@ int output_gstreamer_init_master(void)
 	gstreamer_output.set_volume = NULL;
 	return 0;
 }
+
+int output_gstreamer_init_master2(void)
+{
+	GstBus *bus;
+	GstElement *queue0;
+	GstElement *rtppay;
+	GstElement *udp_sink;
+
+	GstClock *client_clock;
+	//GstNetTimeProvider *prov_clock;
+	
+        create_net_clock(&(gst_data.clock_port));
+	g_print("clock port: %d\n", gst_data.clock_port);
+	client_clock = gst_net_client_clock_new(NULL, UpnpGetServerIpAddress(), gst_data.clock_port, 0);
+	//g_usleep (G_USEC_PER_SEC / 2);
+
+	player_ = gst_pipeline_new("audio_player_master");
+	gst_data.source = gst_element_factory_make ("uridecodebin", "source");
+	gst_data.tee = gst_element_factory_make ("tee", "tee");
+	queue0 = gst_element_factory_make ("queue", "queue");
+	rtppay = gst_element_factory_make ("rtpgstpay", "rtppay");
+	udp_sink = gst_element_factory_make ("udpsink", "udp_sink");
+
+	if (!player_ || !gst_data.source || !gst_data.tee || !queue0 || !rtppay || !udp_sink)
+	{
+		g_print ("Not all elements could be created.\n");
+	}
+
+	g_object_set (udp_sink, "host", "127.0.0.1", NULL);
+	g_object_set (udp_sink, "port", MEDIA_PORT, NULL);
+	
+	gst_bin_add_many (GST_BIN (player_), gst_data.source, gst_data.tee, queue0, rtppay, udp_sink, NULL);
+
+	if (gst_element_link_many (gst_data.tee, queue0, rtppay, udp_sink, NULL) != TRUE)
+	{
+		g_print ("Elements could not be linked. 1\n");
+		//gst_object_unref (player_);
+	}
+	
+	g_signal_connect (gst_data.source, "pad-added", G_CALLBACK (pad_added_handler), gst_data.tee);
+
+	gst_pipeline_use_clock (GST_PIPELINE (player_), client_clock);
+	//gst_element_set_start_time (player_, GST_CLOCK_TIME_NONE);
+	//gst_pipeline_set_latency (GST_PIPELINE (player_), GST_SECOND / 2);
+
+	bus = gst_pipeline_get_bus(GST_PIPELINE(player_));
+	gst_bus_add_watch(bus, my_bus_callback, NULL);
+	gst_object_unref(bus);
+
+	if (audio_sink != NULL) {
+		GstElement *sink = NULL;
+		Log_info("gstreamer", "Setting audio sink to %s; device=%s\n",
+			 audio_sink, audio_device ? audio_device : "");
+		sink = gst_element_factory_make (audio_sink, "sink");
+		if (sink == NULL) {
+		  Log_error("gstreamer", "Couldn't create sink '%s'",
+			    audio_sink);
+		} else {
+		  if (audio_device != NULL) {
+		    g_object_set (G_OBJECT(sink), "device", audio_device, NULL);
+		  }
+		  g_object_set (G_OBJECT (player_), "audio-sink", sink, NULL);
+		}
+	}
+	if (videosink != NULL) {
+		GstElement *sink = NULL;
+		Log_info("gstreamer", "Setting video sink to %s", videosink);
+		sink = gst_element_factory_make (videosink, "sink");
+		g_object_set (G_OBJECT (player_), "video-sink", sink, NULL);
+	}
+
+	if (gst_element_set_state(player_, GST_STATE_READY) ==
+	    GST_STATE_CHANGE_FAILURE) {
+		Log_error("gstreamer", "Error: pipeline doesn't become ready.");
+	}
+	gstreamer_output.get_volume = NULL;
+	gstreamer_output.set_volume = NULL;
+	return 0;
+}
+
+int output_gstreamer_init_master3(void)
+{
+	GstBus *bus;
+
+	player2_ = gst_pipeline_new("audio_player_slave");
+	output_gstreamer_pipeline_init_slave(player2_, (gchar*)"127.0.0.1");
+	
+	bus = gst_pipeline_get_bus(GST_PIPELINE(player2_));
+	gst_bus_add_watch(bus, my_bus_callback2, NULL);
+	gst_object_unref(bus);
+	return 0;
+}
+
 #else
 int add_slave_to_pipeline(char* ip_addr)
 {

@@ -181,6 +181,7 @@ static void scan_mime_list(void)
 }
 
 GstElement *player_ = NULL;
+GstElement *player2_ = NULL;
 static char *gsuri_ = NULL;         // locally strdup()ed
 static char *gs_next_uri_ = NULL;   // locally strdup()ed
 static struct SongMetaData song_meta_;
@@ -979,7 +980,9 @@ static int output_gstreamer_init(void)
 	
 	if (g_device_play_mode == DEVICE_PLAY_MODE_MASTER)
 	{
-		output_gstreamer_init_master();
+		//output_gstreamer_init_master();
+		output_gstreamer_init_master2();
+		output_gstreamer_init_master3();
 	}
 	else if (g_device_play_mode == DEVICE_PLAY_MODE_SLAVE)
 	{

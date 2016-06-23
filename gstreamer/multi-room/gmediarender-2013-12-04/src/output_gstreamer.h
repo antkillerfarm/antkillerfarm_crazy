@@ -40,11 +40,14 @@ typedef struct{
 extern struct output_module gstreamer_output;
 extern GstData gst_data;
 extern GstElement *player_;
+extern GstElement *player2_;
 extern gchar *audio_sink;
 extern gchar *audio_device;
 extern gchar *videosink;
 
 int output_gstreamer_init_master(void);
+int output_gstreamer_init_master2(void);
+int output_gstreamer_init_master3(void);
 int output_gstreamer_init_slave(void);
 int output_gstreamer_control_init_slave(void);
 void output_gstreamer_pipeline_init_slave(GstElement *player, gchar* ip_addr);
