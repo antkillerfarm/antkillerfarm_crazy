@@ -15,8 +15,8 @@
 #define MEDIA_PORT 1500
 #define CONTROL_PORT 1501
 //#define NET_DEV "eth0"
-//#define NET_DEV "wlp3s0"
-#define NET_DEV "enp0s8"
+#define NET_DEV "wlp3s0"
+//#define NET_DEV "enp0s8"
 
 #define TRANS_TYPE_TCP 0
 #define TRANS_TYPE_RTP 1
@@ -29,6 +29,7 @@ typedef struct{
   GstElement *decode_bin;
   GstElement *convert;
   GstElement *audio_sink;
+  GstElement *rtpjitterbuffer;
 }GstData;
 
 typedef struct{
@@ -187,19 +188,22 @@ void gst_pipeline_rtp_init()
 {
   gst_data.playbin = gst_pipeline_new("audio_player_server");
   gst_data.source = gst_element_factory_make ("udpsrc", "source");
+  gst_data.rtpjitterbuffer = gst_element_factory_make ("rtpjitterbuffer", "rtpjitterbuffer");
   gst_data.rtpdepay = gst_element_factory_make ("rtpgstdepay", "rtpdepay");
   gst_data.decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
   gst_data.convert = gst_element_factory_make("audioconvert", "convert");
   gst_data.audio_sink = gst_element_factory_make ("autoaudiosink", "audio_sink");
 
-  if (!gst_data.playbin || !gst_data.source || !gst_data.rtpdepay || !gst_data.decode_bin || !gst_data.convert || !gst_data.audio_sink)
+  if (!gst_data.playbin || !gst_data.source || gst_data.rtpjitterbuffer || !gst_data.rtpdepay || !gst_data.decode_bin || !gst_data.convert || !gst_data.audio_sink)
     {
       g_print ("Not all elements could be created.\n");
     }
 
-  gst_bin_add_many (GST_BIN (gst_data.playbin), gst_data.source, gst_data.rtpdepay, gst_data.decode_bin, gst_data.convert, gst_data.audio_sink, NULL);
+  g_object_set(gst_data.rtpjitterbuffer, "latency", 3000, NULL);
+  
+  gst_bin_add_many (GST_BIN (gst_data.playbin), gst_data.source, gst_data.rtpjitterbuffer, gst_data.rtpdepay, gst_data.decode_bin, gst_data.convert, gst_data.audio_sink, NULL);
 
-  if (gst_element_link_many (gst_data.source, gst_data.rtpdepay, gst_data.decode_bin, NULL) != TRUE)
+  if (gst_element_link_many (gst_data.source, gst_data.rtpjitterbuffer, gst_data.rtpdepay, gst_data.decode_bin, NULL) != TRUE)
     {
       g_print ("Elements could not be linked. 0\n");
       gst_object_unref (gst_data.playbin);

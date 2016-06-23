@@ -33,7 +33,6 @@
 
 typedef struct{
   	GstElement *source;
-	GstElement *convert;
 	GstElement *tee;
 	gint clock_port;
 }GstData;
@@ -52,5 +51,6 @@ void send_cmd_to_server(gchar *cmd);
 int add_slave_to_pipeline(char* ip_addr);
 int add_slave_to_control(struct UpDeviceNode *devnode);
 gboolean my_bus_callback(GstBus * bus, GstMessage * msg, gpointer data);
+void pad_added_handler (GstElement *src, GstPad *new_pad, gpointer data);
 
 #endif /*  _OUTPUT_GSTREAMER_H */

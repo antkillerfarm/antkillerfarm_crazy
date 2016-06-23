@@ -24,9 +24,10 @@ typedef struct{
 
 ControlServiceData control_service_data;
 
-static void slave_pad_added_handler (GstElement *src, GstPad *new_pad, gpointer data)
+void pad_added_handler (GstElement *src, GstPad *new_pad, gpointer data)
 {
-	GstPad *sink_pad = gst_element_get_static_pad (gst_data.convert, "sink");
+	GstElement *sink = (GstElement *)data;
+	GstPad *sink_pad = gst_element_get_static_pad (sink, "sink");
 	GstPadLinkReturn ret;
 	GstCaps *new_pad_caps = NULL;
 	GstStructure *new_pad_struct = NULL;
@@ -78,6 +79,7 @@ int output_gstreamer_init_slave(void)
 	GstElement *rtpdepay;
 	GstElement *decode_bin;
 	GstElement *audio_sink0;
+	GstElement *convert;
 
 	output_gstreamer_control_init_slave();
 
@@ -85,22 +87,22 @@ int output_gstreamer_init_slave(void)
 	source = gst_element_factory_make ("udpsrc", "source");
 	rtpdepay = gst_element_factory_make ("rtpgstdepay", "rtpdepay");
 	decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
-	gst_data.convert = gst_element_factory_make("audioconvert", "convert");
+        convert = gst_element_factory_make("audioconvert", "convert");
         audio_sink0 = gst_element_factory_make ("autoaudiosink", "audio_sink");
 	
-	if (!player_ || !source || !rtpdepay || !decode_bin || !gst_data.convert || !audio_sink0)
+	if (!player_ || !source || !rtpdepay || !decode_bin || !convert || !audio_sink0)
 	{
 		g_print ("Not all elements could be created.\n");
 	}
 
-	gst_bin_add_many (GST_BIN (player_), source, rtpdepay, decode_bin, gst_data.convert, audio_sink0, NULL);
+	gst_bin_add_many (GST_BIN (player_), source, rtpdepay, decode_bin, convert, audio_sink0, NULL);
 
 	if (gst_element_link_many (source, rtpdepay, decode_bin, NULL) != TRUE)
 	{
 		g_print ("Elements could not be linked.\n");
 		//gst_object_unref (player_);
 	}
-	if (gst_element_link_many (gst_data.convert, audio_sink0, NULL) != TRUE)
+	if (gst_element_link_many (convert, audio_sink0, NULL) != TRUE)
 	{
 		g_print ("Elements could not be linked. 1\n");
 		//gst_object_unref (player_);
@@ -117,7 +119,7 @@ int output_gstreamer_init_slave(void)
 
 	g_object_set(source, "address", UpnpGetServerIpAddress(), NULL);
 	g_object_set(source, "port", MEDIA_PORT, NULL);
-	g_signal_connect(decode_bin, "pad-added", G_CALLBACK (slave_pad_added_handler), NULL);
+	g_signal_connect(decode_bin, "pad-added", G_CALLBACK (pad_added_handler), convert);
 
 	bus = gst_pipeline_get_bus(GST_PIPELINE(player_));
 	gst_bus_add_watch(bus, my_bus_callback, NULL);
@@ -170,7 +172,7 @@ int output_gstreamer_init_slave(void)
 	player_ = gst_pipeline_new("audio_player_slave");
 	source = gst_element_factory_make ("tcpserversrc", "source");
 	decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
-	gst_data.convert = gst_element_factory_make("audioconvert", "convert");
+        convert = gst_element_factory_make("audioconvert", "convert");
         audio_sink0 = gst_element_factory_make ("autoaudiosink", "audio_sink");
 	
 	if (!player_ || !source || !decode_bin || !gst_data.convert || !audio_sink0)
@@ -196,7 +198,7 @@ int output_gstreamer_init_slave(void)
 	g_print("tcpserversrc %s\n", UpnpGetServerIpAddress());
 	g_object_set(source, "port", MEDIA_PORT, NULL);
 
-	g_signal_connect(decode_bin, "pad-added", G_CALLBACK (slave_pad_added_handler), NULL);
+	g_signal_connect(decode_bin, "pad-added", G_CALLBACK (pad_added_handler), convert);
 
 	bus = gst_pipeline_get_bus(GST_PIPELINE(player_));
 	gst_bus_add_watch(bus, my_bus_callback, NULL);
