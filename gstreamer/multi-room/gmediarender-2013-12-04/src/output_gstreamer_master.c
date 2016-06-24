@@ -62,12 +62,12 @@ int output_gstreamer_init_master(void)
 	GstElement *audio_sink0;
 	GstElement *convert;
 
-	GstClock *client_clock;
+	//GstClock *client_clock;
 	//GstNetTimeProvider *prov_clock;
 	
-        create_net_clock(&(gst_data.clock_port));
-	g_print("clock port: %d\n", gst_data.clock_port);
-	client_clock = gst_net_client_clock_new(NULL, UpnpGetServerIpAddress(), gst_data.clock_port, 0);
+        //create_net_clock(&(gst_data.clock_port));
+	//g_print("clock port: %d\n", gst_data.clock_port);
+	//client_clock = gst_net_client_clock_new(NULL, UpnpGetServerIpAddress(), gst_data.clock_port, 0);
 	//g_usleep (G_USEC_PER_SEC / 2);
 
 	player_ = gst_pipeline_new("audio_player_master");
@@ -92,7 +92,7 @@ int output_gstreamer_init_master(void)
 	
 	g_signal_connect (gst_data.source, "pad-added", G_CALLBACK (pad_added_handler), gst_data.tee);
 
-	gst_pipeline_use_clock (GST_PIPELINE (player_), client_clock);
+	//gst_pipeline_use_clock (GST_PIPELINE (player_), client_clock);
 	//gst_element_set_start_time (player_, GST_CLOCK_TIME_NONE);
 	//gst_pipeline_set_latency (GST_PIPELINE (player_), GST_SECOND / 2);
 
@@ -138,12 +138,12 @@ int output_gstreamer_init_master2(void)
 	GstElement *rtppay;
 	GstElement *udp_sink;
 
-	GstClock *client_clock;
+	//GstClock *client_clock;
 	//GstNetTimeProvider *prov_clock;
 	
-        create_net_clock(&(gst_data.clock_port));
-	g_print("clock port: %d\n", gst_data.clock_port);
-	client_clock = gst_net_client_clock_new(NULL, UpnpGetServerIpAddress(), gst_data.clock_port, 0);
+        //create_net_clock(&(gst_data.clock_port));
+	//g_print("clock port: %d\n", gst_data.clock_port);
+	//client_clock = gst_net_client_clock_new(NULL, UpnpGetServerIpAddress(), gst_data.clock_port, 0);
 	//g_usleep (G_USEC_PER_SEC / 2);
 
 	player_ = gst_pipeline_new("audio_player_master");
@@ -171,7 +171,7 @@ int output_gstreamer_init_master2(void)
 	
 	g_signal_connect (gst_data.source, "pad-added", G_CALLBACK (pad_added_handler), gst_data.tee);
 
-	gst_pipeline_use_clock (GST_PIPELINE (player_), client_clock);
+	//gst_pipeline_use_clock (GST_PIPELINE (player_), client_clock);
 	//gst_element_set_start_time (player_, GST_CLOCK_TIME_NONE);
 	//gst_pipeline_set_latency (GST_PIPELINE (player_), GST_SECOND / 2);
 
@@ -220,6 +220,12 @@ int output_gstreamer_init_master3(void)
 	bus = gst_pipeline_get_bus(GST_PIPELINE(player2_));
 	gst_bus_add_watch(bus, my_bus_callback2, NULL);
 	gst_object_unref(bus);
+
+	if (gst_element_set_state(player2_, GST_STATE_READY) ==
+	    GST_STATE_CHANGE_FAILURE) {
+		Log_error("gstreamer", "Error: pipeline doesn't become ready. 2");
+	}
+	gst_element_set_state (player2_, GST_STATE_PLAYING);
 	return 0;
 }
 
@@ -258,12 +264,12 @@ int output_gstreamer_init_master(void)
 	GstElement *audio_sink0;
 	GstElement *convert;
 	
-	GstClock *client_clock;
-	GstNetTimeProvider *prov_clock;
+	//GstClock *client_clock;
+	//GstNetTimeProvider *prov_clock;
 	
-	prov_clock = create_net_clock(&(gst_data.clock_port));
-	g_print("clock port: %d\n", gst_data.clock_port);
-	client_clock = gst_net_client_clock_new(NULL, UpnpGetServerIpAddress(), gst_data.clock_port, 0);
+	//prov_clock = create_net_clock(&(gst_data.clock_port));
+	//g_print("clock port: %d\n", gst_data.clock_port);
+	//client_clock = gst_net_client_clock_new(NULL, UpnpGetServerIpAddress(), gst_data.clock_port, 0);
 	//g_usleep (G_USEC_PER_SEC / 2);	
 
 	player_ = gst_pipeline_new("audio_player_master");
@@ -301,7 +307,7 @@ int output_gstreamer_init_master(void)
 	
 	g_signal_connect (decode_bin, "pad-added", G_CALLBACK (pad_added_handler), convert);
 
-	gst_pipeline_use_clock (GST_PIPELINE (player_), client_clock);
+	//gst_pipeline_use_clock (GST_PIPELINE (player_), client_clock);
 	//gst_element_set_start_time (player_, GST_CLOCK_TIME_NONE);
 	//gst_pipeline_set_latency (GST_PIPELINE (player_), GST_SECOND / 2);
 

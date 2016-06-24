@@ -94,9 +94,9 @@ int upnp_discovery_search_result_handler(Upnp_EventType EventType, void *Event, 
 	dev_node_op.operation = dev_node_add_gst_pipeline;
         ctrl_point_dev_node_operation(&dev_node_op);
 
-	gchar cmd[64];
-	sprintf(cmd, "Clock#%s#%d\n", UpnpGetServerIpAddress(), gst_data.clock_port);
-	send_cmd_to_server(cmd);
+	//gchar cmd[64];
+	//sprintf(cmd, "Clock#%s#%d\n", UpnpGetServerIpAddress(), gst_data.clock_port);
+	//send_cmd_to_server(cmd);
 	return CP_SUCCESS;
 }
 

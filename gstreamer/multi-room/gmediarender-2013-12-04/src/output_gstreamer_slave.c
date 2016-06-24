@@ -234,12 +234,12 @@ static void cmd_do_eos(gchar **arg_strv, gint arg_num)
 
 static void cmd_do_clock(gchar **arg_strv, gint arg_num)
 {
-  GstClock *client_clock;
-  g_print ("%s %s %s %s\n", __func__, arg_strv[0], arg_strv[1], arg_strv[2]);
-  client_clock = gst_net_client_clock_new (NULL, arg_strv[1], atoi(arg_strv[2]), 0);
+  //GstClock *client_clock;
+  //g_print ("%s %s %s %s\n", __func__, arg_strv[0], arg_strv[1], arg_strv[2]);
+  //client_clock = gst_net_client_clock_new (NULL, arg_strv[1], atoi(arg_strv[2]), 0);
   //g_usleep (G_USEC_PER_SEC / 2);
 
-  gst_pipeline_use_clock (GST_PIPELINE (player_), client_clock);
+  //gst_pipeline_use_clock (GST_PIPELINE (player_), client_clock);
   //gst_element_set_start_time (gst_data.playbin, GST_CLOCK_TIME_NONE);
   //gst_pipeline_set_latency (GST_PIPELINE (gst_data.playbin), GST_SECOND / 2);
 }
@@ -370,7 +370,7 @@ int output_gstreamer_control_init_slave(void)
 	control_service_data.cmd_buf = NULL;
 
 	/* create the new socketservice */
-	control_service_data.service = g_socket_service_new ();
+	control_service_data.service = g_threaded_socket_service_new(1);
 
 	GInetAddress *address = g_inet_address_new_from_string(UpnpGetServerIpAddress());
 	GSocketAddress *socket_address = g_inet_socket_address_new(address, CONTROL_PORT);
@@ -385,7 +385,7 @@ int output_gstreamer_control_init_slave(void)
 
 	/* listen to the 'incoming' signal */
 	g_signal_connect (control_service_data.service,
-			  "incoming",
+			  "run",
 			  G_CALLBACK (incoming_callback),
 			  NULL);
 
