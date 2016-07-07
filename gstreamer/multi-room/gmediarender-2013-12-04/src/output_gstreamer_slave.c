@@ -75,25 +75,29 @@ exit:
 void output_gstreamer_pipeline_init_slave(GstElement *player, gchar* ip_addr)
 {
         GstElement *source;
+	GstElement *rtpjitterbuffer;
 	GstElement *rtpdepay;
 	GstElement *decode_bin;
 	GstElement *audio_sink0;
 	GstElement *convert;
 
 	source = gst_element_factory_make ("udpsrc", "source");
+	rtpjitterbuffer = gst_element_factory_make ("rtpjitterbuffer", "rtpjitterbuffer");
 	rtpdepay = gst_element_factory_make ("rtpgstdepay", "rtpdepay");
 	decode_bin = gst_element_factory_make ("decodebin", "decode_bin");
         convert = gst_element_factory_make("audioconvert", "convert");
         audio_sink0 = gst_element_factory_make ("autoaudiosink", "audio_sink");
 	
-	if (!player || !source || !rtpdepay || !decode_bin || !convert || !audio_sink0)
+	if (!player || !source || !rtpjitterbuffer || !rtpdepay || !decode_bin || !convert || !audio_sink0)
 	{
 		g_print ("Not all elements could be created.\n");
 	}
 
-	gst_bin_add_many (GST_BIN (player), source, rtpdepay, decode_bin, convert, audio_sink0, NULL);
+	g_object_set(rtpjitterbuffer, "latency", 500, NULL);
 
-	if (gst_element_link_many (source, rtpdepay, decode_bin, NULL) != TRUE)
+	gst_bin_add_many (GST_BIN (player), source, rtpjitterbuffer, rtpdepay, decode_bin, convert, audio_sink0, NULL);
+
+	if (gst_element_link_many (source, rtpjitterbuffer, rtpdepay, decode_bin, NULL) != TRUE)
 	{
 		g_print ("Elements could not be linked.\n");
 		//gst_object_unref (player);
