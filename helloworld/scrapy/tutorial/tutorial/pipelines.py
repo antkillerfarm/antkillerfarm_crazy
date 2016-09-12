@@ -6,12 +6,14 @@
 # See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
 import json
 import sys
+import time
 
 class TutorialPipeline(object):
     def __init__(self):
         reload(sys)
         sys.setdefaultencoding("utf8")
-        self.file = open("./item1.json", "w+")
+        filename=time.strftime("%Y_%m_%d")+".json"
+        self.file = open(filename, "w+")
 
     def process_item(self, item, spider):
         record = json.dumps(dict(item), ensure_ascii=False)+"\n"
