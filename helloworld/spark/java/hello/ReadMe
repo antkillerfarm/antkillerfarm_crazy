@@ -1,0 +1,6 @@
+# Compile
+
+`mvn package`
+
+# Exec
+
