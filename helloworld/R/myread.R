@@ -25,3 +25,13 @@ dbClearResult(query)
 print(data)
 dbDisconnect(conn)
 
+
+file_name<-"/home/data/my/antkillerfarm_crazy/helloworld/scrapy/tutorial/2016_10_11.json"
+rule <- regexpr("/[^:punct:]*.json", file_name)
+date<-substr(file_name,rule[1]+1,rule[1]+attr(rule,"match.length")-6)
+date1<-gsub("_", "-", date)
+
+x<-c(apple=2.5,orange=2.1)
+x0<-attributes(x)
+x1<-attr(x,"names")
+

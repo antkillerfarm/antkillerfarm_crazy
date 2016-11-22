@@ -10,10 +10,11 @@ handle_file<-function(file_name){
   }
   lines[len]<-paste(lines[len],"]}")
   json_data<-fromJSON(paste(lines, collapse=""))
+  #json_data$file_name<-
   return(json_data)
 }
 
-json_data<-handle_file("/home/data/my/antkillerfarm_crazy/helloworld/scrapy/tutorial/2016_10_11.json")
+json_data<-handle_file("/home/data/tj/my/antkillerfarm_crazy/helloworld/scrapy/tutorial/2016_10_11.json")
 
 json_to_db<-function(conn,json){
   for (i in 1:length(json$data)){
@@ -28,6 +29,7 @@ json_to_db(conn,json_data)
 
 conn<-dbConnect(MySQL(), dbname = "ml", username="root", password="123456")
 summary(conn)
+
 
 
 
