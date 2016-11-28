@@ -1,0 +1,59 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>splitter</groupId>
+	<artifactId>splitter</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-core</artifactId>
+			<version>3.0.3</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/lib/lucene-core-3.0.3.jar</systemPath>
+		</dependency>
+		<dependency>
+			<groupId>org.wltea.analyzer</groupId>
+			<artifactId>IKAnalyzer</artifactId>
+			<version>1.0.0</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/lib/IKAnalyzer2012_u6.jar</systemPath>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<sourceDirectory>src</sourceDirectory>
+		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.3</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.5.0</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<executable>java</executable>
+					<arguments>
+						<argument>-classpath</argument>
+						<argument>${project.basedir}/target/splitter-0.0.1-SNAPSHOT.jar:${project.basedir}/lib/lucene-core-3.0.3.jar:${project.basedir}/lib/IKAnalyzer2012_u6.jar</argument>
+						<argument>com.eve.splitter.IKAnalyzerTest</argument>
+					</arguments>
+				</configuration>
+			</plugin>
+		</plugins>
+
+	</build>
+</project>
