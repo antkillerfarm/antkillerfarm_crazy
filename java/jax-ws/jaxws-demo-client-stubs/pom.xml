@@ -1,0 +1,107 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+			     http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.himanshu.jaxws</groupId>
+  <artifactId>jaxws-demo-client-stubs</artifactId>
+  <packaging>jar</packaging>
+  <version>1.0.0-SNAPSHOT</version>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <java-version>1.8</java-version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <build>
+    <plugins>
+
+      <plugin>
+	<groupId>org.codehaus.mojo</groupId>
+	<artifactId>jaxws-maven-plugin</artifactId>
+	<configuration>
+	  <!-- Needed with JAXP 1.5 -->
+	  <vmArgs>
+            <vmArg>-Djavax.xml.accessExternalSchema=all</vmArg>
+	  </vmArgs>
+	</configuration>
+	<executions>
+	  <execution>
+	    <id>generate-stubs-rpc</id>
+	    <phase>generate-sources</phase>
+	    <goals>
+	      <goal>wsimport</goal>
+	    </goals>
+	    <configuration>
+	      <wsdlDirectory>src/main/resources/rpc</wsdlDirectory>
+	      <wsdlFiles>
+		<wsdlFile>
+		  HelloWorldServiceImplService.wsdl
+		</wsdlFile>
+	      </wsdlFiles>
+	      <packageName>gen.com.himanshu.poc.jaxws.stubs.rpc_type</packageName>
+	      <!-- *** you need the next line to set the wsdlLocation in the generated
+		   stubs *** -->
+	      <wsdlLocation>http://localhost:9999/ws/hellorpc</wsdlLocation>
+	      <!-- Without this, multiple WSDLs won't be processed :( -->
+              <staleFile>${project.build.directory}/jaxws/stale/wsdl.FirstWsdl.done</staleFile>
+	    </configuration>
+	  </execution>
+
+	  <execution>
+	    <id>generate-stubs-document</id>
+	    <phase>generate-sources</phase>
+	    <goals>
+	      <goal>wsimport</goal>
+	    </goals>
+	    <configuration>
+	      <wsdlDirectory>src/main/resources/document</wsdlDirectory>
+	      <wsdlFiles>
+		<wsdlFile>
+		  HelloWorldServiceImplService.wsdl
+		</wsdlFile>
+	      </wsdlFiles>
+	      <packageName>gen.com.himanshu.poc.jaxws.stubs.document_type</packageName>
+	      <!-- *** you need the next line to set the wsdlLocation in the generated
+		   stubs *** -->
+	      <wsdlLocation>http://localhost:9999/ws/hellodocument</wsdlLocation>
+	      <!-- Without this, multiple WSDLs won't be processed :( -->
+              <staleFile>${project.build.directory}/jaxws/stale/wsdl.SecondWsdl.done</staleFile>
+	    </configuration>
+	  </execution>
+	</executions>
+      </plugin>
+
+      <plugin>
+	<groupId>org.codehaus.mojo</groupId>
+	<artifactId>build-helper-maven-plugin</artifactId>
+	<version>1.12</version>
+	<executions>
+	  <execution>
+	    <id>add-wsdl-source</id>
+	    <phase>process-sources</phase>
+	    <goals>
+	      <goal>add-source</goal>
+	    </goals>
+	    <configuration>
+	      <sources>
+		<source>${project.build.directory}/jaxws/wsimport/java</source>
+	      </sources>
+	    </configuration>
+	    <!-- [...] -->
+	  </execution>
+	</executions>
+      </plugin>
+
+      <plugin>
+	<groupId>org.apache.maven.plugins</groupId>
+	<artifactId>maven-compiler-plugin</artifactId>
+	<version>3.6.0</version>
+	<configuration>
+	  <source>1.8</source>
+	  <target>1.8</target>
+	</configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xs:schema version="1.0" targetNamespace="http://document_type.service.jaxws.poc.himanshu.com/" xmlns:tns="http://document_type.service.jaxws.poc.himanshu.com/" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <xs:element name="getHelloWorldAsString" type="tns:getHelloWorldAsString"/>
+
+  <xs:element name="getHelloWorldAsStringResponse" type="tns:getHelloWorldAsStringResponse"/>
+
+  <xs:element name="secureHelloWorldAsString" type="tns:secureHelloWorldAsString"/>
+
+  <xs:element name="secureHelloWorldAsStringResponse" type="tns:secureHelloWorldAsStringResponse"/>
+
+  <xs:complexType name="secureHelloWorldAsString">
+    <xs:sequence>
+      <xs:element name="arg0" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="secureHelloWorldAsStringResponse">
+    <xs:sequence>
+      <xs:element name="return" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="getHelloWorldAsString">
+    <xs:sequence>
+      <xs:element name="arg0" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="getHelloWorldAsStringResponse">
+    <xs:sequence>
+      <xs:element name="return" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>
+
