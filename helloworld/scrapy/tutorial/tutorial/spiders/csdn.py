@@ -7,6 +7,7 @@ class CsdnSpider(scrapy.Spider):
     allowed_domains = ["csdn.net"]
     start_urls = (
         'http://blog.csdn.net/antkillerfarm?viewmode=contents',
+        'http://blog.csdn.net/antkillerfarm/article/list/2?viewmode=contents',
     )
 
     def parse(self, response):
