@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 from gi.repository import Gtk
 
 class MyWindow(Gtk.Window):

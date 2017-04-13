@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 import codecs
 import pandas as pd  
 import numpy as np
