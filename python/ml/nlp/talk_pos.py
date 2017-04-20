@@ -23,6 +23,7 @@ def get_keyword(str):
 df = pd.read_csv('/home/tj/big_data/data/talk/c2.csv', header=None)
 fp2 = codecs.open("/home/tj/big_data/data/talk/c2c.csv", "w", "utf-8")
 
+
 len_df = len(df)
 kw_list = []
 for i in xrange(0,len_df):
@@ -48,6 +49,11 @@ fp2.close()
 #for i in xrange(0,200):
 #    print (fdist2[i][0] + ":" + str(fdist2[i][1]))
 
+
+df0 = pd.read_csv('/home/tj/big_data/data/talk/c2c.csv', header=None)
+fp3 = codecs.open("/home/tj/big_data/data/talk/c2cf.csv", "w", "utf-8")
+
+kw_list = df0[2]
 s = pd.Series(kw_list)
 df2 = s.groupby(s).count()
 df3 = df2.sort_values(ascending=False)
@@ -55,7 +61,11 @@ df3 = df2.sort_values(ascending=False)
 for (key, value) in df3.iteritems():
     k_list = key.split(' ')
     if (len(k_list) > 3 and value > 8):
-        print (key + ":" + str(value))
+        str0 = key + "," + str(value)
+        print (str0)
+        fp3.write(str0.decode('utf-8') + "\r\n")
+        
 
+fp3.close()
 
 
