@@ -5,17 +5,20 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.ansj.vec.Learn;
+import com.ansj.vec.Word2VEC;
 import com.hankcs.hanlp.HanLP;
 import com.hankcs.hanlp.corpus.dependency.CoNll.CoNLLSentence;
+import com.hankcs.hanlp.corpus.tag.Nature;
+import com.hankcs.hanlp.seg.common.Term;
 import joinery.DataFrame;
 import org.apache.commons.lang3.StringUtils;
 
 public class HelloWorld {
 
     public static void main(String[] args) {
-        //test6();
-        step3();
-        //System.out.println("row");
+        test7();
+        //step2();
     }
     public static void step1() {
         List<String> corpus = FileReader.getAll("/home/tj/big_data/data/talk/2.txt", "txt");
@@ -43,7 +46,7 @@ public class HelloWorld {
         boolean start_flag = false;
         boolean first_flag = false;
         String s_name = null;
-
+        //int num = 0;
         for(String sent : corpus){
             if (!first_flag) {
                 int pos = sent.indexOf(":");
@@ -88,32 +91,156 @@ public class HelloWorld {
                     corpus2.add(str);
                 }
             }
+            //num++;
+            //if (num > 2000) {
+            //	break;
+            //}
         }
         FileWriter.put("/home/tj/big_data/data/talk/2j2.csv",corpus2);
     }
     public static boolean lineFilter(String line) {
         return (line.contains("系统提示:") || line.contains("系统提醒:"));
     }
+    public static String formQuestionRegex() {
+        List<String> questionKeywordList = Arrays.asList("\\?", "？","什么","几","吗","哪", "么");
+        String regex = "(";
+        for ( String keyword : questionKeywordList) {
+            regex += keyword + "|";
+        }
+        regex = regex.substring(0,regex.length()-1);
+        regex += ")";
+        return regex;
+    }
+    public static boolean questionFilter(String line, String regex) {
+        Pattern p = Pattern.compile(regex);
+        Matcher m = p.matcher(line);
+        return m.find();
+    }
     public static void step3() {
         try {
+            HanLP.Config.NNParserModelPath = "/home/tj/big_data/data/HanLP/" + HanLP.Config.NNParserModelPath;
+            String regex = formQuestionRegex();
             DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j2.csv", ",",null,false);
-            DataFrame<Object> df2 = new DataFrame<>("keyword");
+            DataFrame<Object> df2 = new DataFrame<>("keyword","class");
             int row_num = 0;
+            double t1= 0, t2 = 0, t3 = 0;
             for (List<Object> row : df) {
                 String talk = (String)row.get(1);
                 List<String> keywordList = HanLP.extractKeyword(talk, 5);
                 String keywordStr = StringUtils.join(keywordList, " ");
+                //CoNLLSentence sentence = HanLP.parseDependency(talk);
+                //int flag = QuestionParser.get().check(sentence.getWordArray(),talk);
+                boolean flag = questionFilter(talk, regex);
+                String talk_class;
+                if (flag) {
+                    talk_class = "Q";
+                }
+                else {
+                    talk_class = "U";
+                }
+                df2.append(Arrays.asList(keywordStr, talk_class));
+
+                row_num ++;
+                if (row_num % 500 == 0) {
+                    System.out.println(row_num);
+                    //break;
+                }
+                //System.out.println("row");
+            }
+            DataFrame<Object> df3 = df.join(df2);
+            df3.writeCsv("/home/tj/big_data/data/talk/2j3.csv");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static void test2() {
+        try {
+            String regex = formQuestionRegex();
+            DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j2.csv", ",",null,false);
+            DataFrame<Object> df2 = new DataFrame<>("cutword");
+            int row_num = 0;
+            for (List<Object> row : df) {
+                String talk = (String)row.get(1);
+                List<Term> keywordList = HanLP.segment(talk);
+                String keywordStr = "";
+                for (Term term : keywordList) {
+                    if (term.nature != Nature.w) {
+                        keywordStr += term.word + " ";
+                    }
+                }
+
                 df2.append(Arrays.asList(keywordStr));
 
                 row_num ++;
                 if (row_num % 500 == 0) {
                     System.out.println(row_num);
+                    //break;
                 }
                 //System.out.println("row");
             }
+            //DataFrame<Object> df3 = df.join(df2);
+            df2.writeCsv("/home/tj/big_data/data/talk/2j3s.csv");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static void test3() {
+        try {
+            HanLP.Config.NNParserModelPath = "/home/tj/big_data/data/HanLP/" + HanLP.Config.NNParserModelPath;
+            DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j2.csv", ",",null,false);
+            DataFrame<Object> df2 = new DataFrame<>("keyword","class");
+            int row_num = 0;
+            double t1= 0, t2 = 0, t3 = 0;
+            for (List<Object> row : df) {
+                String talk = (String)row.get(1);
+                long startTime=System.nanoTime();
+                List<String> keywordList = HanLP.extractKeyword(talk, 5);
+                String keywordStr = StringUtils.join(keywordList, " ");
+                long endTime= System.nanoTime();
+                t1 += endTime - startTime;
+                startTime = endTime;
+                CoNLLSentence sentence = HanLP.parseDependency(talk);
+                endTime=System.nanoTime();
+                t2 += endTime - startTime;
+                startTime = endTime;
+                int flag = 0;//QuestionParser.get().check(sentence.getWordArray(),talk);
+                endTime=System.nanoTime();
+                t3 += endTime - startTime;
+                String talk_class;
+                if (flag ==1) {
+                    talk_class = "Q";
+                }
+                else {
+                    talk_class = "U";
+                }
+                df2.append(Arrays.asList(keywordStr, talk_class));
 
+                row_num ++;
+                if (row_num % 500 == 0) {
+                    System.out.println(row_num);
+                    //break;
+                }
+                //System.out.println("row");
+            }
+            System.out.println(String.format("%f:%f:%f", t1/1e9, t2/1e9, t3/1e9));
             DataFrame<Object> df3 = df.join(df2);
             df3.writeCsv("/home/tj/big_data/data/talk/2j3.csv");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static void test4() {
+        try {
+            DataFrame<Object> df = DataFrame.readCsv("/home/tj/big_data/data/talk/2j3.csv", ",", null, true);
+            DataFrame<Object> df2 = df.select(new DataFrame.Predicate<Object>() {
+                @Override
+                public Boolean apply(List<Object> values) {
+                    String str = (String)values.get(3);
+                    return str.equals("Q");
+                }
+            });
+            DataFrame<Object> df3 = df2.drop(0,2,3);
+            df3.writeCsv("/home/tj/big_data/data/talk/2j4.csv");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -131,6 +258,11 @@ public class HelloWorld {
         String str2 = ss.substring(pos1+1,pos2-1);
         System.out.println(str);
         System.out.println(str2);
+        ss = "我的意思是，作为拖鞋是不是应该普通鞋大些？你让我按照普通鞋的尺寸来选，那是不是鞋本身比同码数的普通鞋大些？";
+        regex = "(是不是|普通|尺寸)";
+        p = Pattern.compile(regex);
+        m = p.matcher(ss);
+        System.out.println(m.find());
     }
     public static void test6() {
         HanLP.Config.NNParserModelPath = "/home/tj/big_data/data/HanLP/" + HanLP.Config.NNParserModelPath;
@@ -141,5 +273,33 @@ public class HelloWorld {
         System.out.println(keywordList);
         List<String> sentenceList = HanLP.extractSummary(content, 3);
         System.out.println(sentenceList);
+        content = "恩 那个手镯到了呢 因为发货的姐姐今天有急事要去处理 明天帮您发出呢 您看可以吗";
+        sentence = HanLP.parseDependency(content);
+        System.out.println(sentence);
+        //System.out.println(QuestionParser.get().check(sentence.getWordArray(),content));
+        System.out.println(HanLP.segment("你好，欢迎使用HanLP汉语处理包！"));
+    }
+    public static void test7() {
+        try {
+            Learn lean = new Learn();
+            //lean.learnFile(new File("/home/tj/big_data/data/jinyong/utf8/x1.txt"));
+            //lean.saveModel(new File("/home/tj/big_data/data/jinyong/utf8/vector.mod"));
+            //lean.learnFile(new File("/home/tj/big_data/data/talk/2j3s.csv"));
+            //lean.saveModel(new File("/home/tj/big_data/data/talk/vector.mod"));
+            //加载测试
+            Word2VEC w2v = new Word2VEC();
+
+            w2v.loadJavaModel("/home/tj/big_data/data/talk/vector.mod");
+            //w2v.loadGoogleModel("/home/tj/opensource/word2vec/vectors.bin");
+            //System.out.println(w2v.distance("胡一刀"));
+            float[] word_vector = w2v.getWordVector("顺丰");
+            //System.out.println(word_vector.length);
+            for(float value : word_vector) {
+                System.out.println(value);
+            }
+            System.out.println();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
