@@ -1,12 +1,15 @@
 package oata;
 
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.ansj.vec.Learn;
+import com.ansj.vec.LearnDocVec;
 import com.ansj.vec.Word2VEC;
+import com.ansj.vec.domain.Neuron;
+import com.ansj.vec.domain.WordEntry;
 import com.hankcs.hanlp.HanLP;
 import com.hankcs.hanlp.corpus.dependency.CoNll.CoNLLSentence;
 import com.hankcs.hanlp.corpus.tag.Nature;
@@ -17,7 +20,7 @@ import org.apache.commons.lang3.StringUtils;
 public class HelloWorld {
 
     public static void main(String[] args) {
-        test7();
+        test8();
         //step2();
     }
     public static void step1() {
@@ -300,6 +303,76 @@ public class HelloWorld {
             System.out.println();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+    public static void test8() {
+        try {
+            File result = new File("/home/tj/big_data/data/talk/2j3s.csv");
+            BufferedReader br = new BufferedReader(new InputStreamReader(
+                    new FileInputStream(result)));
+            List<String> lines = new ArrayList<>();
+            String temp = null;
+            while ((temp = br.readLine()) != null) {
+                lines.add(temp);
+            }
+
+            Learn learn = new Learn();
+
+            // 训练词向量
+
+            learn.learnFile(result);
+            learn.saveModel(new File("/home/tj/big_data/data/talk/2j3s.mod"));
+
+            Word2VEC w2v = new Word2VEC();
+
+            //w2v.loadJavaModel("/home/tj/big_data/data/talk/2j3s.mod");
+            //System.out.println(w2v.distance("顺丰"));
+
+            // 得到训练完的词向量，训练文本向量
+
+            Map<String, Neuron> word2vec_model = learn.getWord2VecModel();
+            LearnDocVec learn_doc = new LearnDocVec(word2vec_model);
+            learn_doc.learnFile(result);
+            learn_doc.saveModel(new File("/home/tj/big_data/data/talk/2j3s.mod.bin"));
+
+            // 文本向量写文件
+
+            //Map<Integer, float[]> doc_vec = learn_doc.getDocVector();
+            Word2VEC doc_vec = new Word2VEC();
+            doc_vec.loadJavaModel("/home/tj/big_data/data/talk/2j3s.mod.bin");
+
+            System.out.println("welcome to tj.ai, version 1.0.0");
+            System.out.println("please input command to act, type exit for exit");
+
+            String cmd = readString();
+            while (!cmd.equals("exit")) {
+                //get short command
+                queryDoc(Integer.parseInt(cmd), doc_vec, lines);
+                cmd = readString();
+            }
+
+            System.out.println("bye");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static String readString() {
+        try {
+            return new BufferedReader(new InputStreamReader(System.in)).readLine();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "exit";
+        } finally {
+
+        }
+    }
+
+    public static void queryDoc(int query_no, Word2VEC doc_vec, List<String> lines) {
+        Set<WordEntry> doc_entry = doc_vec.distance(String.format("%d", query_no));
+        System.out.println(String.format("%d:%s", query_no, lines.get(query_no)));
+        for (WordEntry doc : doc_entry) {
+            //System.out.println(doc.name);
+            System.out.println(String.format("%s:%f:%s", doc.name, doc.score, lines.get(Integer.parseInt(doc.name))));
         }
     }
 }

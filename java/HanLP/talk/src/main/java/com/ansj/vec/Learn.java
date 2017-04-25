@@ -374,6 +374,9 @@ public class Learn {
     trainModel(summaryFile);
   }
 
+  public Map<String, Neuron> getWord2VecModel() {
+    return wordMap;
+  }
   /**
    * 保存模型
    */
