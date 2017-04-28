@@ -7,21 +7,30 @@ import java.util.regex.Pattern;
 
 import com.ansj.vec.Learn;
 import com.ansj.vec.LearnDocVec;
-import com.ansj.vec.Word2VEC;
 import com.ansj.vec.domain.Neuron;
 import com.ansj.vec.domain.WordEntry;
+import com.ansj.vec.util.MapCount;
+import com.ansj.vec.util.WordKmeans;
 import com.hankcs.hanlp.HanLP;
 import com.hankcs.hanlp.corpus.dependency.CoNll.CoNLLSentence;
 import com.hankcs.hanlp.corpus.tag.Nature;
 import com.hankcs.hanlp.seg.common.Term;
 import joinery.DataFrame;
 import org.apache.commons.lang3.StringUtils;
+import com.ansj.vec.Word2VEC;
 
 public class HelloWorld {
 
     public static void main(String[] args) {
-        test8();
-        //step2();
+		/*step1();
+		step2();
+		step3();
+		test12();
+		test13();
+		test14();
+		test15();*/
+        test15_2();
+
     }
     public static void step1() {
         List<String> corpus = FileReader.getAll("/home/tj/big_data/data/talk/2.txt", "txt");
@@ -101,6 +110,84 @@ public class HelloWorld {
         }
         FileWriter.put("/home/tj/big_data/data/talk/2j2.csv",corpus2);
     }
+    public static void step2_1() {
+        FileReader.setFile_charset("UTF-8");
+        List<String> corpus = FileReader.getAll("/home/tj/big_data/data/talk/2j.txt", "txt");
+        if (corpus == null) return;
+        List<String> corpus2 =  new LinkedList<>();
+        boolean start_flag = false;
+        boolean first_flag = false;
+        String s_name = null;
+        String current_role = null;
+        //int num = 0;
+        //String str = "";
+        String talk_all = "";
+        for(String sent : corpus){
+            if (!first_flag) {
+                int pos = sent.indexOf(":");
+                s_name = sent.substring(0,pos);
+                System.out.println(s_name);
+                first_flag = true;
+                continue;
+            }
+            String regex1 = "^[0-9]{4}-[0-9]{2}-[0-9]{2}";
+            Pattern p1 = Pattern.compile(regex1);
+            Matcher m1 = p1.matcher(sent);
+            String regex2 = "^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}";
+            Pattern p2 = Pattern.compile(regex2);
+            Matcher m2 = p2.matcher(sent);
+            boolean sent_flag = m2.find();
+            if (!start_flag && m1.find() && !sent_flag) {
+                start_flag = true;
+                continue;
+            }
+            if (sent_flag) {
+                if (start_flag) {
+                    if (current_role!=null) {
+                        String str = current_role + "," + talk_all;
+                        corpus2.add(str);
+                    }
+                    talk_all = "TAGSTART，";
+                    start_flag = false;
+                    //String str = current_role + "," + talk_all;
+                    //corpus2.add(str);
+                    current_role = null;
+                }
+                int pos1 = StringUtils.ordinalIndexOf(sent, " ", 2);
+                int pos2 = StringUtils.ordinalIndexOf(sent, " ", 3);
+                if (pos2 == -1)
+                {
+                    continue;
+                }
+                String name = sent.substring(pos1+1,pos2-1);
+                String talk = sent.substring(pos2+1);
+                boolean flag2 = lineFilter(talk);
+
+                String role;
+                if (name.contains(s_name)) {
+                    role = "S";
+                } else {
+                    role = "C";
+                }
+                if (current_role != null && !current_role.equals(role))
+                {
+                    String str = current_role + "," + talk_all;
+                    corpus2.add(str);
+                    talk_all = "";
+                }
+                if (!flag2 && talk.length() > 0) {
+                    talk_all += talk;
+                    //corpus2.add(str);
+                }
+                current_role = role;
+            }
+            //num++;
+            //if (num > 2000) {
+            //	break;
+            //}
+        }
+        FileWriter.put("/home/tj/big_data/data/talk/2j2.csv",corpus2);
+    }
     public static boolean lineFilter(String line) {
         return (line.contains("系统提示:") || line.contains("系统提醒:"));
     }
@@ -121,6 +208,48 @@ public class HelloWorld {
     }
     public static void step3() {
         try {
+            DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j2.csv", ",",null,false);
+            DataFrame<Object> df2 = new DataFrame<>("keyword");
+            int row_num = 0;
+            double t1= 0, t2 = 0, t3 = 0;
+            for (List<Object> row : df) {
+                String talk = (String)row.get(1);
+                if (talk==null)
+                {
+                    talk = "";
+                }
+                List<String> keywordList = HanLP.extractKeyword(talk, 20);
+                String[] talk_kw_list = (String[])keywordList.toArray(new String[keywordList.size()]);
+                Arrays.sort(talk_kw_list);
+                String keywordStr = "";
+                for (String kw : talk_kw_list) {
+                    if (!kw.equals("TAGSTART")) {
+                        if (keywordStr.equals("")) {
+                            keywordStr += kw;
+                        }else {
+                            keywordStr += " " + kw;
+                        }
+                    }
+                }
+                //String keywordStr = StringUtils.join(keywordList, " ");
+                df2.append(Arrays.asList(keywordStr));
+
+                row_num ++;
+                if (row_num % 500 == 0) {
+                    System.out.println(row_num);
+                    //break;
+                }
+                //System.out.println("row");
+            }
+            DataFrame<Object> df3 = df.join(df2);
+            //DataFrame<Object> df4 = df3.groupBy(2).count().sortBy(-1);
+            df3.writeCsv("/home/tj/big_data/data/talk/2j3_3.csv");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static void step3_2() {
+        try {
             HanLP.Config.NNParserModelPath = "/home/tj/big_data/data/HanLP/" + HanLP.Config.NNParserModelPath;
             String regex = formQuestionRegex();
             DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j2.csv", ",",null,false);
@@ -129,7 +258,11 @@ public class HelloWorld {
             double t1= 0, t2 = 0, t3 = 0;
             for (List<Object> row : df) {
                 String talk = (String)row.get(1);
-                List<String> keywordList = HanLP.extractKeyword(talk, 5);
+                if (talk==null)
+                {
+                    talk = "";
+                }
+                List<String> keywordList = HanLP.extractKeyword(talk, 20);
                 String keywordStr = StringUtils.join(keywordList, " ");
                 //CoNLLSentence sentence = HanLP.parseDependency(talk);
                 //int flag = QuestionParser.get().check(sentence.getWordArray(),talk);
@@ -197,7 +330,7 @@ public class HelloWorld {
             for (List<Object> row : df) {
                 String talk = (String)row.get(1);
                 long startTime=System.nanoTime();
-                List<String> keywordList = HanLP.extractKeyword(talk, 5);
+                List<String> keywordList = HanLP.extractKeyword(talk, 20);
                 String keywordStr = StringUtils.join(keywordList, " ");
                 long endTime= System.nanoTime();
                 t1 += endTime - startTime;
@@ -276,19 +409,29 @@ public class HelloWorld {
         System.out.println(keywordList);
         List<String> sentenceList = HanLP.extractSummary(content, 3);
         System.out.println(sentenceList);
-        content = "恩 那个手镯到了呢 因为发货的姐姐今天有急事要去处理 明天帮您发出呢 您看可以吗";
+        content = "恩 那个手镯到了呢 因为发货的姐姐今天有急事要去处理 明天帮您发出呢 您看可以吗?都是澳洲直邮的";
         sentence = HanLP.parseDependency(content);
         System.out.println(sentence);
         //System.out.println(QuestionParser.get().check(sentence.getWordArray(),content));
-        System.out.println(HanLP.segment("你好，欢迎使用HanLP汉语处理包！"));
+        List<Term> term_list = HanLP.segment(content);
+        for (Term term : term_list) {
+            System.out.println(term.word + "/" + term.nature);
+        }
+        System.out.println("ok");
+        List<Nature> natureList = Arrays.asList(Nature.v, Nature.vn);
+        for (Term term : term_list) {
+            if (natureList.contains(term.nature)) {
+                System.out.println(term.word + "/" + term.nature);
+            }
+        }
     }
     public static void test7() {
         try {
             Learn lean = new Learn();
             //lean.learnFile(new File("/home/tj/big_data/data/jinyong/utf8/x1.txt"));
             //lean.saveModel(new File("/home/tj/big_data/data/jinyong/utf8/vector.mod"));
-            //lean.learnFile(new File("/home/tj/big_data/data/talk/2j3s.csv"));
-            //lean.saveModel(new File("/home/tj/big_data/data/talk/vector.mod"));
+            lean.learnFile(new File("/home/tj/big_data/data/talk/2j3s.csv"));
+            lean.saveModel(new File("/home/tj/big_data/data/talk/vector.mod"));
             //加载测试
             Word2VEC w2v = new Word2VEC();
 
@@ -308,6 +451,23 @@ public class HelloWorld {
     public static void test8() {
         try {
             File result = new File("/home/tj/big_data/data/talk/2j3s.csv");
+            Learn learn = new Learn();
+
+            // 训练词向量
+            learn.learnFile(result);
+            learn.saveModel(new File("/home/tj/big_data/data/talk/2j3s.mod"));
+
+            Map<String, Neuron> word2vec_model = learn.getWord2VecModel();
+            LearnDocVec learn_doc = new LearnDocVec(word2vec_model);
+            learn_doc.learnFile(result);
+            learn_doc.saveModel(new File("/home/tj/big_data/data/talk/2j3s.mod.bin"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static void test8_1() {
+        try {
+            File result = new File("/home/tj/big_data/data/talk/2j3s.csv");
             BufferedReader br = new BufferedReader(new InputStreamReader(
                     new FileInputStream(result)));
             List<String> lines = new ArrayList<>();
@@ -316,28 +476,6 @@ public class HelloWorld {
                 lines.add(temp);
             }
 
-            Learn learn = new Learn();
-
-            // 训练词向量
-
-            learn.learnFile(result);
-            learn.saveModel(new File("/home/tj/big_data/data/talk/2j3s.mod"));
-
-            Word2VEC w2v = new Word2VEC();
-
-            //w2v.loadJavaModel("/home/tj/big_data/data/talk/2j3s.mod");
-            //System.out.println(w2v.distance("顺丰"));
-
-            // 得到训练完的词向量，训练文本向量
-
-            Map<String, Neuron> word2vec_model = learn.getWord2VecModel();
-            LearnDocVec learn_doc = new LearnDocVec(word2vec_model);
-            learn_doc.learnFile(result);
-            learn_doc.saveModel(new File("/home/tj/big_data/data/talk/2j3s.mod.bin"));
-
-            // 文本向量写文件
-
-            //Map<Integer, float[]> doc_vec = learn_doc.getDocVector();
             Word2VEC doc_vec = new Word2VEC();
             doc_vec.loadJavaModel("/home/tj/big_data/data/talk/2j3s.mod.bin");
 
@@ -348,6 +486,37 @@ public class HelloWorld {
             while (!cmd.equals("exit")) {
                 //get short command
                 queryDoc(Integer.parseInt(cmd), doc_vec, lines);
+                cmd = readString();
+            }
+
+            System.out.println("bye");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static void test8_2() {
+        try {
+            File result = new File("/home/tj/big_data/data/talk/2j3s.csv");
+            BufferedReader br = new BufferedReader(new InputStreamReader(
+                    new FileInputStream(result)));
+            List<String> lines = new ArrayList<>();
+            String temp = null;
+            while ((temp = br.readLine()) != null) {
+                lines.add(temp);
+            }
+
+            Word2VEC word_vec = new Word2VEC();
+            word_vec.loadJavaModel("/home/tj/big_data/data/talk/2j3s.mod");
+            Word2VEC doc_vec = new Word2VEC();
+            doc_vec.loadJavaModel("/home/tj/big_data/data/talk/2j3s.mod.bin");
+
+            System.out.println("welcome to tj.ai, version 1.0.0");
+            System.out.println("please input command to act, type exit for exit");
+
+            String cmd = readString();
+            while (!cmd.equals("exit")) {
+                //get short command
+                queryDocByKey(cmd, word_vec, doc_vec, lines);
                 cmd = readString();
             }
 
@@ -373,6 +542,469 @@ public class HelloWorld {
         for (WordEntry doc : doc_entry) {
             //System.out.println(doc.name);
             System.out.println(String.format("%s:%f:%s", doc.name, doc.score, lines.get(Integer.parseInt(doc.name))));
+        }
+    }
+
+    public static void queryDocByKey(String key, Word2VEC word_vec, Word2VEC doc_vec, List<String> lines) {
+        String[] keys = StringUtils.split(key, " ");
+        float[] center = word_vec.getWordsVector(keys);
+        Set<WordEntry> doc_entry = doc_vec.distance(center);
+        //System.out.println(String.format("%d:%s", query_no, lines.get(query_no)));
+        for (WordEntry doc : doc_entry) {
+            //System.out.println(doc.name);
+            System.out.println(String.format("%s:%f:%s", doc.name, doc.score, lines.get(Integer.parseInt(doc.name))));
+        }
+    }
+
+    public static void test9() {
+        try {
+            Word2VEC vec = new Word2VEC();
+            vec.loadJavaModel("/home/tj/big_data/data/talk/2j3s.mod.bin");
+            System.out.println("load model ok!");
+            WordKmeans wordKmeans = new WordKmeans(vec.getWordMap(), 50, 50);
+            WordKmeans.Classes[] explain = wordKmeans.explain();
+
+            for (int i = 0; i < explain.length; i++) {
+                System.out.println("--------" + i + "---------");
+                System.out.println(explain[i].getTop(10));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static void test10() {
+        try {
+            DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_3.csv", ",",null,true);
+            System.out.println("welcome to tj.ai, version 1.0.0");
+            System.out.println("please input command to act, type exit for exit");
+
+            String cmd = readString();
+            while (!cmd.equals("exit")) {
+                //get short command
+                queryKeyword(df, cmd);
+                cmd = readString();
+            }
+
+            System.out.println("bye");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void queryKeyword(DataFrame<Object> df, String keyword) throws IOException {
+        DataFrame<Object> df2 = new DataFrame<>("No","talk");
+        int row_num = 0;
+        for (List<Object> row : df) {
+            String talk_keyword = (String)row.get(2);
+            if (keyword.equals(talk_keyword)) {
+                String talk = (String)row.get(1);
+                System.out.println(String.format("%d:%s", row_num+1, talk));
+                df2.append(Arrays.asList(row_num + 1, talk));
+            }
+            row_num++;
+        }
+        df2.writeCsv("/home/tj/big_data/data/talk/2j3_4.csv");
+    }
+    public static void test11() {
+        try {
+            File result = new File("/home/tj/big_data/data/talk/2j3s.csv");
+            BufferedReader br = new BufferedReader(new InputStreamReader(
+                    new FileInputStream(result)));
+            List<String> lines = new ArrayList<>();
+            String temp = null;
+            while ((temp = br.readLine()) != null) {
+                lines.add(temp);
+            }
+
+            DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_4.csv", ",",null,true);
+            HashMap<String,float[]> doc_vec_map = new HashMap<>();
+
+            Word2VEC vec = new Word2VEC();
+            vec.loadJavaModel("/home/tj/big_data/data/talk/2j3s.mod.bin");
+            System.out.println("load model ok!");
+
+            HashMap<String, float[]> vec_map = vec.getWordMap();
+            for (List<Object> row : df) {
+                String talk_no = row.get(0).toString();
+                float[] talk_vec = vec_map.get(talk_no);
+                doc_vec_map.put(talk_no, talk_vec);
+            }
+
+            WordKmeans wordKmeans = new WordKmeans(doc_vec_map, 5, 50);
+            WordKmeans.Classes[] explain = wordKmeans.explain();
+
+            for (int i = 0; i < explain.length; i++) {
+                System.out.println("--------" + i + "---------");
+                List<Map.Entry<String, Double>> explain_list = explain[i].getTop(10);
+                for(Map.Entry<String, Double> explain_item : explain_list) {
+                    String talk_no = explain_item.getKey();
+                    System.out.println(lines.get(Integer.parseInt(talk_no)));
+                }
+
+            }
+
+            System.out.println("bye");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static void test12() {
+        try {
+            DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_3.csv", ",",null,true);
+            DataFrame<Object> df2 = df.groupBy(2).count().sortBy(-1);
+            DataFrame<Object> df3 = new DataFrame<>("talk","count");
+
+            for (List<Object> row : df2) {
+                String talk_keyword = (String)row.get(0);
+                int talk_count = (int)row.get(1);
+                String[] talk_kw_list = StringUtils.split(talk_keyword, " ");
+                if (talk_kw_list != null) {
+                    if (talk_kw_list.length > 2 && talk_count > 9) {
+                        df3.append(Arrays.asList(talk_keyword, talk_count));
+                    }
+                }
+            }
+
+            df3.writeCsv("/home/tj/big_data/data/talk/2j3_2.csv");
+            System.out.println("bye");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static void test13() {
+        try {
+            File result = new File("/home/tj/big_data/data/talk/2j3s.csv");
+            BufferedReader br = new BufferedReader(new InputStreamReader(
+                    new FileInputStream(result)));
+            List<String> lines = new ArrayList<>();
+            String temp = null;
+            while ((temp = br.readLine()) != null) {
+                lines.add(temp);
+            }
+
+            DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_2.csv", ",",null,true);
+            DataFrame<Object> df2 = DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_3.csv", ",",null,true);
+            DataFrame<Object> df3 = new DataFrame<>("talk");
+
+            for (List<Object> row : df) {
+                String talk_keyword = (String)row.get(0);
+                for (List<Object> row2 : df2) {
+                    String talk_keyword2 = (String)row2.get(2);
+                    if (talk_keyword.equals(talk_keyword2)) {
+                        String talk = (String)row2.get(1);
+                        df3.append(Arrays.asList(talk));
+                        break;
+                    }
+                }
+            }
+
+            df3.writeCsv("/home/tj/big_data/data/talk/2j3_5.csv");
+            System.out.println("bye");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static void test13_1() {
+        try {
+            DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_2.csv", ",",null,true);
+            DataFrame<Object> df2 = DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_3.csv", ",",null,true);
+            DataFrame<Object> df3 = new DataFrame<>("talk", "count","start_count","class");
+            HashMap<String, String> talk_class = new HashMap<>();
+
+            for (List<Object> row : df) {
+                String talk_keyword = (String)row.get(0);
+                Long count = (Long)row.get(1);
+                int df2_len = df2.length();
+                int start_count = 0;
+                for (int i = 0; i < df2_len; i++) {
+                    String talk_keyword2 = (String)df2.get(i,2);
+                    if (talk_keyword.equals(talk_keyword2)) {
+                        for (int j = 0; j < 6; j++) {
+                            int index = i - j;
+                            if (index < 0 || index >= df2_len) {
+                                break;
+                            }
+                            String talk = (String) df2.get(index, 1);
+                            if (talk.contains("TAGSTART")) {
+                                start_count++;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if ((double)(start_count)/count > 0.8) {
+                    if (!talk_class.containsKey(talk_keyword)) {
+                        df3.append(Arrays.asList(talk_keyword, count, start_count, "Start"));
+                        talk_class.put(talk_keyword,"Start");
+                    }
+                }
+            }
+
+            for (List<Object> row : df) {
+                String talk_keyword = (String)row.get(0);
+                if (talk_class.containsKey(talk_keyword)) {
+                    continue;
+                }
+                Long count = (Long)row.get(1);
+                int df2_len = df2.length();
+                int start_count = 0;
+                for (int i = 0; i < df2_len; i++) {
+                    String talk_keyword2 = (String)df2.get(i,2);
+                    if (talk_keyword.equals(talk_keyword2)) {
+                        for (int j = 1; j < 6; j++) {
+                            int index = i + j;
+                            if (index < 0 || index >= df2_len) {
+                                break;
+                            }
+                            String talk = (String) df2.get(index, 1);
+                            if (talk.contains("TAGSTART")) {
+                                start_count++;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if ((double)(start_count)/count > 0.8) {
+                    if (!talk_class.containsKey(talk_keyword)) {
+                        df3.append(Arrays.asList(talk_keyword, count, start_count, "End"));
+                        talk_class.put(talk_keyword,"End");
+                    }
+                }
+            }
+            for (List<Object> row : df) {
+                String talk_keyword = (String) row.get(0);
+                Long count = (Long)row.get(1);
+                if (!talk_class.containsKey(talk_keyword)) {
+                    //continue;
+                    df3.append(Arrays.asList(talk_keyword, count, 0, "Unknown"));
+                }
+            }
+            df3.writeCsv("/home/tj/big_data/data/talk/2j3_2_2.csv");
+            System.out.println("bye");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static void test13_2() {
+        try {
+            File result = new File("/home/tj/big_data/data/talk/2j3s.csv");
+            BufferedReader br = new BufferedReader(new InputStreamReader(
+                    new FileInputStream(result)));
+            List<String> lines = new ArrayList<>();
+            String temp = null;
+            while ((temp = br.readLine()) != null) {
+                lines.add(temp);
+            }
+
+            DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_2_2.csv", ",",null,true);
+            DataFrame<Object> df2 = DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_3.csv", ",",null,true);
+            DataFrame<Object> df3 = new DataFrame<>("talk","class");
+
+            for (List<Object> row : df) {
+                String talk_keyword = (String)row.get(0);
+                String talk_type = (String)row.get(3);
+                for (List<Object> row2 : df2) {
+                    String talk_keyword2 = (String)row2.get(2);
+                    if (talk_keyword.equals(talk_keyword2)) {
+                        String talk = (String)row2.get(1);
+                        df3.append(Arrays.asList(talk,talk_type));
+                        break;
+                    }
+                }
+            }
+
+            df3.writeCsv("/home/tj/big_data/data/talk/2j3_5_2.csv");
+            System.out.println("bye");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static void test14() {
+        try {
+            DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_3.csv", ",",null,true);
+            MapCount kw_count_map = new MapCount();
+            for (List<Object> row : df) {
+                String talk_keyword = (String)row.get(2);
+                String[] talk_kw_list = StringUtils.split(talk_keyword, " ");
+                if (talk_kw_list != null) {
+                    kw_count_map.add(talk_kw_list);
+                }
+            }
+            List<Map.Entry<String, Integer>> kw_count_list = new ArrayList<Map.Entry<String, Integer>>(kw_count_map.get().entrySet());
+            Collections.sort(kw_count_list, new Comparator<Map.Entry<String, Integer>>() {
+                public int compare(Map.Entry<String, Integer> o1, Map.Entry<String, Integer> o2) {
+                    return (o2.getValue() - o1.getValue());
+                    //return (o1.getKey()).toString().compareTo(o2.getKey());
+                }
+            });
+            DataFrame<Object> df2 = new DataFrame<>("kw", "count");
+            List<Nature> natureList = Arrays.asList(Nature.vn);
+            double total_count = 0;
+            for (int i = 0; i < kw_count_list.size(); i++) {
+                //String id = kw_count_list.get(i).toString();
+                //System.out.println(id);
+                String key = kw_count_list.get(i).getKey();
+                List<Term> term_list = HanLP.segment(key);
+                for (Term term : term_list) {
+                    //System.out.println(term.word + "/" + term.nature);
+                    if (natureList.contains(term.nature)) {
+                        //df2.append(Arrays.asList(key + "/" + term.nature, kw_count_list.get(i).getValue()));
+                        total_count += kw_count_list.get(i).getValue();
+                    }
+                }
+            }
+            System.out.println(total_count);
+            double part_count = total_count * 0.85;
+            double part_count0 = 0;
+            outf:for (int i = 0; i < kw_count_list.size(); i++) {
+                //String id = kw_count_list.get(i).toString();
+                //System.out.println(id);
+                String key = kw_count_list.get(i).getKey();
+                List<Term> term_list = HanLP.segment(key);
+                for (Term term : term_list) {
+                    //System.out.println(term.word + "/" + term.nature);
+                    if (natureList.contains(term.nature)) {
+                        df2.append(Arrays.asList(key, kw_count_list.get(i).getValue()));
+                        part_count0 += kw_count_list.get(i).getValue();
+                        if (part_count0 >= part_count) {
+                            break outf;
+                        }
+                    }
+                }
+            }
+            DataFrame<Object> df3 = df2.sortBy(1);
+            df3.writeCsv("/home/tj/big_data/data/talk/2j3_6.csv");
+            System.out.println("bye");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static void test15() {
+        try {
+            DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_5.csv", ",",null,true);
+            DataFrame<Object> df2 =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_6.csv", ",",null,true);
+            //DataFrame<Object> df3 = df2.sortBy(-1);
+
+            File output_file = new File("/home/tj/big_data/data/talk/2j3_7.txt");
+            OutputStream out = new FileOutputStream(output_file, false);
+            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(out,
+                    "utf-8"));
+
+            HashMap<String, String> talk_class = new HashMap<>();
+
+            for (List<Object> row2 : df2) {
+                String kw = (String)row2.get(0);
+                String s = "--------------------\n";
+                s += kw + "\n";
+                s += "--------------------\n";
+                bw.write(s);
+                for (List<Object> row : df) {
+                    String talk = (String)row.get(0);
+                    if (talk.contains(kw)) {
+                        if (!talk_class.containsKey(talk)) {
+                            talk_class.put(talk,kw);
+                            bw.write(talk + "\n");
+                        }
+                    }
+                }
+            }
+            String s = "--------------------\n";
+            s += "其他\n";
+            s += "--------------------\n";
+            bw.write(s);
+            for (List<Object> row : df) {
+                String talk = (String)row.get(0);
+                if (!talk_class.containsKey(talk)) {
+                    bw.write(talk + "\n");
+                }
+            }
+            //bw.write(sb.toString());
+            bw.close();
+            out.close();
+            System.out.println("bye");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static void test15_2() {
+        try {
+            DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_5_2.csv", ",",null,true);
+            DataFrame<Object> df2 =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_6.csv", ",",null,true);
+            //DataFrame<Object> df3 = df2.sortBy(-1);
+
+            File output_file = new File("/home/tj/big_data/data/talk/2j3_7.txt");
+            OutputStream out = new FileOutputStream(output_file, false);
+            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(out,
+                    "utf-8"));
+
+            HashMap<String, String> talk_class = new HashMap<>();
+            String s = "--------------------\n";
+            s += "欢迎词" + "\n";
+            s += "--------------------\n";
+            bw.write(s);
+            for (List<Object> row : df) {
+                String talk_type = (String)row.get(1);
+                if (talk_type.equals("Start")){
+                    String talk = (String)row.get(0);
+                    talk_class.put(talk, "欢迎词");
+                    bw.write(talk + "\n");
+                }
+            }
+
+            s = "--------------------\n";
+            s += "结束语" + "\n";
+            s += "--------------------\n";
+            bw.write(s);
+            for (List<Object> row : df) {
+                String talk_type = (String)row.get(1);
+                if (talk_type.equals("End")){
+                    String talk = (String)row.get(0);
+                    talk_class.put(talk, "结束语");
+                    bw.write(talk + "\n");
+                }
+            }
+
+            for (List<Object> row2 : df2) {
+                String kw = (String)row2.get(0);
+                s = "--------------------\n";
+                s += kw + "\n";
+                s += "--------------------\n";
+                bw.write(s);
+                for (List<Object> row : df) {
+                    String talk = (String)row.get(0);
+                    if (talk.contains(kw)) {
+                        if (!talk_class.containsKey(talk)) {
+                            talk_class.put(talk,kw);
+                            bw.write(talk + "\n");
+                        }
+                    }
+                }
+            }
+            s = "--------------------\n";
+            s += "其他\n";
+            s += "--------------------\n";
+            bw.write(s);
+            for (List<Object> row : df) {
+                String talk = (String)row.get(0);
+                if (!talk_class.containsKey(talk)) {
+                    bw.write(talk + "\n");
+                }
+            }
+            //bw.write(sb.toString());
+            bw.close();
+            out.close();
+            System.out.println("bye");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static void test16() {
+        try {
+            DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_3.csv", ",",null,true);
+
+            System.out.println("bye");
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }

@@ -202,9 +202,7 @@ public class Word2VEC {
 
 	}
 
-	public Set<WordEntry> distance(String queryWord) {
-
-		float[] center = wordMap.get(queryWord);
+	public Set<WordEntry> distance(float[] center) {
 		if (center == null) {
 			return Collections.emptySet();
 		}
@@ -232,40 +230,16 @@ public class Word2VEC {
 
 		return result;
 	}
+	public Set<WordEntry> distance(String queryWord) {
+
+		float[] center = wordMap.get(queryWord);
+		return distance(center);
+	}
 
 	public Set<WordEntry> distance(List<String> words) {
 
-		float[] center = null;
-		for (String word : words) {
-			center = sum(center, wordMap.get(word));
-		}
-
-		if (center == null) {
-			return Collections.emptySet();
-		}
-
-		int resultSize = wordMap.size() < topNSize ? wordMap.size() : topNSize;
-		TreeSet<WordEntry> result = new TreeSet<WordEntry>();
-
-		double min = Float.MIN_VALUE;
-		for (Map.Entry<String, float[]> entry : wordMap.entrySet()) {
-			float[] vector = entry.getValue();
-			float dist = 0;
-			for (int i = 0; i < vector.length; i++) {
-				dist += center[i] * vector[i];
-			}
-
-			if (dist > min) {
-				result.add(new WordEntry(entry.getKey(), dist));
-				if (resultSize < result.size()) {
-					result.pollLast();
-				}
-				min = result.last().score;
-			}
-		}
-		result.pollFirst();
-
-		return result;
+		float[] center = wordMap.get(words);
+		return distance(center);
 	}
 
 	private float[] sum(float[] center, float[] fs) {
@@ -298,6 +272,14 @@ public class Word2VEC {
 	 */
 	public float[] getWordVector(String word) {
 		return wordMap.get(word);
+	}
+
+	public float[] getWordsVector(String[] words) {
+		float[] center = null;
+		for (String word : words) {
+			center = sum(center, wordMap.get(word));
+		}
+		return center;
 	}
 
 	public static float readFloat(InputStream is) throws IOException {

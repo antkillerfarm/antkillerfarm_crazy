@@ -29,11 +29,16 @@
             <artifactId>commons-lang3</artifactId>
             <version>3.5</version>
         </dependency>
-	<dependency>
-	    <groupId>nz.ac.waikato.cms.weka</groupId>
-	    <artifactId>weka-stable</artifactId>
-	    <version>3.8.1</version>
-	</dependency>
+        <dependency>
+            <groupId>nz.ac.waikato.cms.weka</groupId>
+            <artifactId>weka-stable</artifactId>
+            <version>3.8.1</version>
+        </dependency>
+        <dependency>
+            <groupId>de.lmu.ifi.dbs.elki</groupId>
+            <artifactId>elki</artifactId>
+            <version>0.7.1</version>
+        </dependency>
     </dependencies>
 
     <build>
