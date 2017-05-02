@@ -35,6 +35,11 @@
             <version>3.8.1</version>
         </dependency>
         <dependency>
+            <groupId>nz.ac.waikato.cms.weka</groupId>
+            <artifactId>optics_dbScan</artifactId>
+            <version>1.0.4</version>
+        </dependency>
+        <dependency>
             <groupId>de.lmu.ifi.dbs.elki</groupId>
             <artifactId>elki</artifactId>
             <version>0.7.1</version>
