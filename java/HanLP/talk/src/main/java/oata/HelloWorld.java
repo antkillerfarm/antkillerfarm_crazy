@@ -338,7 +338,6 @@ public class HelloWorld {
     }
     public static void test2() {
         try {
-            String regex = formQuestionRegex();
             DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j2.csv", ",",null,false);
             DataFrame<Object> df2 = new DataFrame<>("cutword");
             int row_num = 0;
@@ -424,30 +423,6 @@ public class HelloWorld {
             });
             DataFrame<Object> df3 = df2.drop(0,2,3);
             df3.writeCsv("/home/tj/big_data/data/talk/2j4.csv");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static void test7() {
-        try {
-            Learn lean = new Learn();
-            //lean.learnFile(new File("/home/tj/big_data/data/jinyong/utf8/x1.txt"));
-            //lean.saveModel(new File("/home/tj/big_data/data/jinyong/utf8/vector.mod"));
-            lean.learnFile(new File("/home/tj/big_data/data/talk/2j3s.csv"));
-            lean.saveModel(new File("/home/tj/big_data/data/talk/vector.mod"));
-            //加载测试
-            Word2VEC w2v = new Word2VEC();
-
-            w2v.loadJavaModel("/home/tj/big_data/data/talk/vector.mod");
-            //w2v.loadGoogleModel("/home/tj/opensource/word2vec/vectors.bin");
-            //System.out.println(w2v.distance("胡一刀"));
-            float[] word_vector = w2v.getWordVector("顺丰");
-            //System.out.println(word_vector.length);
-            for(float value : word_vector) {
-                System.out.println(value);
-            }
-            System.out.println();
         } catch (IOException e) {
             e.printStackTrace();
         }

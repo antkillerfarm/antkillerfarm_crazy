@@ -98,7 +98,7 @@ public class Word2VEC {
 				}
 
 				wordMap.put(word, vectors);
-				dis.read();
+				//dis.read();
 			}
 		} finally {
 			bis.close();
