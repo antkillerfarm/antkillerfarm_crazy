@@ -44,6 +44,11 @@
             <artifactId>elki</artifactId>
             <version>0.7.1</version>
         </dependency>
+        <dependency>
+            <groupId>info.debatty</groupId>
+            <artifactId>java-string-similarity</artifactId>
+            <version>0.23</version>
+        </dependency>
     </dependencies>
 
     <build>
