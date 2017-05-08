@@ -382,7 +382,7 @@ public class HelloWorld {
 				endTime=System.nanoTime();
 				t2 += endTime - startTime;
 				startTime = endTime;
-				int flag = QuestionParser.get().check(sentence.getWordArray(),talk);
+				int flag = 0;//QuestionParser.get().check(sentence.getWordArray(),talk);
 				endTime=System.nanoTime();
 				t3 += endTime - startTime;
 				String talk_class;
@@ -641,16 +641,22 @@ public class HelloWorld {
 				}
 			}
 
-            System.out.println("bye");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-    public static void test12() {
-        try {
-            DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_3.csv", ",",null,true);
-            DataFrame<Object> df2 = df.groupBy(2).count().sortBy(-1);
-            DataFrame<Object> df3 = new DataFrame<>("talk","count");
+			df3.writeCsv("/home/tj/big_data/data/talk/2j3_2.csv");
+			System.out.println("bye");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	public static void test13() {
+		try {
+			File result = new File("/home/tj/big_data/data/talk/2j3s.csv");
+			BufferedReader br = new BufferedReader(new InputStreamReader(
+					new FileInputStream(result)));
+			List<String> lines = new ArrayList<>();
+			String temp = null;
+			while ((temp = br.readLine()) != null) {
+				lines.add(temp);
+			}
 
 			DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_2.csv", ",",null,true);
 			DataFrame<Object> df2 = DataFrame.readCsv("/home/tj/big_data/data/talk/2j3_3.csv", ",",null,true);

@@ -7,8 +7,14 @@ import com.hankcs.hanlp.HanLP;
 import com.hankcs.hanlp.corpus.dependency.CoNll.CoNLLSentence;
 import com.hankcs.hanlp.corpus.tag.Nature;
 import com.hankcs.hanlp.seg.common.Term;
+import info.debatty.java.stringsimilarity.Jaccard;
 import joinery.DataFrame;
 import org.apache.commons.lang3.StringUtils;
+import weka.core.Instances;
+import weka.core.Instance;
+import weka.core.converters.ConverterUtils.DataSource;
+import weka.filters.Filter;
+import weka.filters.unsupervised.attribute.Remove;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,9 +30,10 @@ public class App2 {
         //step4();
         //step5_1();
         //step6_1();
-        step7();
+        //step7();
         //test7();
         //step2_2();
+        test_dbscan();
     }
     public static void step1() {
         List<String> corpus = FileReader.getAll("/home/tj/big_data/data/talk/2.txt", "txt");
@@ -337,7 +344,7 @@ public class App2 {
         }
         FileWriter.put("/home/tj/big_data/data/talk/2jx.csv",corpus);
     }
-    public static void test5() {
+    public static void test_reg() {
         String regex = "(http|ftp|https)://\\S*";
         Pattern p = Pattern.compile(regex);
         String ss = "2016-10-12 15:21:40 wzy9008: http://interface.im.taobao.com/mobileimweb/fileupload";
@@ -356,7 +363,7 @@ public class App2 {
         m = p.matcher(ss);
         System.out.println(m.find());
     }
-    public static void test6() {
+    public static void test_nlp() {
         HanLP.Config.NNParserModelPath = "/home/tj/big_data/data/HanLP/" + HanLP.Config.NNParserModelPath;
         String content = "程序员(英文Programmer)是从事程序开发、维护的专业人员。一般将程序员分为程序设计人员和程序编码人员，但两者的界限并不非常清楚，特别是在中国。软件从业人员分为初级程序员、高级程序员、系统分析员和项目经理四大类。";
         CoNLLSentence sentence = HanLP.parseDependency(content);
@@ -381,7 +388,7 @@ public class App2 {
             }
         }
     }
-    public static void test7() {
+    public static void test_wordvec() {
         try {
             Learn lean = new Learn();
             //lean.learnFile(new File("/home/tj/big_data/data/jinyong/utf8/x1.txt"));
@@ -403,12 +410,68 @@ public class App2 {
             e.printStackTrace();
         }
     }
-    public static void test8() {
+    public static void test_wordvec_2() {
         try {
             Word2VEC w2v = new Word2VEC();
             w2v.loadGoogleModel("/home/tj/big_data/data/word2vec_weixin/word2vec_c.bin");
             System.out.println(w2v.distance("金庸"));
         } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static void test_jaccard() {
+        System.out.println("Jaccard");
+        Jaccard j2 = new Jaccard(2);
+        // AB BC CD DE DF
+        // 1  1  1  1  0
+        // 1  1  1  0  1
+        // => 3 / 5 = 0.6
+        System.out.println(j2.similarity("ABCDE", "ABCDF"));
+        System.out.println(j2.similarity("s1 must not be null", "s2 must not be null"));
+    }
+    public static void test_jaccard_2() {
+        System.out.println("Jaccard");
+        System.out.println(DBScan.calJaccardDist("s1 must not be null", "s2 must not be null"));
+    }
+    public static void test_weka() {
+        try {
+            DataSource source = new DataSource("/home/tj/big_data/data/talk/2j3sc_4.csv");
+            Instances inst;
+            inst = source.getDataSet();
+            int[] indicesOfColumnsToUse = {3};
+            Remove remove = new Remove();
+            remove.setAttributeIndicesArray(indicesOfColumnsToUse);
+            remove.setInvertSelection(true);
+            remove.setInputFormat(inst);
+
+            Instances instSubset = Filter.useFilter(inst, remove);
+            //Instance i1 = i.get(1);
+            System.out.println(instSubset);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void test_dbscan() {
+        try {
+            DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/2j3sc_7.csv", ",",null,true);
+            List<String> corpus =  new LinkedList<>();
+            for (List<Object> row : df) {
+                String talk_keyword = (String)row.get(3);
+                corpus.add(talk_keyword);
+            }
+            DBScan ds=new DBScan();
+            ArrayList<DBScan.DataObject> source = ds.formDataObject(corpus);
+            int clunum=ds.dbscan(source);
+            int num = 0;
+            for (DBScan.DataObject object : source) {
+                if (object.getCid() == -1) {
+                    System.out.println(object.getValue());
+                    num++;
+                }
+            }
+            System.out.println(String.format("%d:%d:%d", clunum, corpus.size(), num));
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
