@@ -136,13 +136,24 @@ public class DBScan {
         union.addAll(s1_list);
         union.addAll(s2_list);
 
-        int inter = 0;
+        double x = s1s.length;
+        double y = s2s.length;
+        double z = union.size();
+        return 1.0 - ((x + y - z) / z);
+    }
+    public static double calJaccardDist2(String s1, String s2) {
+        String[] s1s = StringUtils.split(s1, " ");
+        String[] s2s = StringUtils.split(s2, " ");
+        List<String> s1_list = Arrays.asList(s1s);
+        List<String> s2_list = Arrays.asList(s2s);
+        Set<String> union = new HashSet<String>();
+        union.addAll(s1_list);
+        union.addAll(s2_list);
 
-        for (String key : union) {
-            if (s1_list.contains(key) && s2_list.contains(key)) {
-                inter++;
-            }
-        }
-        return 1.0 - (1.0 * inter / union.size());
+        double x = s1s.length;
+        double y = s2s.length;
+        double min = Math.min(x,y);
+        double z = union.size();
+        return 1.0 - ((x + y - z) / min);
     }
 }

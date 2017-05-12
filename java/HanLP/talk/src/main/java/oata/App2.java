@@ -11,7 +11,6 @@ import info.debatty.java.stringsimilarity.Jaccard;
 import joinery.DataFrame;
 import org.apache.commons.lang3.StringUtils;
 import weka.core.Instances;
-import weka.core.Instance;
 import weka.core.converters.ConverterUtils.DataSource;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
@@ -22,15 +21,11 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-class Talk {
-    String from;
-    String to;
-    String talk;
-}
 public class App2 {
     public static void main(String[] args) {
         //App.step1_2();
-        import_flowerplus_1();
+        App2 app = new App2();
+        app.import_flowerplus_1();
         //App.step1();
         //step2();
         //step3();
@@ -692,7 +687,7 @@ public class App2 {
             e.printStackTrace();
         }
     }
-    public static void import_flowerplus_1() {
+    public void import_flowerplus_1() {
         try {
             DataFrame<Object> df =  DataFrame.readCsv("/home/tj/big_data/data/talk/3j.csv", ",",null,false);
             Map<String,List<Talk>> talks_map = new HashMap<>();
@@ -710,13 +705,17 @@ public class App2 {
                     } else {
                         talks = talks_map.get(key);
                     }
-                    Talk talk = new Talk();
-                    talk.from = from;
-                    talk.to = to;
-                    talk.talk = (String)row.get(6);
-                    talks.add(talk);
+                    String s = (String)row.get(6);
+                    if (s != null) {
+                        Talk talk = new Talk();
+                        talk.from = from;
+                        talk.to = to;
+                        talk.talk = lineFilter(s);
+                        talks.add(talk);
+                    }
                 }
             }
+            int num = 0;
             for (List<Talk> talks: talks_map.values()) {
                 for (Talk talk: talks) {
                     String role;
@@ -727,13 +726,40 @@ public class App2 {
                     }
                     String s = String.format("%s:%s", role, talk.talk);
                     corpus2.add(s);
+                    num++;
                 }
                 corpus2.add("----");
+                if (num > 100000) {
+                    break;
+                }
             }
             FileWriter.put("/home/tj/big_data/data/talk/3j_2.csv",corpus2);
             System.out.println(String.format("%d", talks_map.size()));
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+    public String lineFilter(String line) {
+        line = line.replaceAll("\n", "");
+        line = line.replaceAll(",", "，");
+        return line;
+    }
+    public static void import_x() {
+        FileReader.setFile_charset("UTF-8");
+        List<String> corpus = FileReader.getAll("/home/tj/big_data/data/talk/1/谭安军.txt", "txt");
+        String regex = "---------(0|1)";
+        Pattern p = Pattern.compile(regex);
+        int total_num = 0, correct = 0;
+        for (String sent : corpus) {
+            Matcher m = p.matcher(sent);
+            if (m.find()) {
+                String s = sent.substring(sent.length()-1);
+                if (s.equals("1")) {
+                    correct++;
+                }
+                total_num++;
+            }
+        }
+        System.out.println(String.format("%d/%d", correct, total_num));
     }
 }

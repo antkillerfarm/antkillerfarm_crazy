@@ -1,0 +1,368 @@
+package oata;
+
+import com.ansj.vec.util.MapCount;
+import com.hankcs.hanlp.HanLP;
+import com.hankcs.hanlp.corpus.tag.Nature;
+import com.hankcs.hanlp.seg.common.Term;
+import joinery.DataFrame;
+import org.apache.commons.lang3.StringUtils;
+
+import java.io.IOException;
+import java.util.*;
+
+class Talk {
+    String from;
+    String to;
+    String talk;
+    String talk_word_cut;
+    String key_word;
+}
+class Talks {
+    int id;
+    List<Talk> talks;
+    String all_word_cut;
+    String key_word;
+}
+class WordFreq {
+    String word;
+    int count;
+}
+class Topic {
+    List<Talks> talks;
+}
+public class TalkAnalyzer {
+    public int getTalks_id() {
+        talks_id ++;
+        return talks_id;
+    }
+
+    private int talks_id = 0;
+    Map<String,Talks> talks_map = new HashMap<>();
+    MapCount word_count_map = new MapCount();
+    Map<String,Topic> topics_map = new HashMap<>();
+    Map<String,Topic> out_topics_map = new HashMap<>();
+
+    public void import_flowerplus() {
+        try {
+            DataFrame<Object> df = DataFrame.readCsv("/home/tj/big_data/data/talk/3j.csv", ",", null, false);
+            for (List<Object> row : df) {
+                String session_id = (String)row.get(1);
+                String from = (String)row.get(3);
+                String to = (String)row.get(5);
+                if (isIDValid(from) && isIDValid(to)) {
+                    String key = session_id;//formKey(from, to);
+                    Talks talks;
+                    if (!talks_map.containsKey(key)) {
+                        talks = new Talks();
+                        talks.talks = new LinkedList<>();
+                        talks_map.put(key,talks);
+                    } else {
+                        talks = talks_map.get(key);
+                    }
+                    String s = (String)row.get(6);
+                    if (s != null) {
+                        Talk talk = new Talk();
+                        talk.from = from;
+                        talk.to = to;
+                        talk.talk = lineFilter(s);
+                        List<Term> terms = HanLP.segment(talk.talk);
+                        s = "";
+                        for (Term term : terms) {
+                            if (term.nature != Nature.w) {
+                                s += term.word + " ";
+                                word_count_map.add(term.word);
+                            }
+                        }
+                        talk.talk_word_cut = s;
+                        talks.talks.add(talk);
+                    }
+                }
+            }
+            System.out.println("import finished");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public boolean isIDValid(String role) {
+        if (role.startsWith("wx") || role.startsWith("TJ_IM_WEB_WX_USER_ACCOUNT_")) {
+            return true;
+        }
+        return false;
+    }
+    public boolean isCustomer(String role) {
+        if (role.startsWith("wx")) {
+            return true;
+        }
+        return false;
+    }
+
+    public String lineFilter(String line) {
+        line = line.replaceAll("\n", "");
+        line = line.replaceAll(",", "，");
+        return line;
+    }
+
+    public List<WordFreq> getWordFreq() {
+        List<Nature> natureList = Arrays.asList(Nature.vn);
+        List<Map.Entry<String, Integer>> count_list = new ArrayList<Map.Entry<String, Integer>>(word_count_map.get().entrySet());
+        List<WordFreq> word_freq = new LinkedList<>();
+        for (Map.Entry<String, Integer> count : count_list) {
+            String word = count.getKey();
+            Nature nature = getWordNature(word);
+            if (natureList.contains(nature)) {
+                WordFreq wf = new WordFreq();
+                wf.word = word;
+                wf.count = count.getValue();
+                word_freq.add(wf);
+            }
+        }
+        Collections.sort(word_freq, new Comparator<WordFreq>() {
+            public int compare(WordFreq o1, WordFreq o2) {
+                return (o2.count - o1.count);
+            }
+        });
+        return word_freq;
+    }
+
+    public List<WordFreq> getHighFreqWord(List<WordFreq> word_freq) {
+        List<WordFreq> word_freq2 = new LinkedList<>();
+        double total_count = 0;
+        for (WordFreq wf : word_freq) {
+            total_count += wf.count;
+        }
+        double part_count = total_count * 0.85;
+        double part_count0 = 0;
+        for (WordFreq wf : word_freq) {
+            part_count0 += wf.count;
+            word_freq2.add(wf);
+            if (part_count0 >= part_count) {
+                break;
+            }
+        }
+        return word_freq2;
+    }
+
+    public Nature getWordNature(String word) {
+        List<Term> terms = HanLP.segment(word);
+        return terms.get(0).nature;
+    }
+
+    public void handleTalks() {
+        for (Map.Entry<String, Talks> talks : talks_map.entrySet()) {
+            Talks talks0 = talks.getValue();
+            talks0.all_word_cut = "";
+            for (Talk talk : talks0.talks) {
+                talks0.all_word_cut += talk.talk_word_cut + " ";
+            }
+            talks0.key_word = StringUtils.join(HanLP.extractKeyword(talks0.all_word_cut, 20), " ");
+            talks0.id = getTalks_id();
+        }
+    }
+
+    public void handleTopics(List<WordFreq> high_freq_word) {
+        int len = high_freq_word.size();
+        Map<String,String> talks_id_map = new HashMap<>();
+        for (int i = len - 1; i >= 1; i--) {
+            for (int j = i - 1; j >= 0; j--) {
+                String keyword0 = high_freq_word.get(i).word;
+                String keyword1 = high_freq_word.get(j).word;
+                List<String> kw_list = Arrays.asList(keyword0, keyword1);
+                handleTopic(kw_list, talks_id_map);
+                String key = StringUtils.join(kw_list, " ");
+                Topic topic = topics_map.get(key);
+                topicDBScan(key, topic);
+            }
+        }
+    }
+    public void handleTopic(List<String> kw_list, Map<String,String> talks_id_map) {
+        for (Map.Entry<String, Talks> talks : talks_map.entrySet()) {
+            Talks talks0 = talks.getValue();
+            if (talks_id_map.containsKey(String.valueOf(talks0.id))) {
+                continue;
+            }
+            int match_flag = 0;
+            for (String kw : kw_list) {
+                if (talks0.key_word.contains(kw)) {
+                    match_flag++;
+                }
+            }
+            if (match_flag == kw_list.size()) {
+                String key = StringUtils.join(kw_list, " ");
+                Topic topic;
+                if (!topics_map.containsKey(key)) {
+                    topic = new Topic();
+                    topic.talks = new LinkedList<>();
+                    topics_map.put(key,topic);
+                } else {
+                    topic = topics_map.get(key);
+                }
+                topic.talks.add(talks0);
+                talks_id_map.put(String.valueOf(talks0.id), "");
+            }
+        }
+    }
+
+    public void topicDBScan(String key, Topic topic) {
+        if (topic == null) {
+            return;
+        }
+        List<String> corpus =  new LinkedList<>();
+        for (Talks talks : topic.talks) {
+            corpus.add(talks.key_word);
+        }
+
+        DBScan ds=new DBScan();
+        ArrayList<DBScan.DataObject> source = ds.formDataObject(corpus);
+        int clunum=ds.dbscan(source);
+
+        Topic topic0;
+        if (!out_topics_map.containsKey(key)) {
+            topic0 = new Topic();
+            topic0.talks = new LinkedList<>();
+            out_topics_map.put(key,topic0);
+        } else {
+            topic0 = out_topics_map.get(key);
+        }
+        HashMap<String, String> cid_class = new HashMap<>();
+        int len = corpus.size();
+        for (int i = 0; i < len; i++) {
+            int cid = source.get(i).getCid();
+            boolean cid_flag = false;
+            if (cid == -1) {
+                cid_flag = true;
+            } else
+            {
+                if (!cid_class.containsKey(String.valueOf(cid))) {
+                    cid_class.put(String.valueOf(cid), "");
+                    cid_flag = true;
+                }
+            }
+            if (cid_flag) {
+                topic0.talks.add(topic.talks.get(i));
+            }
+        }
+        System.out.println(String.format("%d/%d/%d", clunum, topic0.talks.size(), topic.talks.size()));
+    }
+
+    public void output_report() {
+        List<String> corpus = new LinkedList<>();
+        String s;
+        int num = 0;
+        for (Map.Entry<String,Topic> topic : out_topics_map.entrySet()) {
+            List<Talks> talks_list = topic.getValue().talks;
+            s = "--------------------\n";
+            s += String.format("%s:%d\n", topic.getKey(), talks_list.size());
+            s += "--------------------\n";
+            corpus.add(s);
+            for (Talks talks : talks_list) {
+                for (Talk talk : talks.talks) {
+                    corpus.add(talk.talk);
+                }
+                s = "--------------------\n";
+                corpus.add(s);
+                num++;
+            }
+        }
+        corpus.add(String.format("%d/%d/%d", out_topics_map.size(), num, talks_map.size()));
+        FileWriter.put("/home/tj/big_data/data/talk/2j3sc_4_6.txt",corpus);
+    }
+
+    public void fetchFAQ(boolean is_customer) {
+        int key_word_threshold = 1;
+        int start_threshold = 5;
+        int reply_threshold = 10;
+        MapCount kw_count_map = new MapCount();
+        MapCount kw_start_count_map = new MapCount();
+        Map<String,String> talk_map = new HashMap<>();
+        for (Map.Entry<String, Talks> talks : talks_map.entrySet()) {
+            int len = talks.getValue().talks.size();
+            for (int i = 0; i < len; i++) {
+                Talk talk = talks.getValue().talks.get(i);
+                if (is_customer) {
+                    if (!isCustomer(talk.from)) {
+                        continue;
+                    }
+                } else {
+                    if (isCustomer(talk.from)) {
+                        continue;
+                    }
+                }
+                List<String> kw_list = HanLP.extractKeyword(talk.talk_word_cut, 15);
+                if (kw_list.size() < key_word_threshold) {
+                    continue;
+                }
+                talk.key_word = StringUtils.join(kw_list, " ");
+                kw_count_map.add(talk.key_word);
+                if (!talk_map.containsKey(talk.key_word)) {
+                    talk_map.put(talk.key_word, talk.talk);
+                }
+                if (i < start_threshold) {
+                    kw_start_count_map.add(talk.key_word);
+                }
+            }
+        }
+        List<Map.Entry<String, Integer>> kw_count_list = new ArrayList<Map.Entry<String, Integer>>(kw_count_map.get().entrySet());
+        Collections.sort(kw_count_list, new Comparator<Map.Entry<String, Integer>>() {
+            public int compare(Map.Entry<String, Integer> o1, Map.Entry<String, Integer> o2) {
+                return (o2.getValue() - o1.getValue());
+            }
+        });
+        List<String> auto_reply = new LinkedList<>();
+        List<String> normal_reply = new LinkedList<>();
+        for (int i = 0; i < kw_count_list.size(); i++) {
+            String key = kw_count_list.get(i).getKey();
+            int total_num = kw_count_list.get(i).getValue();
+            if (total_num <= reply_threshold) {
+                continue;
+            }
+            int num = 0;
+            if (kw_start_count_map.get().containsKey(key)) {
+                num = (int)kw_start_count_map.get().get(key);
+            }
+            double percent = 1.0 * num / total_num;
+            if (percent > 0.7) {
+                auto_reply.add(talk_map.get(key));
+            } else {
+                normal_reply.add(talk_map.get(key));
+            }
+        }
+        List<String> corpus = new LinkedList<>();
+        String s;
+        s = "--------------------\n";
+        s += String.format("自动回复:%d\n", auto_reply.size());
+        s += "--------------------\n";
+        corpus.add(s);
+        corpus.addAll(auto_reply);
+        s = "--------------------\n";
+        s += String.format("非自动回复:%d\n", normal_reply.size());
+        s += "--------------------\n";
+        corpus.add(s);
+        corpus.addAll(normal_reply);
+        String file;
+        if (is_customer) {
+            file = "/home/tj/big_data/data/talk/2j3sc_4_customer.txt";
+        } else {
+            file = "/home/tj/big_data/data/talk/2j3sc_4_service.txt";
+        }
+
+        FileWriter.put(file, corpus);
+        System.out.println("bye");
+
+        System.out.println("fetchFAQ");
+    }
+    public static void main(String[] args) {
+        TalkAnalyzer app = new TalkAnalyzer();
+        app.import_flowerplus();
+        app.fetchFAQ(true);
+        app.fetchFAQ(false);
+        /*List<WordFreq> word_freq = app.getWordFreq();
+        List<WordFreq> high_freq_word = app.getHighFreqWord(word_freq);
+        System.out.println("step1");
+        app.handleTalks();
+        System.out.println("step2");
+        app.handleTopics(high_freq_word);
+        System.out.println("step3");
+        app.output_report();*/
+    }
+}
