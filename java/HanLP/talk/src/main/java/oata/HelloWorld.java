@@ -37,6 +37,22 @@ public class HelloWorld {
 		test14();
 		test15();*/
 	}
+	public static void step1_0() {
+		FileReader.setFile_charset("UTF-8");
+		List<String> corpus = FileReader.getAll("/home/tj/big_data/data/jinyong/utf8/1.txt", "txt");
+		List<String> corpus2 =  new LinkedList<>();
+		for(String sent : corpus){
+			List<Term> keywordList = HanLP.segment(sent);
+			String keywordStr = "";
+			for (Term term : keywordList) {
+				if (term.nature != Nature.w) {
+					keywordStr += term.word + " ";
+				}
+			}
+			corpus2.add(keywordStr);
+		}
+		FileWriter.put("/home/tj/big_data/data/jinyong/utf8/2.txt", corpus2);
+	}
 	public static void step1() {
 		List<String> corpus = FileReader.getAll("/home/tj/big_data/data/talk/2.txt", "txt");
 		List<String> corpus2 =  new LinkedList<>();

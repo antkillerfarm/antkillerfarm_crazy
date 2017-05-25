@@ -1,5 +1,6 @@
 package oata;
 
+import com.ansj.vec.LDA.LDAService;
 import com.ansj.vec.util.MapCount;
 import com.hankcs.hanlp.HanLP;
 import com.hankcs.hanlp.corpus.tag.Nature;
@@ -7,30 +8,31 @@ import com.hankcs.hanlp.seg.common.Term;
 import joinery.DataFrame;
 import org.apache.commons.lang3.StringUtils;
 
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
-class Talk {
+class Talk implements Serializable{
     String from;
     String to;
     String talk;
     String talk_word_cut;
     String key_word;
+    boolean flag;
 }
-class Talks {
+class Talks implements Serializable{
     int id;
     List<Talk> talks;
     String all_word_cut;
     String key_word;
 }
-class WordFreq {
+class WordFreq implements Serializable{
     String word;
     int count;
 }
-class Topic {
+class Topic implements Serializable{
     List<Talks> talks;
 }
-public class TalkAnalyzer {
+public class TalkAnalyzer implements Serializable {
     public int getTalks_id() {
         talks_id ++;
         return talks_id;
@@ -42,6 +44,45 @@ public class TalkAnalyzer {
     Map<String,Topic> topics_map = new HashMap<>();
     Map<String,Topic> out_topics_map = new HashMap<>();
 
+    public boolean save(String path){
+        try {
+            ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(path));
+            oos.writeObject(this);
+            oos.flush();
+            oos.close();
+
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    public TalkAnalyzer load(String path){
+        ObjectInputStream oin = null;
+        try{
+            oin = new ObjectInputStream(new FileInputStream(path));
+        } catch (Exception e1) {
+            e1.printStackTrace();
+        }
+
+        TalkAnalyzer ins = null;
+        try {
+            ins = (TalkAnalyzer) oin.readObject();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }finally{
+            try {
+                if(oin != null)
+                    oin.close();
+            } catch (IOException ioe) {
+            }
+        }
+        return ins;
+    }
+
     public void import_flowerplus() {
         try {
             DataFrame<Object> df = DataFrame.readCsv("/home/tj/big_data/data/talk/3j.csv", ",", null, false);
@@ -52,16 +93,24 @@ public class TalkAnalyzer {
                 if (isIDValid(from) && isIDValid(to)) {
                     String key = session_id;//formKey(from, to);
                     Talks talks;
+                    boolean first_flag = false;
                     if (!talks_map.containsKey(key)) {
                         talks = new Talks();
                         talks.talks = new LinkedList<>();
                         talks_map.put(key,talks);
+                        first_flag = true;
                     } else {
                         talks = talks_map.get(key);
                     }
                     String s = (String)row.get(6);
                     if (s != null) {
                         Talk talk = new Talk();
+                        if (first_flag) {
+                            talk.flag = false;
+                        }
+                        else {
+                            talk.flag = true;
+                        }
                         talk.from = from;
                         talk.to = to;
                         talk.talk = lineFilter(s);
@@ -153,11 +202,25 @@ public class TalkAnalyzer {
             Talks talks0 = talks.getValue();
             talks0.all_word_cut = "";
             for (Talk talk : talks0.talks) {
+                if (talk.flag == false) {
+                    continue;
+                }
                 talks0.all_word_cut += talk.talk_word_cut + " ";
             }
             talks0.key_word = StringUtils.join(HanLP.extractKeyword(talks0.all_word_cut, 20), " ");
             talks0.id = getTalks_id();
         }
+    }
+
+    public void saveTalks(String file_name) {
+        List<String> corpus =  new LinkedList<>();
+        for (Map.Entry<String, Talks> talks : talks_map.entrySet()) {
+            Talks talks0 = talks.getValue();
+            if (talks0.key_word != null) {
+                corpus.add(talks0.key_word);
+            }
+        }
+        FileWriter.put(file_name,corpus);
     }
 
     public void handleTopics(List<WordFreq> high_freq_word) {
@@ -171,7 +234,7 @@ public class TalkAnalyzer {
                 handleTopic(kw_list, talks_id_map);
                 String key = StringUtils.join(kw_list, " ");
                 Topic topic = topics_map.get(key);
-                topicDBScan(key, topic);
+                clusteringByTopicDBScan(key, topic);
             }
         }
     }
@@ -202,8 +265,38 @@ public class TalkAnalyzer {
             }
         }
     }
+    public void clusteringByTopicDBScan2() {
+        List<String> corpus =  new LinkedList<>();
+        int num = 0;
+        for (Map.Entry<String, Talks> talks : talks_map.entrySet()) {
+            if (talks.getValue().key_word == null) {
+                continue;
+            }
+            corpus.add(talks.getValue().key_word);
+            num++;
+            if (num > 8000) {
+                break;
+            }
+        }
+        DBScan ds=new DBScan();
+        ArrayList<DBScan.DataObject> source = ds.formDataObject(corpus);
+        int clunum=ds.dbscan(source);
 
-    public void topicDBScan(String key, Topic topic) {
+        int len = corpus.size();
+        int num2 = 0;
+        for (int i = 0; i < len; i++) {
+            int cid = source.get(i).getCid();
+            if (cid == -1) {
+                num2++;
+            }
+            if (cid == 1) {
+                System.out.println(source.get(i).getValue());
+            }
+        }
+        System.out.println(String.format("%d/%d", clunum, num2));
+    }
+
+    public void clusteringByTopicDBScan(String key, Topic topic) {
         if (topic == null) {
             return;
         }
@@ -322,12 +415,15 @@ public class TalkAnalyzer {
             }
             double percent = 1.0 * num / total_num;
             if (percent > 0.7) {
-                auto_reply.add(talk_map.get(key));
+                //auto_reply.add(talk_map.get(key));
+                auto_reply.add(key);
             } else {
-                normal_reply.add(talk_map.get(key));
+                //normal_reply.add(talk_map.get(key));
+                normal_reply.add(key);
             }
         }
-        List<String> corpus = new LinkedList<>();
+        filterFAQ(auto_reply);
+        /*List<String> corpus = new LinkedList<>();
         String s;
         s = "--------------------\n";
         s += String.format("自动回复:%d\n", auto_reply.size());
@@ -347,15 +443,102 @@ public class TalkAnalyzer {
         }
 
         FileWriter.put(file, corpus);
-        System.out.println("bye");
+        System.out.println("bye");*/
 
         System.out.println("fetchFAQ");
     }
+
+    public void filterFAQ(List<String> faqs) {
+        for (Map.Entry<String, Talks> talks : talks_map.entrySet()) {
+            List<Talk> talks0 = talks.getValue().talks;
+            for (int i = 0; i < talks0.size(); i++) {
+                Talk talk = talks0.get(i);
+                for (String faq : faqs) {
+                    if (talk.key_word == null) {
+                        //talk.flag = false;
+                        continue;
+                    }
+                    //if (talk.key_word.equals(faq)) {
+                    if (DBScan.calJaccardDist(talk.key_word, faq) < 0.2 && i <= 5) {
+                        talk.flag = false;
+                    }
+                }
+            }
+        }
+    }
+
+    public void clusteringByLDA() {
+        LDAService lda = LDAService.getInst();
+        List<List<String>> docs = new LinkedList<>();
+        for (Map.Entry<String, Talks> talks : talks_map.entrySet()) {
+            Talks talks0 = talks.getValue();
+            if (talks0 != null) {
+                List<String> doc = new LinkedList<>();
+                doc.add(talks0.all_word_cut);
+                docs.add(doc);
+            }
+        }
+        int topic_num = 100;
+        //lda.trainEx(docs,topic_num);
+        //lda.save("/home/tj/big_data/data/talk/flower_lda.model");
+
+        lda.load("/home/tj/big_data/data/talk/flower_lda.model");
+        double[][] theta = lda.getTheta();
+        int[] doc_topic = new int[theta.length];
+        int[] num_per_topic = new int[topic_num];
+        for (int m = 0; m < theta.length; m++) {
+            double max = 0;
+            int index = 0;
+            for (int n = 0; n < theta[0].length; n++) {
+                if (theta[m][n] > max) {
+                    max = theta[m][n];
+                    index = n;
+                }
+            }
+            doc_topic[m] = index;
+            num_per_topic[index]++;
+        }
+        for (int n = 0; n < topic_num; n++) {
+            System.out.println(String.format("%d:%d", n, num_per_topic[n]));
+        }
+        /*int num = 0;
+        for (int m = 0; m < theta.length; m++) {
+            if (doc_topic[m] == 1) {
+                List<String> words = docs.get(m);
+                System.out.println(words.get(0));
+                System.out.println("------------------");
+                num++;
+                if (num > 20) {
+                    break;
+                }
+            }
+        }*/
+    }
+
     public static void main(String[] args) {
         TalkAnalyzer app = new TalkAnalyzer();
+        /*long startTime=System.nanoTime();
         app.import_flowerplus();
-        app.fetchFAQ(true);
+
+        long endTime= System.nanoTime();
+        System.out.println(String.format("step1:%d", endTime - startTime));
+        startTime = endTime;
         app.fetchFAQ(false);
+        endTime= System.nanoTime();
+        System.out.println(String.format("step2:%d", endTime - startTime));
+        startTime = endTime;
+        app.handleTalks();
+        //app.saveTalks("/home/tj/big_data/data/talk/flower_1.txt");
+        endTime= System.nanoTime();
+        System.out.println(String.format("step3:%d", endTime - startTime));
+        startTime = endTime;
+        app.save("/home/tj/big_data/data/talk/flower.model");*/
+        app = app.load("/home/tj/big_data/data/talk/flower.model");
+        app.clusteringByLDA();
+        //app.clusteringByTopicDBScan2();
+
+        //app.fetchFAQ(true);
+        //app.fetchFAQ(false);
         /*List<WordFreq> word_freq = app.getWordFreq();
         List<WordFreq> high_freq_word = app.getHighFreqWord(word_freq);
         System.out.println("step1");
