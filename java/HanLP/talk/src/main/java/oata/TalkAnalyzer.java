@@ -10,29 +10,38 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 class Talk implements Serializable{
+    private static final long serialVersionUID = 1L;
     String from;
     String to;
     String talk;
     String talk_word_cut;
     String key_word;
     boolean flag;
+
 }
 class Talks implements Serializable{
+    private static final long serialVersionUID = 1L;
     int id;
     List<Talk> talks;
     String all_word_cut;
     String key_word;
 }
 class WordFreq implements Serializable{
+    private static final long serialVersionUID = 1L;
     String word;
     int count;
 }
 class Topic implements Serializable{
+    private static final long serialVersionUID = 1L;
     List<Talks> talks;
 }
 public class TalkAnalyzer implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     public int getTalks_id() {
         talks_id ++;
         return talks_id;
@@ -43,6 +52,9 @@ public class TalkAnalyzer implements Serializable {
     MapCount word_count_map = new MapCount();
     Map<String,Topic> topics_map = new HashMap<>();
     Map<String,Topic> out_topics_map = new HashMap<>();
+    List<Talks> talks_for_train;
+    int topic_num = 100;
+    List<List<Integer>> topic_index;
 
     public boolean save(String path){
         try {
@@ -149,6 +161,10 @@ public class TalkAnalyzer implements Serializable {
     public String lineFilter(String line) {
         line = line.replaceAll("\n", "");
         line = line.replaceAll(",", "，");
+        String regex1 = "[0-9A-Za-z\\t%<>#_]*";
+        Pattern p1 = Pattern.compile(regex1);
+        Matcher m1 = p1.matcher(line);
+        line = m1.replaceAll("");
         return line;
     }
 
@@ -470,22 +486,28 @@ public class TalkAnalyzer implements Serializable {
     public void clusteringByLDA() {
         LDAService lda = LDAService.getInst();
         List<List<String>> docs = new LinkedList<>();
+        talks_for_train = new LinkedList<>();
         for (Map.Entry<String, Talks> talks : talks_map.entrySet()) {
             Talks talks0 = talks.getValue();
             if (talks0 != null) {
-                List<String> doc = new LinkedList<>();
-                doc.add(talks0.all_word_cut);
+                List<String> doc = Arrays.asList(talks0.all_word_cut.split(" "));
                 docs.add(doc);
+                talks_for_train.add(talks0);
             }
         }
-        int topic_num = 100;
-        //lda.trainEx(docs,topic_num);
-        //lda.save("/home/tj/big_data/data/talk/flower_lda.model");
+        lda.trainEx(docs,topic_num);
+        lda.save("/home/tj/big_data/data/talk/flower_lda.model");
 
         lda.load("/home/tj/big_data/data/talk/flower_lda.model");
+        //double[][] phi = lda.getPhi();
+        //Map<String, Double>[] topicMap = LdaUtil.translate(phi, corpus.getVocabulary(), 30);
+        //LdaUtil.explain(topicMap);
         double[][] theta = lda.getTheta();
-        int[] doc_topic = new int[theta.length];
-        int[] num_per_topic = new int[topic_num];
+        topic_index = new ArrayList<>();
+        for (int n = 0; n < topic_num; n++) {
+            List<Integer> indexs = new LinkedList<>();
+            topic_index.add(indexs);
+        }
         for (int m = 0; m < theta.length; m++) {
             double max = 0;
             int index = 0;
@@ -495,31 +517,21 @@ public class TalkAnalyzer implements Serializable {
                     index = n;
                 }
             }
-            doc_topic[m] = index;
-            num_per_topic[index]++;
+            topic_index.get(index).add(m);
         }
         for (int n = 0; n < topic_num; n++) {
-            System.out.println(String.format("%d:%d", n, num_per_topic[n]));
+            System.out.println(String.format("%d:%d", n, topic_index.get(n).size()));
         }
-        /*int num = 0;
-        for (int m = 0; m < theta.length; m++) {
-            if (doc_topic[m] == 1) {
-                List<String> words = docs.get(m);
-                System.out.println(words.get(0));
-                System.out.println("------------------");
-                num++;
-                if (num > 20) {
-                    break;
-                }
-            }
-        }*/
+        for (int n = 0; n < 10; n++) {
+            System.out.println(talks_for_train.get(topic_index.get(1).get(n)).all_word_cut);
+        }
     }
 
     public static void main(String[] args) {
         TalkAnalyzer app = new TalkAnalyzer();
-        /*long startTime=System.nanoTime();
-        app.import_flowerplus();
 
+        long startTime=System.nanoTime();
+        app.import_flowerplus();
         long endTime= System.nanoTime();
         System.out.println(String.format("step1:%d", endTime - startTime));
         startTime = endTime;
@@ -532,9 +544,11 @@ public class TalkAnalyzer implements Serializable {
         endTime= System.nanoTime();
         System.out.println(String.format("step3:%d", endTime - startTime));
         startTime = endTime;
-        app.save("/home/tj/big_data/data/talk/flower.model");*/
-        app = app.load("/home/tj/big_data/data/talk/flower.model");
-        app.clusteringByLDA();
+        app.save("/home/tj/big_data/data/talk/flower.model");
+        endTime= System.nanoTime();
+        System.out.println(String.format("step4:%d", endTime - startTime));
+        //app = app.load("/home/tj/big_data/data/talk/flower.model");
+        //app.clusteringByLDA();
         //app.clusteringByTopicDBScan2();
 
         //app.fetchFAQ(true);

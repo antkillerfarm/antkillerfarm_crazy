@@ -1,10 +1,11 @@
 package com.ansj.vec.util;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
-public class MapCount<T> {
+public class MapCount<T> implements Serializable {
     private HashMap<T, Integer> hm = null;
 
     public MapCount() {
@@ -27,6 +28,12 @@ public class MapCount<T> {
 
     public void add(T t) {
         this.add(t, 1);
+    }
+
+    public void add(T[] t) {
+        for (T t0:t) {
+            this.add(t0, 1);
+        }
     }
 
     public int size() {
