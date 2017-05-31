@@ -1,10 +1,16 @@
 package oata;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.util.List;
 import java.util.Random;
 
 public class ServiceTrainer {
     boolean[] topic_flag;
     int current_topic;
+    int current_sub_topic;
+    int current_talk_index;
+    boolean exit_flag = false;
     Random r = new Random();
     TalkAnalyzer talk_analyzer = null;
 
@@ -13,6 +19,11 @@ public class ServiceTrainer {
         talk_analyzer = talk_analyzer.load("/home/tj/big_data/data/talk/flower.model");
         talk_analyzer.clusteringByLDA();
         topic_flag = new boolean[talk_analyzer.topic_num];
+        for (int i = 0; i < talk_analyzer.topic_num; i++) {
+            if (talk_analyzer.topic_index.get(i).size() == 0) {
+                topic_flag[i] = true;
+            }
+        }
     }
 
     public int selectTopicForTraining() {
@@ -33,9 +44,83 @@ public class ServiceTrainer {
         return true;
     }
 
+    public int selectSubTopicForTraining() {
+        int num = r.nextInt(talk_analyzer.topic_index.get(current_topic).size());
+        return num;
+    }
+
+    public void initRound() {
+        current_sub_topic = selectSubTopicForTraining();
+        current_talk_index = 0;
+    }
+
+    public void questionFromAI() {
+        int talks_index = talk_analyzer.topic_index.get(current_topic).get(current_sub_topic);
+        Talks talks = talk_analyzer.talks_for_train.get(talks_index);
+        Talk talk = talks.talks.get(current_talk_index);
+        while (!(talk_analyzer.isCustomer(talk.from) && talk.flag)) {
+            current_talk_index++;
+            talk = talks.talks.get(current_talk_index);
+        }
+        String str = talk.talk;
+        System.out.println(String.format("Customer:%s", str));
+    }
+
+    public static String readString() {
+        try {
+            return new BufferedReader(new InputStreamReader(System.in)).readLine();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ":exit";
+        }
+    }
+
+    public boolean isAnswerMatch(String answer) {
+
+        return false;
+    }
+
+    public boolean handleAnswerFromService() {
+        String answer = readString();
+        if (answer.equals(":exit")) {
+            exit_flag = true;
+            return false;
+        }
+        if (isAnswerMatch(answer)) {
+            current_talk_index += 2;
+            return true;
+        }
+        List<Integer> topics = talk_analyzer.topic_index.get(current_topic);
+
+        for (int i = 0; i < topics.size(); i++) {
+            Integer topic = topics.get(i);
+            Talks talks = talk_analyzer.talks_for_train.get(topic);
+
+            for (int j = 0; j < talks.talks.size(); j++) {
+                Talk talk = talks.talks.get(j);
+                if (talk_analyzer.isCustomer(talk.from)) {
+                    continue;
+                }
+                if (isAnswerMatch(answer)) {
+                    current_sub_topic = i;
+                }
+            }
+        }
+
+        return true;
+    }
+
     public boolean trainRound() {
         showHelp();
-
+        initRound();
+        boolean res = true;
+        while (res) {
+            questionFromAI();
+            res = handleAnswerFromService();
+            if (exit_flag) {
+                return true;
+            }
+        }
         return false;
     }
 
@@ -50,7 +135,7 @@ public class ServiceTrainer {
         service_trainer.dataPreprocess();
         System.out.println("Loading Finished");
 
-        /*service_trainer.current_topic = service_trainer.selectTopicForTraining();
+        service_trainer.current_topic = service_trainer.selectTopicForTraining();
 
         while (service_trainer.isAllTrained() == false) {
             service_trainer.current_topic = service_trainer.selectTopicForTraining();
@@ -59,6 +144,6 @@ public class ServiceTrainer {
                 break;
             }
         }
-        System.out.println("Training Finished");*/
+        System.out.println("Training Finished");
     }
 }

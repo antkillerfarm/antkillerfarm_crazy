@@ -1,6 +1,8 @@
 package oata;
 
 import com.ansj.vec.LDA.LDAService;
+import com.ansj.vec.LDA.LdaUtil;
+import com.ansj.vec.LDA.Vocabulary;
 import com.ansj.vec.util.MapCount;
 import com.hankcs.hanlp.HanLP;
 import com.hankcs.hanlp.corpus.tag.Nature;
@@ -490,13 +492,16 @@ public class TalkAnalyzer implements Serializable {
         for (Map.Entry<String, Talks> talks : talks_map.entrySet()) {
             Talks talks0 = talks.getValue();
             if (talks0 != null) {
+                if (talks0.key_word == null || talks0.key_word.equals("")) {
+                    continue;
+                }
                 List<String> doc = Arrays.asList(talks0.all_word_cut.split(" "));
                 docs.add(doc);
                 talks_for_train.add(talks0);
             }
         }
-        lda.trainEx(docs,topic_num);
-        lda.save("/home/tj/big_data/data/talk/flower_lda.model");
+        //lda.trainEx(docs,topic_num);
+        //lda.save("/home/tj/big_data/data/talk/flower_lda.model");
 
         lda.load("/home/tj/big_data/data/talk/flower_lda.model");
         //double[][] phi = lda.getPhi();
@@ -519,18 +524,28 @@ public class TalkAnalyzer implements Serializable {
             }
             topic_index.get(index).add(m);
         }
+        /*System.out.println(String.format("%d", talks_for_train.size()));
         for (int n = 0; n < topic_num; n++) {
             System.out.println(String.format("%d:%d", n, topic_index.get(n).size()));
         }
         for (int n = 0; n < 10; n++) {
             System.out.println(talks_for_train.get(topic_index.get(1).get(n)).all_word_cut);
-        }
+        }*/
+    }
+
+    public void outputLDAWordClass() {
+        Vocabulary vocab = Vocabulary.getInst();
+        vocab.load("/home/tj/big_data/data/talk/flower_vocabulary.model");
+        LDAService lda = LDAService.getInst();
+        double[][] phi = lda.getPHI();
+        Map<String, Double>[] topicMap = LdaUtil.translate(phi, vocab, 30);
+        LdaUtil.explain(topicMap);
     }
 
     public static void main(String[] args) {
         TalkAnalyzer app = new TalkAnalyzer();
 
-        long startTime=System.nanoTime();
+        /*long startTime=System.nanoTime();
         app.import_flowerplus();
         long endTime= System.nanoTime();
         System.out.println(String.format("step1:%d", endTime - startTime));
@@ -546,9 +561,10 @@ public class TalkAnalyzer implements Serializable {
         startTime = endTime;
         app.save("/home/tj/big_data/data/talk/flower.model");
         endTime= System.nanoTime();
-        System.out.println(String.format("step4:%d", endTime - startTime));
-        //app = app.load("/home/tj/big_data/data/talk/flower.model");
-        //app.clusteringByLDA();
+        System.out.println(String.format("step4:%d", endTime - startTime));*/
+        app = app.load("/home/tj/big_data/data/talk/flower.model");
+        app.clusteringByLDA();
+        app.outputLDAWordClass();
         //app.clusteringByTopicDBScan2();
 
         //app.fetchFAQ(true);
