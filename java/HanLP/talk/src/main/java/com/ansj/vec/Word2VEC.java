@@ -1,9 +1,7 @@
 package com.ansj.vec;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -201,6 +199,25 @@ public class Word2VEC {
 		}
 
 	}
+	
+	public double similarity(String wordA,String wordB){
+		float[] wa = wordMap.get(wordA);
+		float[] wb = wordMap.get(wordB);
+
+		return similarity(wa, wb);
+	}
+
+	public double similarity(float[] wa, float[] wb){
+		if(wa == null || wb == null)
+			return 0;
+
+		double rst = 0;
+		for (int i = 0; i < wa.length; i++) {
+			rst += wa[i] * wb[i];
+		}
+
+		return rst;
+	}
 
 	public Set<WordEntry> distance(float[] center) {
 		if (center == null) {
@@ -237,8 +254,10 @@ public class Word2VEC {
 	}
 
 	public Set<WordEntry> distance(List<String> words) {
-
-		float[] center = wordMap.get(words);
+		float[] center = new float[size];
+		for (String word : words) {
+			center = sum(center, wordMap.get(word));
+		}
 		return distance(center);
 	}
 
@@ -275,7 +294,7 @@ public class Word2VEC {
 	}
 
 	public float[] getWordsVector(String[] words) {
-		float[] center = null;
+		float[] center = new float[size];
 		for (String word : words) {
 			center = sum(center, wordMap.get(word));
 		}

@@ -6,6 +6,7 @@ import com.ansj.vec.domain.WordNeuron;
 import com.ansj.vec.util.Haffman;
 import com.ansj.vec.util.MapCount;
 
+
 import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
@@ -43,6 +44,7 @@ public class LearnDocVec {
 	private int MAX_EXP = 6;
 
 	private int topNSize = 40;
+	private Random r = new Random();
 
 	// private int freqThresold = 5;
 	// word2vec已过滤
@@ -136,11 +138,9 @@ public class LearnDocVec {
 				for (int index = 0; index < sentence.size(); index++) {
 					nextRandom = nextRandom * 25214903917L + 11;
 					if (isCbow) {
-						cbowGram(index, sent_no, sentence, (int) nextRandom
-								% window);
+						cbowGram(index, sent_no, sentence, (int) nextRandom % window);
 					} else {
-						skipGram(index, sent_no, sentence, (int) nextRandom
-								% window);
+						skipGram(index, sent_no, sentence, (int) nextRandom % window);
 					}
 				}
 
@@ -219,7 +219,6 @@ public class LearnDocVec {
 				// 更新句子（文本）向量，不更新词向量
 			}
 		}
-
 	}
 
 	/**
@@ -235,6 +234,181 @@ public class LearnDocVec {
 		int a, c = 0;
 
 		float[] doc_vec = doc_vector.get(sent_no);
+
+		List<Neuron> neurons = word.neurons;
+		double[] neu1e = new double[layerSize];// 误差项
+		double[] neu1 = new double[layerSize];// 误差项
+		WordNeuron last_word;
+
+		for (a = b; a < window * 2 + 1 - b; a++) {
+
+			if (a != window) {
+				c = index - window + a;
+				if (c < 0)
+					continue;
+				if (c >= sentence.size())
+					continue;
+				last_word = sentence.get(c);
+				if (last_word == null)
+					continue;
+				for (c = 0; c < layerSize; c++)
+					neu1[c] += last_word.syn0[c];
+			}
+
+			for (c = 0; c < layerSize; c++)
+				neu1[c] += doc_vec[c];
+			// 将文本的向量也作为输入
+
+		}
+
+		// HIERARCHICAL SOFTMAX
+		for (int d = 0; d < neurons.size(); d++) {
+			HiddenNeuron out = (HiddenNeuron) neurons.get(d);
+			double f = 0;
+			// Propagate hidden -> output
+			for (c = 0; c < layerSize; c++)
+				f += neu1[c] * out.syn1[c];
+			if (f <= -MAX_EXP)
+				continue;
+			else if (f >= MAX_EXP)
+				continue;
+			else
+				f = expTable[(int) ((f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2))];
+			// 'g' is the gradient multiplied by the learning rate
+			// double g = (1 - word.codeArr[d] - f) * alpha;
+			// double g = f*(1-f)*( word.codeArr[i] - f) * alpha;
+			double g = f * (1 - f) * (word.codeArr[d] - f) * alpha;
+			//
+			for (c = 0; c < layerSize; c++) {
+				neu1e[c] += g * out.syn1[c];
+			}
+			// Learn weights hidden -> output
+			// for (c = 0; c < layerSize; c++) {
+			// out.syn1[c] += g * neu1[c];
+			// }
+			// 不改变预测的中间词的向量
+
+		}
+		for (a = b; a < window * 2 + 1 - b; a++) {
+			if (a != window) {
+				c = index - window + a;
+				if (c < 0)
+					continue;
+				if (c >= sentence.size())
+					continue;
+				last_word = sentence.get(c);
+				if (last_word == null)
+					continue;
+				for (c = 0; c < layerSize; c++) {
+
+					// last_word.syn0[c] += neu1e[c];
+					doc_vec[c] += neu1e[c];
+					// 更新句子（文本）向量，不更新词向量
+
+				}
+
+			}
+
+		}
+	}
+
+	public float[] genDocVec(String sent) {
+		long nextRandom = 5;
+		float[] doc_vec = new float[layerSize];
+		for (int i = 0; i < doc_vec.length; i++)
+			doc_vec[i] = (float) ((r.nextDouble() - 0.5) / layerSize);
+		String[] strs = sent.split(" ");
+		List<WordNeuron> sentence = new ArrayList<WordNeuron>();
+		for (int i = 0; i < strs.length; i++) {
+			Neuron entry = wordMap.get(strs[i]);
+			if (entry == null) {
+				continue;
+			}
+			if (sample > 0) {
+				double ran = (Math.sqrt(entry.freq
+						/ (sample * trainWordsCount)) + 1)
+						* (sample * trainWordsCount) / entry.freq;
+				nextRandom = nextRandom * 25214903917L + 11;
+				if (ran < (nextRandom & 0xFFFF) / (double) 65536) {
+					continue;
+				}
+			}
+			sentence.add((WordNeuron) entry);
+		}
+
+		for (int index = 0; index < sentence.size(); index++) {
+			nextRandom = nextRandom * 25214903917L + 11;
+			if (isCbow) {
+				cbowGramDocVec(index, doc_vec, sentence, (int) nextRandom % window);
+			} else {
+				skipGramDocVec(index, doc_vec, sentence, (int) nextRandom % window);
+			}
+		}
+
+		return doc_vec;
+	}
+
+	private void skipGramDocVec(int index, float[] doc_vec, List<WordNeuron> sentence,
+						  int b) {
+		WordNeuron word = sentence.get(index);
+		int a, c = 0;
+		for (a = b; a < window * 2 + 1 - b; a++) {
+			if (a == window) {
+				continue;
+			}
+			c = index - window + a;
+			if (c < 0 || c >= sentence.size()) {
+				continue;
+			}
+
+			double[] neu1e = new double[layerSize];// 误差项
+			// HIERARCHICAL SOFTMAX
+			List<Neuron> neurons = word.neurons;
+			// WordNeuron we = sentence.get(c);
+			// 不是中间词向量，而是文本向量
+
+			for (int i = 0; i < neurons.size(); i++) {
+				HiddenNeuron out = (HiddenNeuron) neurons.get(i);
+				double f = 0;
+				// Propagate hidden -> output
+				for (int j = 0; j < layerSize; j++) {
+					// f += we.syn0[j] * out.syn1[j];
+					f += doc_vec[j] * out.syn1[j];
+				}
+				if (f <= -MAX_EXP || f >= MAX_EXP) {
+					continue;
+				} else {
+					f = (f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2);
+					f = expTable[(int) f];
+				}
+				// 'g' is the gradient multiplied by the learning rate
+				double g = (1 - word.codeArr[i] - f) * alpha;
+				// Propagate errors output -> hidden
+				for (c = 0; c < layerSize; c++) {
+					neu1e[c] += g * out.syn1[c];
+				}
+				// Learn weights hidden -> output
+				// for (c = 0; c < layerSize; c++) {
+				// out.syn1[c] += g * we.syn0[c];
+				//
+				// }
+				// 不改变预测的中间词的向量
+			}
+
+			// Learn weights input -> hidden
+			for (int j = 0; j < layerSize; j++) {
+				// we.syn0[j] += neu1e[j];
+
+				doc_vec[j] += neu1e[j];
+				// 更新句子（文本）向量，不更新词向量
+			}
+		}
+	}
+
+	private void cbowGramDocVec(int index, float[] doc_vec, List<WordNeuron> sentence,
+								int b) {
+		WordNeuron word = sentence.get(index);
+		int a, c = 0;
 
 		List<Neuron> neurons = word.neurons;
 		double[] neu1e = new double[layerSize];// 误差项
@@ -405,7 +579,6 @@ public class LearnDocVec {
 	}
 
 	public Map<Integer, float[]> getDocVector() {
-
 		return doc_vector;
 	}
 

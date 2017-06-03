@@ -3,6 +3,10 @@ package oata;
 import com.ansj.vec.LDA.LDAService;
 import com.ansj.vec.LDA.LdaUtil;
 import com.ansj.vec.LDA.Vocabulary;
+import com.ansj.vec.Learn;
+import com.ansj.vec.LearnDocVec;
+import com.ansj.vec.Word2VEC;
+import com.ansj.vec.domain.Neuron;
 import com.ansj.vec.util.MapCount;
 import com.hankcs.hanlp.HanLP;
 import com.hankcs.hanlp.corpus.tag.Nature;
@@ -146,6 +150,61 @@ public class TalkAnalyzer implements Serializable {
             e.printStackTrace();
         }
     }
+    public void saveTalksForW2v(String file_name) {
+        List<String> corpus =  new LinkedList<>();
+        for (Map.Entry<String, Talks> talks : talks_map.entrySet()) {
+            Talks talks0 = talks.getValue();
+            for (Talk talk : talks0.talks) {
+                if (!talk.talk_word_cut.equals("")) {
+                    corpus.add(talk.talk_word_cut);
+                }
+            }
+        }
+        FileWriter.put(file_name,corpus);
+    }
+
+    public void talksToD2v() {
+        try {
+            File result = new File("/home/tj/big_data/data/talk/flower_for_w2v.model");
+            BufferedReader br = new BufferedReader(new InputStreamReader(
+                    new FileInputStream(result)));
+
+            HashMap<String, Integer> lines = new HashMap<>();
+            String temp = null;
+            int num = 0;
+            while ((temp = br.readLine()) != null) {
+                lines.put(temp, num);
+                num++;
+            }
+            String str = "需要 换 大 盒子 配送 的 ";
+            Integer no = lines.get(str);
+
+            Learn learn = new Learn();
+            //learn.learnFile(result);
+            //learn.saveModel(new File("/home/tj/big_data/data/talk/flower_w2v.model"));
+            //加载测试
+            learn.learnFileWithoutTrain(result);
+            Map<String, Neuron> word2vec_model = learn.getWord2VecModel();
+            LearnDocVec learn_doc = new LearnDocVec(word2vec_model);
+            //learn_doc.learnFile(result);
+            //learn_doc.saveModel(new File("/home/tj/big_data/data/talk/flower_d2v.model"));
+            Word2VEC w2v = new Word2VEC();
+            w2v.loadJavaModel("/home/tj/big_data/data/talk/flower_d2v.model");
+            Word2VEC w2v2 = new Word2VEC();
+            w2v2.loadJavaModel("/home/tj/big_data/data/talk/flower_w2v.model");
+            float[] doc_vec = learn_doc.genDocVec(str);
+            float[] doc_vec2 = w2v.getWordVector(String.format("%d",no));
+            float[] doc_vec3 = w2v.getWordVector(String.format("%d",no + 1));
+            String[] strs = str.split(" ");
+            float[] doc_vec4 = w2v2.getWordsVector(strs);
+            double sim = w2v.similarity(doc_vec, doc_vec2);
+            System.out.println(String.format("%f", sim));
+            sim = w2v.similarity(doc_vec2, doc_vec4);
+            System.out.println(String.format("%f", sim));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     public boolean isIDValid(String role) {
         if (role.startsWith("wx") || role.startsWith("TJ_IM_WEB_WX_USER_ACCOUNT_")) {
@@ -163,6 +222,7 @@ public class TalkAnalyzer implements Serializable {
     public String lineFilter(String line) {
         line = line.replaceAll("\n", "");
         line = line.replaceAll(",", "，");
+        line = line.replaceAll("-", "");
         String regex1 = "[0-9A-Za-z\\t%<>#_]*";
         Pattern p1 = Pattern.compile(regex1);
         Matcher m1 = p1.matcher(line);
@@ -562,9 +622,11 @@ public class TalkAnalyzer implements Serializable {
         app.save("/home/tj/big_data/data/talk/flower.model");
         endTime= System.nanoTime();
         System.out.println(String.format("step4:%d", endTime - startTime));*/
-        app = app.load("/home/tj/big_data/data/talk/flower.model");
-        app.clusteringByLDA();
-        app.outputLDAWordClass();
+        //app = app.load("/home/tj/big_data/data/talk/flower.model");
+        //app.saveTalksForW2v("/home/tj/big_data/data/talk/flower_for_w2v.model");
+        app.talksToD2v();
+        //app.clusteringByLDA();
+        //app.outputLDAWordClass();
         //app.clusteringByTopicDBScan2();
 
         //app.fetchFAQ(true);

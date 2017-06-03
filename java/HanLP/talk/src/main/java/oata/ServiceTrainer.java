@@ -103,6 +103,7 @@ public class ServiceTrainer {
                 }
                 if (isAnswerMatch(answer)) {
                     current_sub_topic = i;
+                    current_talk_index = 0;
                 }
             }
         }
