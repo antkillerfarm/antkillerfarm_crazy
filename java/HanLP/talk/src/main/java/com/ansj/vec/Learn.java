@@ -177,6 +177,9 @@ public class Learn {
 
 			// Learn weights input -> hidden
 			for (int j = 0; j < layerSize; j++) {
+				/*if (Math.abs(neu1e[j]) > 0.01) {
+					System.out.println("zz");
+				}*/
 				we.syn0[j] += neu1e[j];
 			}
 		}

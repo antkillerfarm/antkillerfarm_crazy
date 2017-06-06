@@ -24,6 +24,8 @@ public class ServiceTrainer {
                 topic_flag[i] = true;
             }
         }
+        talk_analyzer.saveTalksForW2v("/home/tj/big_data/data/talk/flower_for_w2v.model");
+        talk_analyzer.talksToD2v();
     }
 
     public int selectTopicForTraining() {
@@ -76,7 +78,7 @@ public class ServiceTrainer {
     }
 
     public boolean isAnswerMatch(String answer) {
-
+        talk_analyzer.learn_doc.genDocVec(answer);
         return false;
     }
 

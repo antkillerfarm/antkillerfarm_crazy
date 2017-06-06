@@ -106,12 +106,12 @@ public class LearnDocVec {
 							+ "%");
 					wordCountActual += wordCount - lastWordCount;
 					lastWordCount = wordCount;
-					alpha = startingAlpha
-							* (1 - wordCountActual
+					alpha = startingAlpha;
+					/*		* (1 - wordCountActual
 									/ (double) (trainWordsCount + 1));
 					if (alpha < startingAlpha * 0.0001) {
 						alpha = startingAlpha * 0.0001;
-					}
+					}*/
 				}
 				String[] strs = temp.split(" ");
 				wordCount += strs.length;
@@ -214,7 +214,6 @@ public class LearnDocVec {
 			// Learn weights input -> hidden
 			for (int j = 0; j < layerSize; j++) {
 				// we.syn0[j] += neu1e[j];
-
 				doc_vec[j] += neu1e[j];
 				// 更新句子（文本）向量，不更新词向量
 			}
@@ -311,12 +310,20 @@ public class LearnDocVec {
 
 		}
 	}
+	private void sum(float[] center, double[] fs) {
+		// TODO Auto-generated method stub
 
+		for (int i = 0; i < fs.length; i++) {
+			center[i] += fs[i];
+		}
+	}
 	public float[] genDocVec(String sent) {
 		long nextRandom = 5;
 		float[] doc_vec = new float[layerSize];
-		for (int i = 0; i < doc_vec.length; i++)
-			doc_vec[i] = (float) ((r.nextDouble() - 0.5) / layerSize);
+		alpha = 0.025;
+		//for (int i = 0; i < doc_vec.length; i++)
+		//	doc_vec[i] = (float) ((r.nextDouble() - 0.5) / layerSize);
+
 		String[] strs = sent.split(" ");
 		List<WordNeuron> sentence = new ArrayList<WordNeuron>();
 		for (int i = 0; i < strs.length; i++) {
@@ -333,18 +340,20 @@ public class LearnDocVec {
 					continue;
 				}
 			}
-			sentence.add((WordNeuron) entry);
+			WordNeuron word_neuron = (WordNeuron) entry;
+			sum(doc_vec,word_neuron.syn0);
+			sentence.add(word_neuron);
 		}
-
-		for (int index = 0; index < sentence.size(); index++) {
-			nextRandom = nextRandom * 25214903917L + 11;
-			if (isCbow) {
-				cbowGramDocVec(index, doc_vec, sentence, (int) nextRandom % window);
-			} else {
-				skipGramDocVec(index, doc_vec, sentence, (int) nextRandom % window);
+		for (int i = 0; i < 20; i++) {
+			for (int index = 0; index < sentence.size(); index++) {
+				nextRandom = nextRandom * 25214903917L + 11;
+				if (isCbow) {
+					cbowGramDocVec(index, doc_vec, sentence, (int) nextRandom % window);
+				} else {
+					skipGramDocVec(index, doc_vec, sentence, (int) nextRandom % window);
+				}
 			}
 		}
-
 		return doc_vec;
 	}
 

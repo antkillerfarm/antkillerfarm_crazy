@@ -216,6 +216,18 @@ public class Word2VEC {
 			rst += wa[i] * wb[i];
 		}
 
+		double normA = 0;
+		for (int i = 0; i < wa.length; i++) {
+			normA += wa[i] * wa[i];
+		}
+
+		double normB = 0;
+		for (int i = 0; i < wb.length; i++) {
+			normB += wb[i] * wb[i];
+		}
+
+		rst = rst / (Math.sqrt(normA) * Math.sqrt(normB));
+
 		return rst;
 	}
 
@@ -230,10 +242,11 @@ public class Word2VEC {
 		double min = Float.MIN_VALUE;
 		for (Map.Entry<String, float[]> entry : wordMap.entrySet()) {
 			float[] vector = entry.getValue();
-			float dist = 0;
+			/*float dist = 0;
 			for (int i = 0; i < vector.length; i++) {
 				dist += center[i] * vector[i];
-			}
+			}*/
+			float dist = (float)(similarity(center, vector));
 
 			if (dist > min) {
 				result.add(new WordEntry(entry.getKey(), dist));

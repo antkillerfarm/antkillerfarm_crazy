@@ -29,6 +29,8 @@ public class HelloWorld {
 		test13();
 		test14();
 		test15();*/
+		//step1_0();
+		test8_2_2();
 		/*step1_2();
 		step1_3();
 		step3();
@@ -73,9 +75,10 @@ public class HelloWorld {
 	}
 	public static void step1_2() {
 		FileReader.setFile_charset("UTF-8");
-		List<String> corpus = FileReader.getAll("/home/tj/big_data/data/talk/3.csv", "txt");
+		List<String> corpus = FileReader.getAll("/home/tj/big_data/data/talk/tj_tjk_customer_IM_msg.csv", "txt");
 		List<String> corpus2 =  new LinkedList<>();
-		for(String sent : corpus){
+		for(int i = 0; i < corpus.size(); i++){
+			String sent = corpus.get(i);
 			corpus2.add(sent);
 		}
 		FileWriter.put("/home/tj/big_data/data/talk/3j.csv",corpus2);
@@ -517,6 +520,47 @@ public class HelloWorld {
 			e.printStackTrace();
 		}
 	}
+	public static void test8_2_2() {
+		try {
+			File result = new File("/home/tj/big_data/data/talk/flower_for_w2v.model");
+			BufferedReader br = new BufferedReader(new InputStreamReader(
+					new FileInputStream(result)));
+			List<String> lines = new ArrayList<>();
+			String temp = null;
+			while ((temp = br.readLine()) != null) {
+				lines.add(temp);
+			}
+
+			Learn learn = new Learn();
+			learn.learnFile(result);
+			learn.saveModel(new File("/home/tj/big_data/data/talk/flower_w2v.model"));
+			//加载测试
+			//learn.learnFileWithoutTrain(result);
+			Map<String, Neuron> word2vec_model = learn.getWord2VecModel();
+			LearnDocVec learn_doc = new LearnDocVec(word2vec_model);
+			learn_doc.learnFile(result);
+			learn_doc.saveModel(new File("/home/tj/big_data/data/talk/flower_d2v.model"));
+			Word2VEC word_vec = new Word2VEC();
+			word_vec.loadJavaModel("/home/tj/big_data/data/talk/flower_w2v.model");
+			Word2VEC doc_vec = new Word2VEC();
+			doc_vec.loadJavaModel("/home/tj/big_data/data/talk/flower_d2v.model");
+
+			System.out.println("welcome to tj.ai, version 1.0.0");
+			System.out.println("please input command to act, type exit for exit");
+
+			String cmd = readString();
+			while (!cmd.equals("exit")) {
+				//get short command
+				//queryDocByKey(cmd, word_vec, doc_vec, lines);
+				queryDocByKey2(cmd, word_vec, doc_vec, lines, learn_doc);
+				cmd = readString();
+			}
+
+			System.out.println("bye");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 	public static String readString() {
 		try {
 			return new BufferedReader(new InputStreamReader(System.in)).readLine();
@@ -547,7 +591,15 @@ public class HelloWorld {
 			System.out.println(String.format("%s:%f:%s", doc.name, doc.score, lines.get(Integer.parseInt(doc.name))));
 		}
 	}
-
+	public static void queryDocByKey2(String key, Word2VEC word_vec, Word2VEC doc_vec, List<String> lines, LearnDocVec learn_doc) {
+		float[] center = learn_doc.genDocVec(key);
+		Set<WordEntry> doc_entry = doc_vec.distance(center);
+		//System.out.println(String.format("%d:%s", query_no, lines.get(query_no)));
+		for (WordEntry doc : doc_entry) {
+			//System.out.println(doc.name);
+			System.out.println(String.format("%s:%f:%s", doc.name, doc.score, lines.get(Integer.parseInt(doc.name))));
+		}
+	}
 	public static void test9() {
 		try {
 			Word2VEC vec = new Word2VEC();

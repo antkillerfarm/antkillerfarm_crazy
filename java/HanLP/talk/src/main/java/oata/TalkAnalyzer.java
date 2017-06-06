@@ -7,6 +7,8 @@ import com.ansj.vec.Learn;
 import com.ansj.vec.LearnDocVec;
 import com.ansj.vec.Word2VEC;
 import com.ansj.vec.domain.Neuron;
+import com.ansj.vec.domain.WordNeuron;
+import com.ansj.vec.util.Haffman;
 import com.ansj.vec.util.MapCount;
 import com.hankcs.hanlp.HanLP;
 import com.hankcs.hanlp.corpus.tag.Nature;
@@ -27,7 +29,7 @@ class Talk implements Serializable{
     String talk_word_cut;
     String key_word;
     boolean flag;
-
+    float[] doc_vec;
 }
 class Talks implements Serializable{
     private static final long serialVersionUID = 1L;
@@ -59,8 +61,13 @@ public class TalkAnalyzer implements Serializable {
     Map<String,Topic> topics_map = new HashMap<>();
     Map<String,Topic> out_topics_map = new HashMap<>();
     List<Talks> talks_for_train;
+    List<Talk> all_talk_for_train;
     int topic_num = 100;
     List<List<Integer>> topic_index;
+    Learn learn;
+    LearnDocVec learn_doc;
+    Word2VEC w2v;
+    Word2VEC d2v;
 
     public boolean save(String path){
         try {
@@ -150,15 +157,39 @@ public class TalkAnalyzer implements Serializable {
             e.printStackTrace();
         }
     }
+
     public void saveTalksForW2v(String file_name) {
         List<String> corpus =  new LinkedList<>();
+        all_talk_for_train = new LinkedList<>();
         for (Map.Entry<String, Talks> talks : talks_map.entrySet()) {
             Talks talks0 = talks.getValue();
             for (Talk talk : talks0.talks) {
                 if (!talk.talk_word_cut.equals("")) {
                     corpus.add(talk.talk_word_cut);
+                    all_talk_for_train.add(talk);
                 }
             }
+        }
+        FileWriter.put(file_name,corpus);
+    }
+
+    public void saveTalksForRawText(String file_name) {
+        List<String> corpus =  new LinkedList<>();
+        for (Map.Entry<String, Talks> talks : talks_map.entrySet()) {
+            Talks talks0 = talks.getValue();
+            for (Talk talk : talks0.talks) {
+                if (!talk.talk_word_cut.equals("")) {
+                    String str;
+                    if (isCustomer(talk.from)) {
+                        str = "Customer:";
+                    }
+                    else {
+                        str = "Service:";
+                    }
+                    corpus.add(str + talk.talk);
+                }
+            }
+            corpus.add("-----------------------------");
         }
         FileWriter.put(file_name,corpus);
     }
@@ -166,7 +197,7 @@ public class TalkAnalyzer implements Serializable {
     public void talksToD2v() {
         try {
             File result = new File("/home/tj/big_data/data/talk/flower_for_w2v.model");
-            BufferedReader br = new BufferedReader(new InputStreamReader(
+            /*BufferedReader br = new BufferedReader(new InputStreamReader(
                     new FileInputStream(result)));
 
             HashMap<String, Integer> lines = new HashMap<>();
@@ -177,30 +208,33 @@ public class TalkAnalyzer implements Serializable {
                 num++;
             }
             String str = "需要 换 大 盒子 配送 的 ";
-            Integer no = lines.get(str);
+            Integer no = lines.get(str);*/
 
-            Learn learn = new Learn();
-            //learn.learnFile(result);
-            //learn.saveModel(new File("/home/tj/big_data/data/talk/flower_w2v.model"));
+            learn = new Learn();
+            learn.learnFile(result);
+            learn.saveModel(new File("/home/tj/big_data/data/talk/flower_w2v.model"));
             //加载测试
-            learn.learnFileWithoutTrain(result);
+            //learn.learnFileWithoutTrain(result);
             Map<String, Neuron> word2vec_model = learn.getWord2VecModel();
-            LearnDocVec learn_doc = new LearnDocVec(word2vec_model);
-            //learn_doc.learnFile(result);
-            //learn_doc.saveModel(new File("/home/tj/big_data/data/talk/flower_d2v.model"));
-            Word2VEC w2v = new Word2VEC();
+            learn_doc = new LearnDocVec(word2vec_model);
+            learn_doc.learnFile(result);
+            learn_doc.saveModel(new File("/home/tj/big_data/data/talk/flower_d2v.model"));
+            w2v = new Word2VEC();
             w2v.loadJavaModel("/home/tj/big_data/data/talk/flower_d2v.model");
-            Word2VEC w2v2 = new Word2VEC();
-            w2v2.loadJavaModel("/home/tj/big_data/data/talk/flower_w2v.model");
-            float[] doc_vec = learn_doc.genDocVec(str);
+            d2v = new Word2VEC();
+            d2v.loadJavaModel("/home/tj/big_data/data/talk/flower_w2v.model");
+            /*float[] doc_vec = learn_doc.genDocVec(str);
             float[] doc_vec2 = w2v.getWordVector(String.format("%d",no));
-            float[] doc_vec3 = w2v.getWordVector(String.format("%d",no + 1));
             String[] strs = str.split(" ");
-            float[] doc_vec4 = w2v2.getWordsVector(strs);
+            float[] doc_vec4 = d2v.getWordsVector(strs);
             double sim = w2v.similarity(doc_vec, doc_vec2);
             System.out.println(String.format("%f", sim));
             sim = w2v.similarity(doc_vec2, doc_vec4);
-            System.out.println(String.format("%f", sim));
+            System.out.println(String.format("%f", sim));*/
+            for (int i = 0; i < all_talk_for_train.size(); i++) {
+                float[] doc_vec = w2v.getWordVector(String.format("%d",i));
+                all_talk_for_train.get(i).doc_vec = doc_vec;
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -227,6 +261,11 @@ public class TalkAnalyzer implements Serializable {
         Pattern p1 = Pattern.compile(regex1);
         Matcher m1 = p1.matcher(line);
         line = m1.replaceAll("");
+        /*line = line.replaceAll("\n", "");
+        line = line.replaceAll("flowerplus", "XX");
+        line = line.replaceAll("Flowerplus", "XX");
+        line = line.replaceAll("FlowerPlus", "XX");
+        line = line.replaceAll("花加", "XX");*/
         return line;
     }
 
@@ -622,8 +661,8 @@ public class TalkAnalyzer implements Serializable {
         app.save("/home/tj/big_data/data/talk/flower.model");
         endTime= System.nanoTime();
         System.out.println(String.format("step4:%d", endTime - startTime));*/
-        //app = app.load("/home/tj/big_data/data/talk/flower.model");
-        //app.saveTalksForW2v("/home/tj/big_data/data/talk/flower_for_w2v.model");
+        app = app.load("/home/tj/big_data/data/talk/flower.model");
+        app.saveTalksForW2v("/home/tj/big_data/data/talk/flower_for_w2v.model");
         app.talksToD2v();
         //app.clusteringByLDA();
         //app.outputLDAWordClass();
