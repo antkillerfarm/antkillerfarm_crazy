@@ -1,0 +1,33 @@
+\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{fit}
+\tikzset{%
+  highlight/.style={rectangle,rounded corners,fill=red!15,draw,fill opacity=0.5,thick,inner sep=0pt}
+}
+\newcommand{\tikzmark}[2]{\tikz[overlay,remember picture,baseline=(#1.base)] \node (#1) {#2};}
+%
+\newcommand{\Highlight}[1][submatrix]{%
+    \tikz[overlay,remember picture]{
+    \node[highlight,fit=(left.north west) (right.south east)] (#1) {};}
+}
+\begin{document}
+\[
+  \left(\begin{array}{*5{c}}
+    \tikzmark{left}{1} & 2 & 3 & 4 \\
+    6 & \tikzmark{right}{7} & 8 & 9  \\
+    11 & 12 & 13 & 14 \\
+    16 & 17 & 18 & 19\\
+  \end{array}\right)
+  \Highlight[first]
+  \qquad \qquad \qquad
+  \left(\begin{array}{*5{c}}
+    \tikzmark{left}{7}\tikzmark{right}{\, \,} & 9 \\
+    17 & 19 \\
+  \end{array}\right)
+\]
+\Highlight[second]
+
+\tikz[overlay,remember picture] {
+  \draw[->,thick,red,dashed] (first) -- (second) node [pos=0.66,above] {Max pooling};
+}
+\end{document}​
