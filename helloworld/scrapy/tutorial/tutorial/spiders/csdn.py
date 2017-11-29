@@ -6,19 +6,17 @@ class CsdnSpider(scrapy.Spider):
     name = "csdn"
     allowed_domains = ["csdn.net"]
     start_urls = (
-        'http://blog.csdn.net/antkillerfarm?viewmode=contents',
-        'http://blog.csdn.net/antkillerfarm/article/list/2?viewmode=contents',
-    )
+        'http://blog.csdn.net/antkillerfarm/svc/getarticles?pageindex=1&pagesize=100',)
 
     def parse(self, response):
         sel = scrapy.Selector(response)
-        sites = sel.xpath('//div[@class="list_item list_view"]')
+        sites = sel.xpath('//li[@class="blog-unit"]')
         items = []
 
         for site in sites:
             item = TutorialItem()
-            item['title'] = site.xpath('descendant::span[@class="link_title"]/a/text()').extract()[0].encode("utf-8").strip()
-            item['readCount'] = site.xpath('descendant::span[@class="link_view"]/text()').extract()[0].strip('()')
+            item['title'] = site.xpath('descendant::h3[@class="blog-title odd-overhidden bottom-dis-8"]/a/text()').extract()[0].encode("utf-8").strip()
+            item['readCount'] = site.xpath('descendant::div[@class=" floatL left-dis-24"]/span/text()').extract()[0].strip()
             items.append(item)
             print "title:="+item['title']
             print "readCount:="+item['readCount']
