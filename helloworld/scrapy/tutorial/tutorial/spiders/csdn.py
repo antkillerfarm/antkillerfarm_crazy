@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import scrapy
+import string
 from tutorial.items import TutorialItem
 
 class CsdnSpider(scrapy.Spider):
@@ -12,6 +13,7 @@ class CsdnSpider(scrapy.Spider):
         sel = scrapy.Selector(response)
         sites = sel.xpath('//li[@class="blog-unit"]')
         items = []
+        num = 0
 
         for site in sites:
             item = TutorialItem()
@@ -20,6 +22,8 @@ class CsdnSpider(scrapy.Spider):
             items.append(item)
             print "title:="+item['title']
             print "readCount:="+item['readCount']
+            num += string.atoi(item['readCount'])
 
+        print("Total Count: %d" % (num))
         return items
  
