@@ -22,7 +22,7 @@ def get_batch(dataset, i, BATCH_SIZE):
 
 
 #DATASET_PATH = 'G:/DL/tf_speech_recognition'
-DATASET_PATH = '/home/ubuser/my/dataset/speech_commands'
+DATASET_PATH = '/home/data/my/open_source/dataset/speech_commands'
 ALLOWED_LABELS = ['yes', 'no', 'up', 'down', 'left', 'right', 'on',
 				  'off', 'stop', 'go', 'silence', 'unknown']
 ALLOWED_LABELS_MAP = {}
@@ -110,6 +110,7 @@ with tf.Session() as sess:
 
             _, batch_cost = sess.run([training, loss], feed_dict={x: batch_x, y: batch_y, current_batch_size: batch_current_batch_size})	# train on the given batch size of features and labels
             total_cost += batch_cost
+            print('{}/{}'.format(i, int(NUM_EXAMPLES/BATCH_SIZE)))
 
         print("Epoch:", epoch, "\tCost:", total_cost)
 

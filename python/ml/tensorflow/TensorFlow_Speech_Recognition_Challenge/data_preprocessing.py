@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import random
 
 from scipy import signal
 from scipy.io import wavfile
@@ -38,38 +39,48 @@ def get_audio_dataset_features_labels(path, allowed_labels, type='train'):
 
     with open(TRAIN_PATH, 'r') as f:
         wav_files = f.readlines()
+        wav_files = random.sample(wav_files, 5600)
         audio_files_len = len(wav_files)
         file_handled = 0
+        unknown_handled = 0
+
         for audio_file in wav_files:
             audio_file = audio_file.replace('\n','')
             folder = os.path.dirname(audio_file)
-            audio_file = path + os.sep + audio_file
-            samplerate, test_sound = wavfile.read(audio_file)
-
-            if len(test_sound) < 16000:
-                diff = 16000 - len(test_sound)
-                while (diff > 0):
-                    test_sound = np.insert(test_sound, 1, 0)
-                    diff -= 1
-
-            _, spectrogram = log_specgram(test_sound, samplerate)
-
-            dataset_features.append(spectrogram.T)
+            is_file_handled = False
             if folder in ALLOWED_LABELS:
                 label_index = one_hot_map[folder]
                 label = np.zeros(len(ALLOWED_LABELS))
                 label[label_index] = 1
                 dataset_labels.append(label)
+                file_handled += 1
+                is_file_handled = True
             else:
-                label_index = one_hot_map['unknown']
-                label = np.zeros(len(ALLOWED_LABELS))
-                label[label_index] = 1
-                dataset_labels.append(label)
-            file_handled += 1
-            if (file_handled % 100 == 0):
-                print('{}/{}'.format(file_handled, audio_files_len))
-            if (file_handled >= 2000):
-               break
+                unknown_handled += 1
+                if (unknown_handled % 30 == 0):
+                    label_index = one_hot_map['unknown']
+                    label = np.zeros(len(ALLOWED_LABELS))
+                    label[label_index] = 1
+                    dataset_labels.append(label)
+                    file_handled += 1
+                    is_file_handled = True
+
+            if is_file_handled:
+                audio_file = path + os.sep + audio_file
+                samplerate, test_sound = wavfile.read(audio_file)
+
+                if len(test_sound) < 16000:
+                    diff = 16000 - len(test_sound)
+                    while (diff > 0):
+                        test_sound = np.insert(test_sound, 1, 0)
+                        diff -= 1
+
+                _, spectrogram = log_specgram(test_sound, samplerate)
+
+                dataset_features.append(spectrogram.T)
+
+                if (file_handled % 100 == 0):
+                    print('{}/{}'.format(file_handled, audio_files_len))
 
     return np.array(dataset_features, dtype='float'), np.array(dataset_labels, dtype='float'), one_hot_map
 
@@ -139,7 +150,8 @@ def get_audio_test_dataset_filenames(path):
             dataset_filenames.append(audio_file)
 
     #dataset_filenames.sort()
-    dataset_filenames = dataset_filenames[0:300]
+    #dataset_filenames = dataset_filenames[0:300]
+    dataset_filenames = random.sample(dataset_filenames, 300)
     return dataset_filenames
 
 def get_audio_test_dataset_filenames_1(path):
