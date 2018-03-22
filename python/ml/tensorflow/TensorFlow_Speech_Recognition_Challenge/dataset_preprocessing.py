@@ -51,13 +51,28 @@ def which_set(filename, validation_percentage, testing_percentage):
     result = 'training'
   return result
 
+def save_list(l, file_name):
+    with open(file_name,'w') as f:
+        s = '\n'.join(l)
+        f.write(s)
+        f.close()
+
 DATASET_PATH = '/home/ubuser/my/dataset/speech_commands'
 training_files = []
 testing_files = []
-
+validation_files = []
 for parent, dirnames, filenames in os.walk(DATASET_PATH):
     for filename in filenames:
         if ".wav" in filename:
             fullname = os.path.join(parent, filename)
             result = which_set(fullname, 10, 10)
+            if "training" in result:
+                training_files.append(fullname.replace(DATASET_PATH + "/",''))
+            elif "testing" in result:
+                testing_files.append(fullname.replace(DATASET_PATH + "/", ''))
+            else:
+                validation_files.append(fullname.replace(DATASET_PATH + "/", ''))
 
+save_list(training_files, DATASET_PATH + "/" + 'training_files.txt')
+save_list(testing_files, DATASET_PATH + "/" + 'testing_files.txt')
+save_list(validation_files, DATASET_PATH + "/" + 'validation_files.txt')
