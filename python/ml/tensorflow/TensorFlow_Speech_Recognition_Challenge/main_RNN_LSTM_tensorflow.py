@@ -20,16 +20,33 @@ def get_batch(dataset, i, BATCH_SIZE):
         return dataset[i*BATCH_SIZE:, :], dataset.shape[0] - i*BATCH_SIZE
     return dataset[i*BATCH_SIZE:(i*BATCH_SIZE+BATCH_SIZE), :], BATCH_SIZE
 
+def get_batch_2(dataset, i, BATCH_SIZE):
+    dataset0 = []
+    end = i*BATCH_SIZE+BATCH_SIZE
+    if i*BATCH_SIZE+BATCH_SIZE > len(dataset):
+        end = len(dataset)
+    for j in range(i*BATCH_SIZE, end):
+        dataset0.append(dataset[j])
+    return dataset0
+
+def get_class_name(label_list, label_map):
+    name_list = []
+    for i in range(0, len(label_list)):
+        label = str(int(label_list[i]))
+        label0 = label_map[label]
+        name_list.append(label0)
+    return name_list
 
 #DATASET_PATH = 'G:/DL/tf_speech_recognition'
-DATASET_PATH = '/home/data/my/open_source/dataset/speech_commands'
+#DATASET_PATH = '/home/data/my/open_source/dataset/speech_commands'
+DATASET_PATH = '/home/ubuser/my/dataset/speech_commands'
 ALLOWED_LABELS = ['yes', 'no', 'up', 'down', 'left', 'right', 'on',
 				  'off', 'stop', 'go', 'silence', 'unknown']
 ALLOWED_LABELS_MAP = {}
 for i in range(0, len(ALLOWED_LABELS)):
     ALLOWED_LABELS_MAP[str(i)] = ALLOWED_LABELS[i]
 
-dataset_train_features, dataset_train_labels, labels_one_hot_map =\
+dataset_train_features, dataset_train_labels, labels_one_hot_map, dataset_train_filenames =\
 	get_audio_dataset_features_labels(DATASET_PATH, ALLOWED_LABELS, type='train')
 audio_filenames = get_audio_test_dataset_filenames(DATASET_PATH)
 
@@ -42,15 +59,18 @@ dataset_train_features, min_value, max_value \
 	= normalize_training_dataset(dataset_train_features)
 
 # randomize shuffle
-print('Shuffling training dataset')
-dataset_train_features, dataset_train_labels \
-	= shuffle_randomize(dataset_train_features, dataset_train_labels)
+#print('Shuffling training dataset')
+#dataset_train_features, dataset_train_labels \
+#	= shuffle_randomize(dataset_train_features, dataset_train_labels)
 
 # divide training set into training and validation
 train_len = 1700
 dataset_validation_features, dataset_validation_labels \
 	= dataset_train_features[train_len:dataset_train_features.shape[0], :],\
 	  dataset_train_labels[train_len:dataset_train_labels.shape[0], :]
+dataset_validation_filenames = []
+for i in range(train_len, len(dataset_train_filenames)):
+    dataset_validation_filenames.append(dataset_train_filenames[i])
 dataset_train_features, dataset_train_labels \
 	= dataset_train_features[0:train_len, :], dataset_train_labels[0:train_len, :]
 print('dataset_validation_features.shape:',
@@ -95,6 +115,7 @@ logits = recurrent_neural_network(x, current_batch_size)
 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y))
 optimizer = tf.train.AdamOptimizer()
 training = optimizer.minimize(loss)
+saver = tf.train.Saver()
 
 test_batch = 200
 with tf.Session() as sess:
@@ -120,13 +141,18 @@ with tf.Session() as sess:
         for i in range(0, int(dataset_validation_features.shape[0]/BATCH_SIZE)):
             batch_x, batch_current_batch_size = get_batch(dataset_validation_features, i, BATCH_SIZE)
             batch_y, _ = get_batch(dataset_validation_labels, i, BATCH_SIZE)
+            batch_filenames = get_batch_2(dataset_validation_filenames, i, BATCH_SIZE)
             # print(batch_current_batch_size)
 
             y_predicted = tf.nn.softmax(logits)
-            correct = tf.equal(tf.argmax(y_predicted, 1), tf.argmax(y, 1))
+            y_predicted_class = tf.argmax(y_predicted, 1)
+            correct = tf.equal(y_predicted_class, tf.argmax(y, 1))
             accuracy_function = tf.reduce_mean(tf.cast(correct, 'float'))
             accuracy_validation = accuracy_function.eval({x:batch_x, y:batch_y, current_batch_size:batch_current_batch_size})
-
+            batch_y_class = sess.run(tf.argmax(batch_y, 1))
+            batch_y_name = get_class_name(batch_y_class, ALLOWED_LABELS_MAP)
+            y_predicted_labels = y_predicted_class.eval({x:batch_x, y:batch_y, current_batch_size:batch_current_batch_size})
+            y_predicted_name = get_class_name(y_predicted_labels, ALLOWED_LABELS_MAP)
             sum_accuracy_validation += accuracy_validation
             sum_i += 1
             print("Validation Accuracy in Epoch ", epoch, ":", accuracy_validation, 'sum_i:', sum_i, 'sum_accuracy_validation:', sum_accuracy_validation)
@@ -177,7 +203,7 @@ with tf.Session() as sess:
                 for element in temp:
                     y_predicted_labels.append(element)
 
-            test_samples_picked += test_batch
+            test_samples_picked += len(y_predicted_labels)
             print('test_samples_picked:', test_samples_picked)
 
             # writing predicted labels into a csv file
@@ -185,3 +211,5 @@ with tf.Session() as sess:
                 for i in range(0, len(y_predicted_labels)):
                     file.write(str(audio_files_list[i]) + ',' + str(ALLOWED_LABELS_MAP[str(int(y_predicted_labels[i]))]))
                     file.write('\n')
+
+            saver.save(sess, './my_test_model')

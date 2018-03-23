@@ -57,7 +57,8 @@ def save_list(l, file_name):
         f.write(s)
         f.close()
 
-DATASET_PATH = '/home/data/my/open_source/dataset/speech_commands'
+#DATASET_PATH = '/home/data/my/open_source/dataset/speech_commands'
+DATASET_PATH = '/home/ubuser/my/dataset/speech_commands'
 training_files = []
 testing_files = []
 validation_files = []

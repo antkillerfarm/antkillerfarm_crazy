@@ -29,6 +29,7 @@ def get_audio_dataset_features_labels(path, allowed_labels, type='train'):
     TRAIN_PATH = path + os.sep + 'training_files.txt'
     dataset_features = []
     dataset_labels = []
+    dataset_filenames = []
     ALLOWED_LABELS = allowed_labels
 
     one_hot_map = {}
@@ -39,7 +40,7 @@ def get_audio_dataset_features_labels(path, allowed_labels, type='train'):
 
     with open(TRAIN_PATH, 'r') as f:
         wav_files = f.readlines()
-        wav_files = random.sample(wav_files, 5600)
+        wav_files = random.sample(wav_files, 5000)
         audio_files_len = len(wav_files)
         file_handled = 0
         unknown_handled = 0
@@ -78,11 +79,12 @@ def get_audio_dataset_features_labels(path, allowed_labels, type='train'):
                 _, spectrogram = log_specgram(test_sound, samplerate)
 
                 dataset_features.append(spectrogram.T)
+                dataset_filenames.append(audio_file)
 
                 if (file_handled % 100 == 0):
                     print('{}/{}'.format(file_handled, audio_files_len))
 
-    return np.array(dataset_features, dtype='float'), np.array(dataset_labels, dtype='float'), one_hot_map
+    return np.array(dataset_features, dtype='float'), np.array(dataset_labels, dtype='float'), one_hot_map, dataset_filenames
 
 def get_audio_dataset_features_labels_1(path, allowed_labels, type='train'):
     TYPES = ['train', 'test', 'both']
