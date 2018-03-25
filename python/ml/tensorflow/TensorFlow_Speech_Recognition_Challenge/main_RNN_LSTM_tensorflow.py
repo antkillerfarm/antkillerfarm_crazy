@@ -38,8 +38,8 @@ def get_class_name(label_list, label_map):
     return name_list
 
 #DATASET_PATH = 'G:/DL/tf_speech_recognition'
-#DATASET_PATH = '/home/data/my/open_source/dataset/speech_commands'
-DATASET_PATH = '/home/ubuser/my/dataset/speech_commands'
+DATASET_PATH = '/home/data/my/open_source/dataset/speech_commands'
+#DATASET_PATH = '/home/ubuser/my/dataset/speech_commands'
 ALLOWED_LABELS = ['yes', 'no', 'up', 'down', 'left', 'right', 'on',
 				  'off', 'stop', 'go', 'silence', 'unknown']
 ALLOWED_LABELS_MAP = {}
@@ -64,7 +64,7 @@ dataset_train_features, min_value, max_value \
 #	= shuffle_randomize(dataset_train_features, dataset_train_labels)
 
 # divide training set into training and validation
-train_len = 1700
+train_len = 3500
 dataset_validation_features, dataset_validation_labels \
 	= dataset_train_features[train_len:dataset_train_features.shape[0], :],\
 	  dataset_train_labels[train_len:dataset_train_labels.shape[0], :]
@@ -118,6 +118,7 @@ training = optimizer.minimize(loss)
 saver = tf.train.Saver()
 
 test_batch = 200
+sum_accuracy_validation0 = 0.0
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())		# initialize all global variables, which includes weights and biases
 
@@ -138,24 +139,29 @@ with tf.Session() as sess:
         # predict validation accuracy after every epoch
         sum_accuracy_validation = 0.0
         sum_i = 0
-        for i in range(0, int(dataset_validation_features.shape[0]/BATCH_SIZE)):
-            batch_x, batch_current_batch_size = get_batch(dataset_validation_features, i, BATCH_SIZE)
-            batch_y, _ = get_batch(dataset_validation_labels, i, BATCH_SIZE)
-            batch_filenames = get_batch_2(dataset_validation_filenames, i, BATCH_SIZE)
-            # print(batch_current_batch_size)
+        with open('runX' + str(epoch) + '.csv', 'a') as f1:
+            for i in range(0, int(dataset_validation_features.shape[0]/BATCH_SIZE)):
+                batch_x, batch_current_batch_size = get_batch(dataset_validation_features, i, BATCH_SIZE)
+                batch_y, _ = get_batch(dataset_validation_labels, i, BATCH_SIZE)
+                batch_filenames = get_batch_2(dataset_validation_filenames, i, BATCH_SIZE)
+                # print(batch_current_batch_size)
 
-            y_predicted = tf.nn.softmax(logits)
-            y_predicted_class = tf.argmax(y_predicted, 1)
-            correct = tf.equal(y_predicted_class, tf.argmax(y, 1))
-            accuracy_function = tf.reduce_mean(tf.cast(correct, 'float'))
-            accuracy_validation = accuracy_function.eval({x:batch_x, y:batch_y, current_batch_size:batch_current_batch_size})
-            batch_y_class = sess.run(tf.argmax(batch_y, 1))
-            batch_y_name = get_class_name(batch_y_class, ALLOWED_LABELS_MAP)
-            y_predicted_labels = y_predicted_class.eval({x:batch_x, y:batch_y, current_batch_size:batch_current_batch_size})
-            y_predicted_name = get_class_name(y_predicted_labels, ALLOWED_LABELS_MAP)
-            sum_accuracy_validation += accuracy_validation
-            sum_i += 1
-            print("Validation Accuracy in Epoch ", epoch, ":", accuracy_validation, 'sum_i:', sum_i, 'sum_accuracy_validation:', sum_accuracy_validation)
+                y_predicted = tf.nn.softmax(logits)
+                y_predicted_class = tf.argmax(y_predicted, 1)
+                y_predicted_labels = y_predicted_class.eval({x:batch_x, y:batch_y, current_batch_size:batch_current_batch_size})
+                correct = tf.equal(y_predicted_labels, tf.argmax(y, 1))
+                accuracy_function = tf.reduce_mean(tf.cast(correct, 'float'))
+                accuracy_validation = accuracy_function.eval({y:batch_y, current_batch_size:batch_current_batch_size})
+                batch_y_class = sess.run(tf.argmax(batch_y, 1))
+                batch_y_name = get_class_name(batch_y_class, ALLOWED_LABELS_MAP)
+
+                y_predicted_name = get_class_name(y_predicted_labels, ALLOWED_LABELS_MAP)
+                sum_accuracy_validation += accuracy_validation
+                sum_i += 1
+                print("Validation Accuracy in Epoch ", epoch, ":", accuracy_validation, 'sum_i:', sum_i, 'sum_accuracy_validation:', sum_accuracy_validation)
+                for j in range(0, len(y_predicted_labels)):
+                    f1.write(batch_y_name[j] + ',' + y_predicted_name[j])
+                    f1.write('\n')
         # training end
 
         # testing
@@ -212,4 +218,6 @@ with tf.Session() as sess:
                     file.write(str(audio_files_list[i]) + ',' + str(ALLOWED_LABELS_MAP[str(int(y_predicted_labels[i]))]))
                     file.write('\n')
 
-            saver.save(sess, './my_test_model')
+            if sum_accuracy_validation > sum_accuracy_validation0:
+                sum_accuracy_validation0 = sum_accuracy_validation
+                saver.save(sess, './my_test_model')

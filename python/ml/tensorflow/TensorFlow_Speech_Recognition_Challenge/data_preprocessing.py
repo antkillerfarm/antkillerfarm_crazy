@@ -40,7 +40,7 @@ def get_audio_dataset_features_labels(path, allowed_labels, type='train'):
 
     with open(TRAIN_PATH, 'r') as f:
         wav_files = f.readlines()
-        wav_files = random.sample(wav_files, 5000)
+        wav_files = random.sample(wav_files, 10000)
         audio_files_len = len(wav_files)
         file_handled = 0
         unknown_handled = 0
