@@ -1,0 +1,4 @@
+[Desktop Entry]
+Name=indicator-netspeed
+Exec=indicator-netspeed
+Type=Application
