@@ -58,15 +58,16 @@ def save_list(l, file_name):
         f.close()
 
 #DATASET_PATH = '/home/data/my/open_source/dataset/speech_commands'
-DATASET_PATH = '/home/ubuser/my/dataset/speech_commands'
+#DATASET_PATH = '/home/ubuser/my/dataset/speech_commands'
+DATASET_PATH = '/home/ubuser/my/opensource/dataset/speech_commands'
 training_files = []
 testing_files = []
 validation_files = []
 for parent, dirnames, filenames in os.walk(DATASET_PATH):
     for filename in filenames:
-        if ".wav" in filename:
+        if (".wav" in filename) and ('_background_noise_' not in parent):
             fullname = os.path.join(parent, filename)
-            result = which_set(fullname, 10, 10)
+            result = which_set(fullname, 5, 5)
             if "training" in result:
                 training_files.append(fullname.replace(DATASET_PATH + "/",''))
             elif "testing" in result:
@@ -77,3 +78,4 @@ for parent, dirnames, filenames in os.walk(DATASET_PATH):
 save_list(training_files, DATASET_PATH + "/" + 'training_files.txt')
 save_list(testing_files, DATASET_PATH + "/" + 'testing_files.txt')
 save_list(validation_files, DATASET_PATH + "/" + 'validation_files.txt')
+

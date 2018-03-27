@@ -40,7 +40,7 @@ def get_audio_dataset_features_labels(path, allowed_labels, type='train'):
 
     with open(TRAIN_PATH, 'r') as f:
         wav_files = f.readlines()
-        wav_files = random.sample(wav_files, 10000)
+        wav_files = random.sample(wav_files, 57500)
         audio_files_len = len(wav_files)
         file_handled = 0
         unknown_handled = 0
@@ -58,7 +58,7 @@ def get_audio_dataset_features_labels(path, allowed_labels, type='train'):
                 is_file_handled = True
             else:
                 unknown_handled += 1
-                if (unknown_handled % 30 == 0):
+                if (unknown_handled % 19 == 0):
                     label_index = one_hot_map['unknown']
                     label = np.zeros(len(ALLOWED_LABELS))
                     label[label_index] = 1
@@ -82,7 +82,7 @@ def get_audio_dataset_features_labels(path, allowed_labels, type='train'):
                 dataset_filenames.append(audio_file)
 
                 if (file_handled % 100 == 0):
-                    print('{}/{}'.format(file_handled, audio_files_len))
+                    print('\r{}/{}'.format(file_handled, audio_files_len),end='')
 
     return np.array(dataset_features, dtype='float'), np.array(dataset_labels, dtype='float'), one_hot_map, dataset_filenames
 
