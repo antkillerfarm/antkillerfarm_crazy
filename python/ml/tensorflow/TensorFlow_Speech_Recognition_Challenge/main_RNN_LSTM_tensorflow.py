@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import random
+import time
 
 # from tensorflow.python.ops import rnn
 from tensorflow.contrib import rnn
@@ -38,14 +39,17 @@ def get_class_name(label_list, label_map):
     return name_list
 
 #DATASET_PATH = 'G:/DL/tf_speech_recognition'
-DATASET_PATH = '/home/data/my/open_source/dataset/speech_commands'
+#DATASET_PATH = '/home/data/my/open_source/dataset/speech_commands'
 #DATASET_PATH = '/home/ubuser/my/dataset/speech_commands'
+DATASET_PATH = '/home/ubuser/my/opensource/dataset/speech_commands'
+
 ALLOWED_LABELS = ['yes', 'no', 'up', 'down', 'left', 'right', 'on',
 				  'off', 'stop', 'go', 'silence', 'unknown']
 ALLOWED_LABELS_MAP = {}
 for i in range(0, len(ALLOWED_LABELS)):
     ALLOWED_LABELS_MAP[str(i)] = ALLOWED_LABELS[i]
 
+print(time.asctime(time.localtime(time.time())))
 dataset_train_features, dataset_train_labels, labels_one_hot_map, dataset_train_filenames =\
 	get_audio_dataset_features_labels(DATASET_PATH, ALLOWED_LABELS, type='train')
 audio_filenames = get_audio_test_dataset_filenames(DATASET_PATH)
@@ -64,7 +68,7 @@ dataset_train_features, min_value, max_value \
 #	= shuffle_randomize(dataset_train_features, dataset_train_labels)
 
 # divide training set into training and validation
-train_len = 3500
+train_len = 22000
 dataset_validation_features, dataset_validation_labels \
 	= dataset_train_features[train_len:dataset_train_features.shape[0], :],\
 	  dataset_train_labels[train_len:dataset_train_labels.shape[0], :]
@@ -84,7 +88,7 @@ NUM_EXAMPLES = dataset_train_features.shape[0]
 NUM_CHUNKS = dataset_train_features.shape[1]	# 161
 CHUNK_SIZE = dataset_train_features.shape[2]	# 99 
 NUM_EPOCHS = 100
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 
 x = tf.placeholder(tf.float32, shape=[None, NUM_CHUNKS, CHUNK_SIZE])
 y = tf.placeholder(tf.float32, shape=[None, NUM_CLASSES])
@@ -125,14 +129,14 @@ with tf.Session() as sess:
     # training start
     for epoch in range(0, NUM_EPOCHS):
         total_cost = 0
-
+        print(time.asctime(time.localtime(time.time())))
         for i in range(0, int(NUM_EXAMPLES/BATCH_SIZE)):
             batch_x, batch_current_batch_size = get_batch(dataset_train_features, i, BATCH_SIZE)	# get batch of features of size BATCH_SIZE
             batch_y, _ = get_batch(dataset_train_labels, i, BATCH_SIZE)	# get batch of labels of size BATCH_SIZE
 
             _, batch_cost = sess.run([training, loss], feed_dict={x: batch_x, y: batch_y, current_batch_size: batch_current_batch_size})	# train on the given batch size of features and labels
             total_cost += batch_cost
-            print('{}/{}'.format(i, int(NUM_EXAMPLES/BATCH_SIZE)))
+            print('\r{}/{}'.format(i, int(NUM_EXAMPLES/BATCH_SIZE)), end='')
 
         print("Epoch:", epoch, "\tCost:", total_cost)
 
