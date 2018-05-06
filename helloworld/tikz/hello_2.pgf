@@ -1,0 +1,21 @@
+\documentclass[tikz,convert=pdf2svg]{standalone}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}[scale=0.8,thick]
+\def\iangle{120}
+\begin{scope}[xshift=-2cm]
+\draw[->] (-1.2,0) --(1.2,0);
+\draw[->] (0,-1.2) --(0,1.2);
+\draw[thick] (0,0) circle(1cm);
+\coordinate [label = \iangle:$P$] (P) at (\iangle:1);
+\coordinate [label = below:$P0$] (P0) at (P |-0,0);
+\draw (P)--(P0);
+\draw (0,0)--(P);
+\fill [fill = gray,fill opacity=0.2] (0,0)--(0:1) arc (0:\iangle:1)--cycle;
+\filldraw [fill = gray,fill opacity=0.5] (0,0)--(0:0.3) arc (0:\iangle:0.3)--cycle;
+ 
+\end{scope}
+
+\end{tikzpicture}
+
+\end{document}
