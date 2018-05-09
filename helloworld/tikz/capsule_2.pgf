@@ -44,8 +44,6 @@
       {
           \path (naveq0_\x)+(0, 1 - \y * 0.5) node [cunit0] {};
       }
-    \path (naveq_0) edge (naveq0_0);
-      
 \end{tikzpicture}
 
 \end{document}
