@@ -1,0 +1,38 @@
+\documentclass{article}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows}
+\usepackage{amsmath,bm,times}
+\newcommand{\mx}[1]{\mathbf{\bm{#1}}} % Matrix command
+\newcommand{\vc}[1]{\mathbf{\bm{#1}}} % Vector command
+
+\begin{document}
+\pagestyle{empty}
+
+% We need layers to draw the block diagram
+\pgfdeclarelayer{background}
+\pgfdeclarelayer{foreground}
+\pgfsetlayers{background,main,foreground}
+
+% Define a few styles and constants
+\tikzstyle{capsule}=[draw, fill=green!20, text width=2em, 
+    text centered, minimum height=8em, rounded corners]
+\tikzstyle{cunit}=[circle, draw, fill=purple!80, minimum size=1em]
+\tikzstyle{cunit0}=[circle, draw, fill=blue!80, minimum size=1em]
+\def\blockdist{2.3}
+\def\edgedist{2.5}
+
+\begin{tikzpicture}
+    \node (naveq) [capsule] {};
+    \foreach \x in {0,...,4}
+      {
+          \path (naveq)+(\x * 0.5, 1 - \x * 0.5) node [cunit] {};
+      }
+    \path (naveq)+(2, 0) node (naveq_1) [capsule] {};
+    \foreach \x in {0,...,4}
+      {
+          \path (naveq_1)+(\x * 0.5, 1 - \x * 0.5) node [cunit] {};
+      }
+\end{tikzpicture}
+
+\end{document}
