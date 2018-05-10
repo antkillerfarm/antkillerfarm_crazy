@@ -3,26 +3,20 @@
 \usepackage{tikz}
 \usetikzlibrary{shapes,arrows}
 \usepackage{amsmath,bm,times}
-\newcommand{\mx}[1]{\mathbf{\bm{#1}}} % Matrix command
-\newcommand{\vc}[1]{\mathbf{\bm{#1}}} % Vector command
+\usepackage{verbatim}
 
 \begin{document}
 \pagestyle{empty}
 
-% We need layers to draw the block diagram
-\pgfdeclarelayer{background}
-\pgfdeclarelayer{foreground}
-\pgfsetlayers{background,main,foreground}
-
 % Define a few styles and constants
-\tikzstyle{capsule}=[draw, fill=green!20, text width=2em, 
+\tikzstyle{capsule}=[draw, fill=green!20, text width=2em,
     text centered, minimum height=6em, rounded corners]
 \tikzstyle{cunit}=[circle, draw, fill=purple!80, minimum size=1em]
 \tikzstyle{capsule0}=[draw, fill=green!20, text width=2em, 
     text centered, minimum height=8em, rounded corners]
 \tikzstyle{cunit0}=[circle, draw, fill=blue!80, minimum size=1em]
-\def\blockdist{2.3}
-\def\edgedist{2.5}
+\tikzstyle{capsule1}=[draw, fill=green!20, text width=2em, 
+    text centered, minimum height=2em, rounded corners]
 
 \begin{tikzpicture}
     \node (naveq_0) [capsule] {};
@@ -34,6 +28,7 @@
       \foreach \y in {0,...,3}
       {
           \path (naveq_\x)+(0, 0.75 - \y * 0.5) node [cunit] {};
+          \path (naveq_\x)+(0, -1.25) node {$x_\x$};
       }
     \foreach \x in {0,...,3}
       {
@@ -43,9 +38,44 @@
       \foreach \y in {0,...,4}
       {
           \path (naveq0_\x)+(0, 1 - \y * 0.5) node [cunit0] {};
+          \path (naveq0_\x)+(0, 1.75) node {$y_\x$};
       }
-    \path (naveq_0) edge (naveq0_0);
-      
+    \foreach \x in {0,...,4}
+      \foreach \y in {0,...,3}
+      {
+          \path (naveq_\x.north) edge [->, thick] (naveq0_\y.south);
+      }
 \end{tikzpicture}
+
+\begin{comment}
+\begin{tikzpicture}
+    \node (naveq_0) [capsule1] {};
+    \foreach \x in {1,...,4}
+      {
+          \path (naveq_0)+(\x * 2, 0) node (naveq_\x) [capsule1] {};
+      }
+    \foreach \x in {0,...,4}
+      \foreach \y in {0}
+      {
+          \path (naveq_\x)+(0, 0) node [cunit] {};
+          \path (naveq_\x)+(0, -0.5) node {$x_\x$};
+      }
+    \foreach \x in {0,...,3}
+      {
+          \path (naveq_0)+(\x * 2 + 1, 2) node (naveq0_\x) [capsule1] {};
+      }
+    \foreach \x in {0,...,3}
+      \foreach \y in {0}
+      {
+          \path (naveq0_\x)+(0, 0) node [cunit0] {};
+          \path (naveq0_\x)+(0, 0.5) node {$y_\x$};
+      }
+    \foreach \x in {0,...,4}
+      \foreach \y in {0,...,3}
+      {
+          \path (naveq_\x.north) edge [->, thick] (naveq0_\y.south);
+      }
+\end{tikzpicture}
+\end{comment}
 
 \end{document}
