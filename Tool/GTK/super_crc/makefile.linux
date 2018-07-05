@@ -1,0 +1,11 @@
+CFLAGS = `pkg-config --cflags gtk+-3.0 gmodule-export-2.0 libxml-2.0`
+LDFLAGS = `pkg-config --libs gtk+-3.0 gmodule-export-2.0 libxml-2.0`
+
+super_crc:main.o nmea_crc.o crc16.o crc24q.o
+	gcc $^ -o $@ $(LDFLAGS)
+
+%.o: %.c
+	gcc -g $(CFLAGS) -o $@ -c $^
+
+clean:
+	rm super_crc *.o

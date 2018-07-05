@@ -1,0 +1,6 @@
+如何抓取DEBUG数据
+1.连接好串口，设置好串口号、波特率之后，按下Open按钮，使之能正常收到NMEA数据。
+2.按下Debug按钮，再按下Close按钮。
+3.将波特率改为115200，重新按下Open按钮。此时即可收到DEBUG信息。
+4.按下Capture Text按钮，相关debug信息将保存在DebugMonitor.exe所在文件夹的capture子文件夹中。debug数据文件的命名规则为：串口号_年月日_时分秒.txt
+5.Pcomm.dll为本软件的一部分，需要和DebugMonitor.exe配合使用。数据保存的多了，可以删除capture子文件夹中的数据文件.

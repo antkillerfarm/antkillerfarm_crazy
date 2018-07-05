@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<firm_items>
+  <items name = "Pin Reused" type = "0">
+    <sub_item name = "GPIO0" type = "0" check = "1"/>
+    <sub_item name = "GPIO1" type = "0" check = "1"/>
+    <sub_item name = "GPIO2" type = "0" check = "0"/>
+  </items>
+</firm_items>
