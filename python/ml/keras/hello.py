@@ -25,5 +25,5 @@ w_final = weights[0][0][0]
 b_final = weights[1][0]
 print('Linear regression model is trained to have weight w: %.2f, b: %.2f' % (w_final, b_final))
 
-
+model.save('linear_regression_model.h5')
 
