@@ -19,7 +19,7 @@ saver.restore(sess, ckpt.model_checkpoint_path)
 # print(sess.graph_def)
 if len(sys.argv) > 4:
     output = list()
-    for id in range(3, len(sys.argv)):
+    for id in range(4, len(sys.argv)):
         output.append(sys.argv[id])
         frozen_graph = graph_util.convert_variables_to_constants(sess, sess.graph_def, output)
         tf.train.write_graph(frozen_graph, MainFolder, OutputPBFileName, as_text=False)

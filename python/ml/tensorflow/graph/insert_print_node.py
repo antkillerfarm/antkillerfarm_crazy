@@ -78,7 +78,7 @@ def parse_args():
     from optparse import OptionParser
     parser = OptionParser()
     parser.add_option('', '--pb', dest="pb", help="tensorflow .pb path")
-    parser.add_option('', '--tensor', dest="tensor", help="tensorflow .pb path")
+    parser.add_option('', '--tensor', dest="tensor", help="your tensor name")
     parser.add_option('', '--dtype', dest="dtype", default='float32', help='dtype of target tensor, default float32')
 
     (options, args) = parser.parse_args()
