@@ -38,3 +38,4 @@ out = tf.transpose(out, perm=[0, 2, 1])
 print(out)
 
 np.savetxt("output.tensor", out.numpy().flatten(), fmt='%f')
+
