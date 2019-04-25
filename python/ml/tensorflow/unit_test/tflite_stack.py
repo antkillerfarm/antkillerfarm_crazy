@@ -1,8 +1,8 @@
 import tensorflow as tf
 
-x = tf.placeholder(tf.float32, shape=[16, 16, 3], name='x')
-y = tf.placeholder(tf.float32, shape=[16, 16, 3], name='y')
-z = tf.placeholder(tf.float32, shape=[16, 16, 3], name='z')
+x = tf.placeholder(tf.float32, shape=[None, 16, 16, 3], name='x')
+y = tf.placeholder(tf.float32, shape=[None, 16, 16, 3], name='y')
+z = tf.placeholder(tf.float32, shape=[None, 16, 16, 3], name='z')
 
 t1 = tf.stack([x, y, z], axis=1)
 
