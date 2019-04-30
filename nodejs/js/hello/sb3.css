@@ -1,24 +1,24 @@
 #sb_group{
-	width: 25%;
-	float: left;
-	background: #eee;
-	border-style: solid;
-	border-top-width: 0px;
-	border-right-width: 5px;
-	border-bottom-width: 0px;
-	border-left-width: 0px;
+  width: 25%;
+  float: left;
+  background: #eee;
+  border-style: solid;
+  border-top-width: 0px;
+  border-right-width: 5px;
+  border-bottom-width: 0px;
+  border-left-width: 0px;
 }
 
 .super_button{
-	border-radius: 15px;
-	margin: 30px auto;
-	text-align: center;
-	font-size: 38px;
-	font-weight: bold;
-	font-family: Arial;
-	background: #333;
-	color: #EEEEEE;
-	opacity: 1;
+  border-radius: 15px;
+  margin: 30px auto;
+  text-align: center;
+  font-size: 38px;
+  font-weight: bold;
+  font-family: Arial;
+  background: #333;
+  color: #EEEEEE;
+  opacity: 1;
 }
 
 @-webkit-keyframes rotate_mill {

@@ -1,17 +1,17 @@
 #sb_group{
-	width: 25%;
-	float: left;
+  width: 25%;
+  float: left;
 }
 
 .super_button{
-	border-radius: 15px;
-	margin: 30px auto;
-	text-align: center;
-	font-size: 38px;
-	font-weight: bold;
-	font-family: Arial;
-	background: #333;
-	color: #EEEEEE;
+  border-radius: 15px;
+  margin: 30px auto;
+  text-align: center;
+  font-size: 38px;
+  font-weight: bold;
+  font-family: Arial;
+  background: #333;
+  color: #EEEEEE;
 }
 
 @-webkit-keyframes rotate_mill {
