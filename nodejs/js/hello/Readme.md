@@ -1,1 +1,1 @@
-npm install d3
+npm install gl-matrix monaco-editor d3
