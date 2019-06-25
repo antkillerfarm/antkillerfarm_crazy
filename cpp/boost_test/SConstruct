@@ -1,0 +1,3 @@
+Program('unit_test', 'test_boost_suit.cpp',
+  LIBS = 'boost_unit_test_framework',
+  CCFLAGS = '-DBOOST_TEST_DYN_LINK')
