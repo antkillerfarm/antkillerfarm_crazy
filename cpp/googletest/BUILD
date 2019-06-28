@@ -5,5 +5,5 @@ cc_binary(
     srcs = [
         "test.cpp",
     ],
-    linkopts = ["-lgtest"],
+    deps = ["@googletest//:gtest"],
 )

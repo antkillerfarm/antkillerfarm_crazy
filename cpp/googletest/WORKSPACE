@@ -1,0 +1,17 @@
+'''
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+http_archive(
+    sha256 = "aaed4bb33cd098b2a1cf0d092b5409cdde28efc900e232130da33d531f7fe9a6",
+    name = "googletest",
+    strip_prefix = "googletest",
+    urls = [
+        "http://192.168.32.219/downloads/archives/googletest.1.8.1.tgz",
+    ],
+)
+'''
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+git_repository(
+    name = "googletest",
+    remote = "https://github.com/google/googletest.git",
+    tag = "release-1.8.1",
+)
