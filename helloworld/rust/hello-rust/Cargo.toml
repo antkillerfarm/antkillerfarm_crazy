@@ -1,0 +1,15 @@
+[package]
+name = "hello-rust"
+version = "0.1.0"
+authors = ["antkillerfarm <antkillerfarm@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.gtk]
+version = "0.7.0"
+features = ["v3_16"]
+
+[dependencies.gio]
+version = ""
+features = ["v2_44"]
