@@ -33,7 +33,27 @@ void test3()
   using MyMap = std::map< std::string,  std::string>;
   MyMap my_map;
   auto emplaced = my_map.emplace(std::string("Ali"), std::string("Jack Ma"));
-  std::cout << emplaced.first->first << " => " <<emplaced.first->second <<std::endl;
+  std::cout << emplaced.first->first << " => " <<emplaced.first->second << std::endl;
+}
+
+std::pair<int, std::string> fun_tie(int a, std::string str)
+{
+  return std::make_pair(a, str);
+}
+
+std::tuple<int, std::string, std::string> fun_tie2(int a, std::string str, std::string str1)
+{
+  return std::make_tuple(a, str, str1);
+}
+
+void test4()
+{
+  int a;
+  std::string str, str2;
+  std::tie(a , str) = fun_tie(12, std::string("Pony Ma"));
+  std::cout << a << "," << str << std::endl;
+  std::tie(a , str, str2) = fun_tie2(21, std::string("Robin Li"), std::string("Elon Musk"));
+  std::cout << a << "," << str << "," << str2 << std::endl;
 }
 
 int main()
@@ -41,4 +61,5 @@ int main()
   test1();
   test2();
   test3();
+  test4();
 }
