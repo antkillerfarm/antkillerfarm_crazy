@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for file in ./*.pgf
+for file in ./*.tex
 do
   pdflatex --enable-write18 --shell-escape $file
 done

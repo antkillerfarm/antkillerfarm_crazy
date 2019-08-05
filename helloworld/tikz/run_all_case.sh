@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for file in ./*.pgf
+for file in ./*.tex
 do
-  pdflatex $file
+  pdflatex --shell-escape $file
 done
