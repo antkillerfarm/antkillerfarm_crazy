@@ -1,0 +1,211 @@
+\documentclass{beamer}
+\usepackage{tikz}
+\usepackage{animate}
+
+% Define a the counter cnt. Used to identify files generated for use
+% with Gnuplot.
+\newcounter{cnt}
+\setcounter{cnt}{0}
+
+% Macro for drawing one frame of the F-distribution animation.
+\newcommand{\fdst}[4]{%
+    % shade the critical region tail
+    \draw[fill,orange]  (#1,0) -- plot[id=5\thecnt,domain=#1:5.5,samples=50]
+        function {#4*(x**(0.5*#2-1))*((1+#2*x/#3)**(-0.5*#2-0.5*#3))}
+            -- (5.5,0) -- cycle;
+
+    % draw the F distribution curve
+    \draw[color=blue!50!black,thick]
+        plot[id=f4\thecnt,smooth,domain=0:5.5,samples=100]
+        function {#4*(x**(0.5*#2-1))*((1+#2*x/#3)**(-0.5*#2-0.5*#3))};
+
+    % draw the F axis
+    \draw[->] (0,0) -- (6,0) node[right] {$F$};
+    % label the critical region boundary
+    \draw (#1,0) -- (#1,-0.02) node[below] {$#1$};
+    % label 0
+    \draw (0,0) -- (0,-0.02) node[below] {$0$};
+
+    % add some lables for degrees of freedom and alpha level
+    \draw (2,0.5) node[right] {$df_1 = #2$};
+    \draw (2,0.4) node[right] {$df_2 = #3$};
+    \draw (2,0.3) node[right] {$\alpha = 0.10$};
+
+    % draw the y axis
+    \draw[very thin,->] (0,0) -- (0,0.8);
+}
+
+\newcommand{\distpic}[3]{
+    % First draw the upper distribution.
+    % Shade the critical region:
+    \fill[red!30] (0.658,0)  -- plot[id=f3,domain=0.658:3,samples=50]
+        function {exp(-x*x*0.5/0.16)} -- (3,0) -- cycle;
+
+    % Draw the normal distribution curve
+    \draw[blue!50!black,smooth,thick] plot[id=f1,domain=-2:3,samples=50]
+    function {exp(-x*x*0.5/0.16)};
+    % Draw the x-axis
+    \draw[->,black] (-2.2,0) -- (3.2,0);
+    % Put some ticks and tick labels in:
+    \foreach \x in {-2,-1,0,1,2,3}
+    \draw (\x,0) -- (\x,-0.1) node[below] {$\x$};
+    % Put in a label for the critical region boundary:
+    \draw[red!50!black,thick] (0.658,0) node[below,yshift=-0.5cm] {0.658}
+    -- (0.658,0.85);
+
+    % Put in labels for accepting or rejecting the null hypothesis with
+    % the corresponding regions:
+    \draw[red!50!black,thick,->] (0.688,0.7) -- (1.3,0.7)
+        node[anchor=south] {Reject  $H_0$};
+    \draw[red!50!black,thick,->] (0.628,0.7) -- (-1,0.7)
+        node[anchor=south]{\parbox{1.5cm}{\raggedright Fail to reject $H_0$}};
+
+    % Add a label to the upper picture, when the null is true
+    \draw (-3,1) node[above,draw,fill=green!30] {$H_0$ is true:};
+
+    % Label the critical region with an alpha level:
+    \draw[<-,thick] (0.75,0.05) -- (1.6,0.2) node[right,yshift=0.3cm]
+    {\begin{tabular}{l} $\alpha=0.05$ \\ (Type I error rate) \end{tabular}};
+
+
+    % Add a label showing the effect size between the two plots:
+    \draw[very thin] (0,-1) -- (0,-0.5);
+    \draw[<->,thick] (0,-1) node[left] {Effect size:  #1} -- (#1,-1);
+    \draw[thick] (0,-.9) -- (0,-1.1);
+
+    \draw[very thin] (#1,-1) -- (#1,-1.7);
+    \draw[thick] (#1,-.9) -- (#1,-1.1);
+
+    % Now draw the lower distribution showing the effect size:
+    \begin{scope}[yshift=-3cm]
+    % Shade the "reject H0" region red
+    \fill[red!30] (0.658,0)  -- plot[id=f3\thecnt,domain=0.658:3,samples=50]
+        function {exp(-(x-#1)*(x-#1)*0.5/0.16)} --
+        (3,0) -- cycle;
+        % Shade the "accept H0" region blue
+    \fill[blue!30] (-2,0) -- plot[id=f4\thecnt,domain=-2:0.658,samples=50]
+        function {exp(-(x-#1)*(x-#1)*0.5/0.16)} --
+        (0.658,0) -- cycle;
+
+        % Draw the shifted normal distribution:
+    \draw[blue!50!black,smooth,thick] plot[id=f1\thecnt,domain=-2:3,samples=50]
+            function {exp(-(x-#1)*(x-#1)*0.5/0.16)};
+
+        % Draw the x-axis and put in some ticks and tick labels
+    \draw[->,black] (-2.2,0) -- (3.2,0);
+    \foreach \x in {-2,-1,0,1,2,3}
+            \draw (\x,0) -- (\x,-0.1) node[below] {$\x$};
+
+        % Draw and label the critical region boundary
+    \draw[red!50!black,very thick] (0.658,0) node[below,yshift=-0.5cm] {0.658}
+        -- (0.658,1.0);
+    \draw[red!50!black,very thick,->] (0.688,0.7) -- (2.7,0.7)
+        node[anchor=south west] {Reject  $H_0$};
+    \draw[red!50!black,very thick,->] (0.628,0.7) -- (-0.5,0.7)
+        node[anchor=south]{\parbox{1.5cm}{\raggedright Fail to reject $H_0$}};
+
+    % Add a label to the lower picture, when the alternative hypothesis is true:
+    \draw (-3,1) node[above,draw,fill=green!30] {$H_a$ is true:};
+
+        % Add labels showing the statistical power and the Type II error rate:
+    \draw[<-,thick] (1.5,0.1) -- (3,0.2) node[anchor=south west]
+        {Power = \large #2};
+    \draw[<-,thick] (0.4,0.1) -- (-1,0.2) node[left,yshift=0.3cm]
+        {\begin{tabular}{l}
+        $\beta$ = {\large #3} \\ (Type II error rate) \end{tabular}};
+    \end{scope}
+}
+
+
+\begin{document}
+
+\begin{frame}
+  General form for the $F$ distribution with $\nu_1$ and $\nu_2$ degrees of
+  freedom:
+  \[
+    f(F; \nu_1, \nu_2) = \frac{\Gamma\left(\frac{\nu_1+\nu_2}{2}\right)}
+    {\Gamma\left(\frac{\nu_1}{2}\right)\Gamma\left(\frac{\nu_2}{2}\right)}
+    \left(\frac{\nu_1}{\nu_2}\right)^{\frac{\nu_1}{2}}
+    \frac{F^{\frac{\nu_1-2}{2}}}{\left[1 +
+    \left(\frac{\nu_1}{\nu_2}\right)F\right]^{\frac{\nu_1+\nu_2}{2}}}
+  \]
+
+  Critical region for an $F$ test for various degrees of freedom:
+
+  \begin{center}
+
+  \begin{animateinline}[autoplay,palindrome,
+    begin={\begin{tikzpicture}[yscale=4]},
+    end={\stepcounter{cnt}\end{tikzpicture}}]{8}
+    \fdst{5.3426}{4}{3}{6.6667};\newframe
+    \fdst{4.1072}{4}{4}{6};\newframe
+    \fdst{3.5202}{4}{5}{5.6};\newframe
+    \fdst{3.1808}{4}{6}{5.3333};\newframe
+    \fdst{2.9605}{4}{7}{5.1429};\newframe
+    \fdst{2.8064}{4}{8}{5};\newframe
+    \fdst{2.6927}{4}{9}{4.8889};\newframe
+    \fdst{2.6053}{4}{10}{4.8};\newframe
+    \fdst{2.5216}{5}{10}{10.3684};\newframe
+    \fdst{2.6106}{5}{9}{10.7120};\newframe
+    \fdst{2.7264}{5}{8}{11.1463};\newframe
+    \fdst{2.8833}{5}{7}{11.7125};\newframe
+    \fdst{3.1075}{5}{6}{12.4807};\newframe
+    \fdst{3.4530}{5}{5}{13.5812};\newframe
+    \fdst{4.0506}{5}{4}{15.2856};\newframe
+    \fdst{5.3092}{5}{3}{18.2638};\newframe
+    \fdst{5.2847}{6}{3}{52.5};\newframe
+    \fdst{4.0097}{6}{4}{40.5};\newframe
+    \fdst{3.4045}{6}{5}{34.02};\newframe
+    \fdst{3.0546}{6}{6}{30};\newframe
+    \fdst{2.8274}{6}{7}{27.2755};\newframe
+    \fdst{2.6683}{6}{8}{25.3125};\newframe
+    \fdst{2.5509}{6}{9}{23.8333};\newframe
+    \fdst{2.4606}{6}{10}{22.6800};\newframe
+    \fdst{2.4140}{7}{10}{50.4952};\newframe
+    \fdst{2.5053}{7}{9}{54.1009};\newframe
+    \fdst{2.6241}{7}{8}{58.8076};\newframe
+    \fdst{2.7849}{7}{7}{65.1899};\newframe
+    \fdst{3.0145}{7}{6}{74.2894};\newframe
+    \fdst{3.3679}{7}{5}{88.1895};\newframe
+    \fdst{3.9790}{7}{4}{111.6641};\newframe
+    \fdst{5.2662}{7}{3}{158.1280};\newframe
+    \fdst{5.2517}{8}{3}{497.7779};\newframe
+    \fdst{3.9549}{8}{4}{320};\newframe
+    \fdst{3.3393}{8}{5}{236.544};\newframe
+    \fdst{2.9830}{8}{6}{189.6296};\newframe
+    \fdst{2.7516}{8}{7}{160.0933};\newframe
+    \fdst{2.5893}{8}{8}{140};\newframe
+    \fdst{2.4694}{8}{9}{125.5418};\newframe
+    \fdst{2.3772}{8}{10}{114.688};\newframe
+    \fdst{2.3473}{9}{10}{266.0};\newframe
+    \fdst{2.4403}{9}{9}{298.0};\newframe
+    \fdst{2.5612}{9}{8}{341.7};\newframe
+    \fdst{2.7247}{9}{7}{404.0};\newframe
+    \fdst{2.9577}{9}{6}{498.7};\newframe
+    \fdst{3.3163}{9}{5}{655.8};\newframe
+    \fdst{3.9357}{9}{4}{941.5};\newframe
+    \fdst{5.2400}{9}{3}{1633.2};
+  \end{animateinline}
+  \end{center}
+
+\end{frame}
+
+\begin{frame}
+  Statistical power in hypothesis testing:
+
+  \begin{animateinline}[autoplay,loop,
+    begin={\begin{tikzpicture}[scale=1.3]},
+    end={\stepcounter{cnt}\end{tikzpicture}}]{3}
+    \distpic{0.5}{.346}{.654}
+    \newframe
+    \distpic{0.7}{.542}{.458}\newframe
+    \distpic{0.9}{.727}{.273}\newframe
+    \distpic{1.1}{.865}{.135}\newframe
+    \distpic{1.3}{.946}{.054}\newframe
+    \distpic{1.5}{.982}{.018}\newframe
+    \distpic{1.7}{.995}{.005}\newframe
+    \distpic{1.9}{.999}{.001}
+  \end{animateinline}
+\end{frame}
+
+\end{document}

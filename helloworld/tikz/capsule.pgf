@@ -47,7 +47,6 @@
       }
 \end{tikzpicture}
 
-\begin{comment}
 \begin{tikzpicture}
     \node (naveq_0) [capsule1] {};
     \foreach \x in {1,...,4}
@@ -76,6 +75,5 @@
           \path (naveq_\x.north) edge [->, thick] (naveq0_\y.south);
       }
 \end{tikzpicture}
-\end{comment}
 
 \end{document}
