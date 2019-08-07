@@ -1,7 +1,5 @@
-﻿// topk.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
-//
-
-#include <iostream>
+﻿#include <stdio.h>
+#include <stdint.h>
 
 #ifndef TRUE
 #define TRUE 1
@@ -9,6 +7,8 @@
 #ifndef FALSE
 #define FALSE 0
 #endif
+
+typedef uint32_t bool;
 
 float input[100] = { 0.24405758545342704, 0.6823071261111106, 0.7125174614243092, 0.6764326879764893, 0.2057687974444613,
 0.5148242648943889, 0.4415894991869841, 0.27060077944877126, 0.06172037394464147, 0.5164734134185364,
@@ -224,4 +224,3 @@ int main()
     find_top_k_1d(input, 100, 10, value, indices);
     print_tensor(value, 10);
 }
-
