@@ -185,8 +185,13 @@ static void find_top_k_1d
 {
     int32_t low = 0;
     int32_t high = input_len - 1;
-    int32_t j = partition_complex(input, low, high, FALSE, indices);
+    int32_t j;
 
+    for (j = 0; j < input_len; j++)
+    {
+        indices[j] = j;
+    }
+    j = partition_complex(input, low, high, FALSE, indices);
     //part_sort
     while (j != k)
     {
@@ -217,10 +222,6 @@ int main()
     //find_top_k_basic(input, 100, 10);
     //print_tensor(input, 10);
 
-    for (i = 0; i < 100; i++)
-    {
-        indices[i] = i;
-    }
     find_top_k_1d(input, 100, 10, value, indices);
     print_tensor(value, 10);
 }

@@ -1,9 +1,12 @@
 #include <iostream>
+#include <iterator>
 #include <tuple>
 #include <utility>
 #include <vector>
 #include<string>
 #include <map>
+#include <numeric>
+#include <algorithm>
 
 void test1()
 {
@@ -25,6 +28,11 @@ void test2()
   for(auto i : vec) {
     std::cout << i << ' ';
   }
+  std::cout << std::endl;
+  std::iota(vec.begin(), vec.end(), 999);
+  std::copy(vec.begin(), vec.end(), std::ostream_iterator<int>(std::cout, " "));
+  std::cout << std::endl;
+  std::for_each(std::begin(vec),std::end(vec),[](int n){std::cout<<n<<" ";});
   std::cout << std::endl;
 }
 
