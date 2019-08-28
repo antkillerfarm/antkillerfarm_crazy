@@ -1,6 +1,8 @@
 ﻿#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
+#include <pthread.h>
 
 #ifndef PHILOX_W32_0
 #define PHILOX_W32_0 ((uint32_t)0x9E3779B9)
@@ -73,28 +75,111 @@ philox4x32_ctr_t philox4x32_R(uint32_t R, philox4x32_ctr_t ctr, philox4x32_key_t
 }
 
 #define NUM_RANDOM 102400
-philox4x32_ctr_t g_ctr;
-philox4x32_key_t g_key;
-char str[256];
+#define NUM_THREAD 4
+uint32_t random_buf[NUM_RANDOM * 4] = {0};
+float uni_buf[NUM_RANDOM * 4] = {0};
+float gauss_buf[NUM_RANDOM * 4] = {0};
+uint32_t key_buf[NUM_THREAD * 2];
+philox4x32_ctr_t *g_ctr = (philox4x32_ctr_t *)random_buf;
+philox4x32_key_t *g_key = (philox4x32_key_t *)key_buf;
 
-void print_philox4x32(FILE* f, philox4x32_ctr_t ctr)
+static void * random_thread(void *arg)
 {
-    fprintf(f, "%u\n", ctr.v[0]);
-    fprintf(f, "%u\n", ctr.v[1]);
-    fprintf(f, "%u\n", ctr.v[2]);
-    fprintf(f, "%u\n", ctr.v[3]);
+    uint32_t* p_index = (uint32_t *)arg;
+    uint32_t num = NUM_RANDOM / NUM_THREAD;
+    uint32_t offset = *p_index * num;
+    uint32_t i;
+    printf("Thread %d: %d\n", *p_index, offset);
+    g_ctr[offset] = philox4x32_R(10, g_ctr[0], g_key[*p_index]);
+    for (i = 0; i < num - 1; i++)
+    {
+        g_ctr[offset + i + 1] = philox4x32_R(10, g_ctr[offset + i], g_key[*p_index]);
+    }
+}
+
+void init_keys()
+{
+    uint32_t i;
+    for (i = 0; i < NUM_THREAD / 2; i++)
+    {
+        g_ctr[0] = philox4x32_R(10, g_ctr[0], g_key[0]);
+        g_key[i * 2].v[0] = g_ctr[0].v[0];
+        g_key[i * 2].v[1] = g_ctr[0].v[1];
+        g_key[i * 2 + 1].v[0] = g_ctr[0].v[2];
+        g_key[i * 2 + 1].v[1] = g_ctr[0].v[3];
+    }
+}
+
+void uniform_transform()
+{
+    uint32_t i;
+    float rand_max = pow(2, 32) - 1;
+    for (i = 0; i < NUM_RANDOM * 4; i++)
+    {
+        uni_buf[i] = random_buf[i] / rand_max;
+    }
+}
+
+void gaussian_transform()
+{
+    //Boxer-Muller transform
+    uint32_t i;
+    const float epsilon = 1.0e-7f;
+    float f1, f2;
+    for (i = 0; i < NUM_RANDOM * 2; i++)
+    {
+        if (uni_buf[i * 2] < epsilon)
+        {
+            uni_buf[i * 2] = epsilon;
+        }
+        f1 = sqrt(-2.0f * log(uni_buf[i * 2]));
+        f2 = 2 * M_PI * uni_buf[i * 2 + 1];
+        gauss_buf[i * 2] = f1 * sin(f2);
+        gauss_buf[i * 2 + 1] = f1 * cos(f2);
+    }
 }
 
 int main()
 {
     philox4x32_ukey_t key = { 0xdeadbeef, 0x13579 };
-    FILE* f = fopen("1.txt", "w");
+    FILE* f = fopen("2.txt", "w");
     uint32_t i;
-    g_key = philox4x32keyinit(key);
-    for (i = 0; i < NUM_RANDOM; i++)
+    pthread_t tidp[NUM_THREAD];
+    uint32_t thread_id[NUM_THREAD];
+
+    //generate random integer
+    g_key[0] = philox4x32keyinit(key);
+    init_keys();
+    for (i = 0; i < NUM_THREAD; i++)
     {
-        g_ctr = philox4x32_R(10, g_ctr, g_key);
-        print_philox4x32(f, g_ctr);
+        thread_id[i] = i;
+        pthread_create(&(tidp[i]), NULL, random_thread, (void*)&(thread_id[i]));
+    }
+    for (i = 0; i < NUM_THREAD; i++)
+    {
+        pthread_join(tidp[i], NULL);
+    }
+    for (i = 0; i < NUM_RANDOM * 4; i++)
+    {
+        fprintf(f, "%u\n", random_buf[i]);
+    }
+    fclose(f);
+
+    //generate Uniform Distribution on [0,1]
+    f = fopen("3.txt", "w");
+    uniform_transform();
+    for (i = 0; i < NUM_RANDOM * 4; i++)
+    {
+        fprintf(f, "%f\n", uni_buf[i]);
+    }
+    fclose(f);
+
+    //generate Gaussian Distribution on [0,1]
+    f = fopen("4.txt", "w");
+    gaussian_transform();
+    for (i = 0; i < NUM_RANDOM * 4; i++)
+    {
+        fprintf(f, "%f\n", gauss_buf[i]);
     }
     fclose(f);
     return 0;

@@ -1,1 +1,1 @@
-Program('random', 'philox_1.c')
+Program('random', 'philox_1.c',LIBS = ['pthread','m'])
