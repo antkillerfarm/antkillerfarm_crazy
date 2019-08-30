@@ -17,7 +17,7 @@ fn main() {
 
         let button = Button::new_with_label("Click me!");
         button.connect_clicked(|_| {
-            println!("Clicked!");
+            println!("\x1b[4;30;46mClicked!\x1b[0m");
         });
         window.add(&button);
 

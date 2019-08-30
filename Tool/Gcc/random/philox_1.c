@@ -139,13 +139,14 @@ void gaussian_transform()
     }
 }
 
-int main()
+void test_random()
 {
     philox4x32_ukey_t key = { 0xdeadbeef, 0x13579 };
     FILE* f = fopen("2.txt", "w");
     uint32_t i;
     pthread_t tidp[NUM_THREAD];
     uint32_t thread_id[NUM_THREAD];
+    
 
     //generate random integer
     g_key[0] = philox4x32keyinit(key);
@@ -182,5 +183,32 @@ int main()
         fprintf(f, "%f\n", gauss_buf[i]);
     }
     fclose(f);
+}
+
+int upper_bound(float* a, int n, float x) {
+    int l = 0;
+    int h = n; // Not n - 1
+    while (l < h) {
+        int mid = (l + h) / 2;
+        if (x >= a[mid]) {
+            l = mid + 1;
+        } else {
+            h = mid;
+        }
+    }
+    return l;
+}
+
+void test_upper_bound()
+{
+    float f[] = {1.0, 2.0, 3.0, 4.0, 5.0};
+    int index = upper_bound(f, 5, 0.6);
+    printf("\x1b[33m%d\x1b[0m\n",index);
+}
+
+int main()
+{
+    //test_random();
+    test_upper_bound();
     return 0;
 }
