@@ -80,7 +80,7 @@ function fillArc(x, y) {
 function draw_light(light) {
     var x = light.x;
     var y = light.y;
-    if (light.is_update == false) return;
+    if (!light.is_update) return;
     if (light.is_red) {
         g.fillStyle = "Red";
         fillArc(x - 40, y - 75);
@@ -104,6 +104,19 @@ function toggle_light(light) {
     light.is_update = true;
 }
 
+function test_crash(x, y, index) {
+    for (var i = 0; i < car_list.length; i++) {
+        if (index == i) continue;
+        deltax = Math.abs(car_list[i].x - x);
+        deltay = Math.abs(car_list[i].y - y);
+        if (deltax < 30 &&
+            deltay < 30) {
+            return true;
+        }
+    }
+    return false;
+}
+
 //随机产生汽车出现的地点和方向
 function generate_car() {
     var i;
@@ -114,10 +127,10 @@ function generate_car() {
     else if (d < 0.8) i = 3;
     else if (d < 0.9) i = 4;
     else i = 5;
-    x = appearx[i];
-    y = appeary[i];
+    var x = appearx[i];
+    var y = appeary[i];
     direct = appeard[i];
-    return {
+    var obj = {
         x: x,
         y: y,
         x0: x,
@@ -125,7 +138,18 @@ function generate_car() {
         direct: direct,
         pre_direct: direct, //汽车下一步的行驶方向
         is_wait: false,
-    };
+    }
+    if (test_crash(x, y, null)) {
+        return {
+            val: false,
+            car: obj
+        };
+    } else {
+        return {
+            val: true,
+            car: obj
+        };
+    }
 }
 
 function draw_car(car) {
@@ -204,9 +228,28 @@ function is_turn_180(car) {
     return (direct0 == car.pre_direct)
 }
 
+function handle_light(car, is_light, light) {
+    if (is_light(car) && car.direct == car.pre_direct) {
+        if (car.direct == 0 || car.direct == 2) { //汽车为东西向行驶时
+            if (!light.is_red) {
+                car.is_wait = true;
+            } else {
+                car.is_wait = false;
+            }
+        } else { //汽车为南北向行驶时
+            if (light.is_red) {
+                car.is_wait = true;
+            } else {
+                car.is_wait = false;
+            }
+        }
+        return car.is_wait;
+    } else return false;
+}
+
 function update_car(car, index, array) {
     var obj = is_preturn(car);
-    if (obj.val) {
+    if (obj.val && !car.is_wait) {
         if (can_turn[obj.index][1] == 4) {
             car.pre_direct = can_turn[obj.index][0]; //只有1种转向
         } else {
@@ -223,50 +266,57 @@ function update_car(car, index, array) {
         }
     }
     //汽车到左侧的信号灯处，且直行时
-    if (is_light1(car) && car.direct == car.pre_direct) {
-        if (car.direct == 0 || car.direct == 2) { //汽车为东西向行驶时
-            if (!light1.is_red) {
-                return;
-            }
-        } else { //汽车为南北向行驶时
-            if (light1.is_red) {
-                return;
-            }
-        }
-    }
+    if (handle_light(car, is_light1, light1)) return;
     //汽车到右侧的信号灯处，且直行时
-    if (is_light2(car) && car.direct == car.pre_direct) {
-        if (car.direct == 0 || car.direct == 2) {
-            if (!light2.is_red) {
-                return;
-            }
-        } else {
-            if (light2.is_red) {
-                return;
-            }
-        }
-    }
+    if (handle_light(car, is_light2, light2)) return;
+
+    var direct = car.direct;
     if (is_turn(car)) {
         car.direct = car.pre_direct;
+        if (car.x == 25 && car.y == 235) {
+            car.direct = 0;
+        }
+        if (car.x == 725 && car.y == 165) {
+            car.direct = 2;
+        }
     }
-    car.x0 = car.x;
-    car.y0 = car.y;
     //根据汽车的行驶方向，确定其下一刻的坐标
+    var x, y;
     switch (car.direct) {
         case 0:
-            car.x = car.x + 5;
+            x = car.x + 5;
+            y = car.y;
             break;
         case 1:
-            car.y = car.y + 5;
+            x = car.x;
+            y = car.y + 5;
             break;
         case 2:
-            car.x = car.x - 5;
+            x = car.x - 5;
+            y = car.y;
             break;
         default:
-            car.y = car.y - 5;
+            x = car.x;
+            y = car.y - 5;
     }
-    if (is_in(car) == false) {
+    if (test_crash(x, y, index)) {
+        car.is_wait = true;
+        car.direct = direct;
+    } else {
+        car.x0 = car.x;
+        car.y0 = car.y;
+        car.x = x;
+        car.y = y;
+    }
+
+    if (!is_in(car)) {
         array.splice(index, 1);
+    }
+}
+
+function clean_wait_flag() {
+    for (var i = 0; i < car_list.length; i++) {
+        car_list[i].is_wait = false;
     }
 }
 
@@ -281,9 +331,11 @@ function draw_frame() {
 }
 
 function generate_car_task() {
-    if (car_list.length < 20) {
-        var car = generate_car();
-        car_list.push(car);
+    if (car_list.length < 50) {
+        var obj = generate_car();
+        if (obj.val) {
+            car_list.push(obj.car);
+        }
     }
 }
 
@@ -291,8 +343,9 @@ function update_status() {
     if (time_step % 100 == 0) {
         toggle_light(light1);
         toggle_light(light2);
+        clean_wait_flag();
     }
-    if (time_step % 5 == 0) {
+    if (time_step % 3 == 0) {
         generate_car_task()
     }
     update_cars()
@@ -302,7 +355,7 @@ function update_frame() {
     update_status();
     draw_frame();
     time_step++;
-    console.log(time_step);
+    console.log(car_list.length);
 }
 
 draw_ground();
