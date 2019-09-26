@@ -129,7 +129,7 @@ function generate_car() {
     else i = 5;
     var x = appearx[i];
     var y = appeary[i];
-    direct = appeard[i];
+    var direct = appeard[i];
     var obj = {
         x: x,
         y: y,
