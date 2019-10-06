@@ -1,0 +1,38 @@
+<html>
+
+<head>
+  <link type="text/css" rel="stylesheet" href="style.css" />
+  <script src="../../../common/jquery.min.js"></script>
+</head>
+
+<body>
+  <div style="height:600px;width:602px;float:left;">
+    <canvas id="myCanvas" width="600" height="600" style="border:1px solid #000000;">
+    </canvas>
+  </div>
+
+  <div class="direction">
+    <div class="direction_content">
+      <button id="up" class="direction_div top_direction" type="button">Up</button>
+      <button id="left" class="direction_div left_direction" type="button">Left</button>
+      <button id="down" class="direction_div bottom_direction" type="button">Down</button>
+      <button id="right" class="direction_div right_direction" type="button">Right</button>
+    </div>
+    <div class="textfield_content">
+      Discount: <input class="textfield" type="text" id="discount"><br>
+      Initial Value: <input class="textfield" type="text" id="initial_value"><br>
+      Greedy: <input class="textfield" type="text" id="greedy"><br>
+      Step: <input class="textfield" type="text" id="step"><br>
+      Alpha: <input class="textfield" type="text" id="alpha"><br>
+    </div>
+    <div class="label_content">
+      Number of steps: <br>
+      <div id="report_steps_label"></div>
+      Total reward received: <br>
+      <div id="report_rewards_label"></div>
+    </div>
+  </div>
+  <script src="Q.js"></script>
+</body>
+
+</html>
