@@ -1,0 +1,62 @@
+.direction {
+    text-align: center;
+    width: 200px;
+    height: 600px;
+    float: left;
+}
+
+.direction_content {
+    background-color: Sandybrown;
+    width: 100%;
+    height: 30%;
+    position: relative;
+}
+
+.direction_div {
+    position: absolute;
+    width: 75px;
+    height: 30px;
+}
+
+/*left*/
+.left_direction {
+    top: 41%;
+    left: 3%;
+}
+
+/*bottom*/
+.bottom_direction {
+    top: 76%;
+    left: 32%;
+}
+
+/*right*/
+.right_direction {
+    top: 41%;
+    left: 59%;
+}
+
+/*top*/
+.top_direction {
+    top: 6%;
+    left: 32%;
+}
+
+.textfield_content {
+    background-color: Orange;
+    width: 100%;
+    height: 50%;
+    position: relative;
+}
+
+.textfield {
+    width: 100%;
+    position: relative;
+}
+
+.label_content {
+    background-color: Olive;
+    width: 100%;
+    height: 20%;
+    position: relative;
+}
