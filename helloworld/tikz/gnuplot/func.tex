@@ -18,6 +18,8 @@
         node[right] {$f(x) = \sin x$};
     \draw[color=orange] plot[id=exp] function{0.05*exp(x)} 
         node[right] {$f(x) = \frac{1}{20} \mathrm e^x$};
+    \fill[red!30] (0.658,-1)  -- plot[id=f3,domain=0.658:3,samples=50]
+        function {0.05*exp(x)} -- (3,0) -- cycle;
 \end{tikzpicture}
 
 
