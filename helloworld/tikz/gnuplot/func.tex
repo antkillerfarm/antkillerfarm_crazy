@@ -2,6 +2,18 @@
 
 \usepackage[latin1]{inputenc}
 \usepackage{tikz}
+\usetikzlibrary{decorations.markings}
+
+\tikzset
+ {every pin/.style = {pin edge = {<-}},    % pins are arrows from label to point
+  > = stealth,                            % arrow tips look like stealth bombers
+  flow/.style =    % everything marked as "flow" will be decorated with an arrow
+   {decoration = {markings, mark=at position #1 with {\arrow{>}}},
+    postaction = {decorate}
+   },
+  flow/.default = 0.5,          % default position of the arrow is in the middle
+  main/.style = {line width=1pt}                    % thick lines for main graph
+ }
 
 % GNUPLOT required
 \begin{document}
@@ -20,6 +32,12 @@
         node[right] {$f(x) = \frac{1}{20} \mathrm e^x$};
     \fill[red!30] (0.658,-1)  -- plot[id=f3,domain=0.658:3,samples=50]
         function {0.05*exp(x)} -- (3,0) -- cycle;
+    \foreach \r in {1,2,3}                  % draw three circles
+    {
+        \draw[flow=0.63] (\r,0) arc (0:-360:\r cm);
+        \draw (\r,\r) rectangle (-\r, -\r);
+    }
+
 \end{tikzpicture}
 
 
