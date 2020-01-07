@@ -40,5 +40,21 @@
 
 \end{tikzpicture}
 
+\begin{tikzpicture}[even odd rule,rounded corners=2pt,x=10pt,y=10pt]
+    \filldraw[fill=yellow!80!black] (0,0) rectangle (1,1)
+        [xshift=5pt,yshift=5pt] (0,0) rectangle (1,1)
+        [rotate=30] (-1,-1) rectangle (2,2);
+\end{tikzpicture}
+
+\begin{tikzpicture}
+    \begin{scope}[rotate=45]
+        \draw[->] (-1.5,0) -- (1.5,0) node[right] {$x$} coordinate(x axis);
+        \draw[->] (0,-1.5) -- (0,1.5) node[above] {$y$} coordinate(y axis);
+        \foreach \x/\xtext in {-1, -.5/-\frac{1}{2}, 1}
+        \draw[xshift=\x cm] (0pt,1pt) -- (0pt,-1pt) node[below,fill=white] {$\xtext$};
+        \foreach \y/\ytext in {-1, -.5/-\frac{1}{2}, .5/\frac{1}{2}, 1}
+        \draw[yshift=\y cm] (1pt,0pt) -- (-1pt,0pt) node[left,fill=white] {$\ytext$};
+    \end{scope}
+\end{tikzpicture}
 
 \end{document}

@@ -1,0 +1,21 @@
+\documentclass{article}
+
+\usepackage[latin1]{inputenc}
+\usepackage{tikz}
+
+% GNUPLOT required
+\begin{document}
+\pagestyle{empty}
+
+
+\begin{tikzpicture}
+    \draw (2, 2) rectangle (-2, -2);
+    \filldraw[fill=yellow,even odd rule]
+        (2, 2) arc (90:180:4) (-2, -2) arc (270:360:4)
+        (2, 0) arc (0:-360:2);
+    \filldraw[fill=white]
+        (2, 2) arc (90:180:4) (-2, -2) arc (270:360:4);
+    \draw (2, 2) (2, 0) arc (0:-360:2);
+\end{tikzpicture}
+
+\end{document}

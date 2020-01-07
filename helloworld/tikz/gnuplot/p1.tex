@@ -1,0 +1,24 @@
+\documentclass{article}
+
+\usepackage[latin1]{inputenc}
+\usepackage{tikz}
+
+% GNUPLOT required
+\begin{document}
+\pagestyle{empty}
+
+
+\begin{tikzpicture}
+    \begin{scope}[rotate=-45]
+        \draw (2, 2) rectangle (-2, -2);
+        \filldraw[fill=yellow,even odd rule]
+            (2, 2) arc (90:180:4) (-2, -2) arc (270:360:4)
+            (2, 0) arc (0:-360:2);
+        \filldraw[fill=white]
+            (2, 2) arc (90:180:4) (-2, -2) arc (270:360:4);
+        \draw (2, 2) (2, 0) arc (0:-360:2);
+    \end{scope}
+    \draw[->] (-4,0) -- (4,0) node[right] {$x$};
+\end{tikzpicture}
+
+\end{document}
