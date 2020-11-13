@@ -121,6 +121,9 @@ void test4() {
     for (container::reverse_iterator ii = c.rbegin(); ii != c.rend(); ++ii)
       cout << i2s_table[*ii] << " ";
     cout << endl;
+    for (auto v : c)
+      cout << i2s_table[v] << " ";
+    cout << endl;
   }
 }
 
