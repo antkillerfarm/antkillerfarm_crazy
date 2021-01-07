@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import codecs
-import pandas as pd  
+import pandas as pd
 import numpy as np
 
 def get_another_index_list(kw_index):
