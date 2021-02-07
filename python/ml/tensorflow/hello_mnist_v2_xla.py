@@ -4,6 +4,7 @@ import os
 import tensorflow as tf
 
 from tensorflow.python.client import device_lib
+from tensorflow.profiler.experimental import Profile
 
 #input("pid: " + str(os.getpid()) +", press enter after attached")
 #input("pid: " + str(os.getpid()) +", press enter after set breakpoints")
@@ -37,7 +38,8 @@ def test():
                 metrics=['accuracy'])
 
   if fit_flag:
-    model.fit(x_train, y_train, epochs=1)
+    with Profile(os.path.dirname(os.path.abspath(__file__)) + '/logdir_path'):
+      model.fit(x_train, y_train, epochs=1)
 
     model.evaluate(x_test,  y_test, verbose=2)
 
