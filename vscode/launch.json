@@ -8,7 +8,7 @@
             "name": "(gdb) 附加",
             "type": "cppdbg",
             "request": "attach",
-            "program": "/home/tangjing/anaconda3/bin/python",
+            "program": "/home/ubuser/anaconda3/bin/python3.8",
             "processId": "${command:pickProcess}",
             "MIMode": "gdb",
             "setupCommands": [
@@ -19,7 +19,7 @@
                 }
             ],
             "sourceFileMap": {
-                "/proc/self/cwd/tensorflow": "${workspaceFolder}/tensorflow"
+                "/proc/self/cwd/tensorflow":"${workspaceFolder}/tensorflow",
             }
         },
         {
@@ -27,7 +27,13 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "env": {
+                "TF_CPP_MIN_VLOG_LEVEL": "0",
+                //"TF_XLA_FLAGS": "--tf_xla_enable_xla_devices",
+                "TF_XLA_FLAGS": "--tf_xla_auto_jit=2 --tf_xla_cpu_global_jit",
+                "XLA_FLAGS": "--xla_hlo_profile --xla_dump_to=/home/ubuser/my/antkillerfarm_crazy/python/ml/tensorflow/dump --xla_dump_hlo_as_text --xla_dump_hlo_as_dot --xla_dump_hlo_as_html --xla_dump_hlo_as_proto",
+            }
         }
     ]
 }
