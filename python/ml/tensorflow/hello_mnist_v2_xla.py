@@ -11,6 +11,7 @@ from tensorflow.profiler.experimental import Profile
 
 #print(device_lib.list_local_devices())
 fit_flag = True
+current_dir = os.path.dirname(os.path.abspath(__file__))
 
 def test():
   mnist = tf.keras.datasets.mnist
@@ -38,7 +39,7 @@ def test():
                 metrics=['accuracy'])
 
   if fit_flag:
-    with Profile(os.path.dirname(os.path.abspath(__file__)) + '/logdir_path1'):
+    with Profile(current_dir + '/logdir_path1'):
       model.fit(x_train, y_train, epochs=1)
 
     model.evaluate(x_test,  y_test, verbose=2)
@@ -138,7 +139,7 @@ def test3():
 
   (x_train, _), (x_test, _) = mnist.load_data()
   x_train, x_test = x_train / 255.0, x_test / 255.0
-  with Profile(os.path.dirname(os.path.abspath(__file__)) + '/logdir_path1'):
+  with Profile(current_dir + '/logdir_path1'):
     res = train_one_step(x_train[0:100], x_train[100:200], x_train[200:300])
 
 #test()
