@@ -1,9 +1,10 @@
 #include <iostream>
 #include <iterator>
 #include <tuple>
+#include <set>
 #include <utility>
 #include <vector>
-#include<string>
+#include <string>
 #include <map>
 #include <numeric>
 #include <algorithm>
@@ -64,10 +65,22 @@ void test4()
   std::cout << a << "," << str << "," << str2 << std::endl;
 }
 
+void test5()
+{
+  std::set<int> s;
+  s.insert(1);
+  s.insert(2);
+  s.insert(3);
+  s.insert(1);
+  std::cout << "Count of 1 ：" << s.count(1) << std::endl;
+  std::cout << "Count of 4 ：" << s.count(4) << std::endl;
+}
+
 int main()
 {
   test1();
   test2();
   test3();
   test4();
+  test5();
 }
