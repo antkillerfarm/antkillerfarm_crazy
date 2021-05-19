@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-import sys
 import os
-import fnmatch
+from markdown_toclify import markdown_toclify
 
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src_dir = root_dir + "/src"
@@ -30,17 +29,20 @@ def get_md_blocks(file):
         lines = fhndl.readlines()
         lines_out = []
         status = BLOCK_NONE
-        for line in lines:
+        for index, line in enumerate(lines):
             if (status == BLOCK_NONE):
                 if (line.strip() == "/**"):
                     status = BLOCK_START
             else: # status == BLOCK_START
-                if (line.lstrip().startswith("* ")):
-                    lines_out.append(line.lstrip()[2:])
-                elif (line.strip() == "*/"):
+                if (line.strip() == "*/"):
                     status = BLOCK_NONE
                     blocks.append(lines_out.copy())
                     lines_out = []
+                elif (line.lstrip().startswith("*")):
+                    if (line.lstrip().startswith("*\n")):
+                        lines_out.append("\n")
+                    else:
+                        lines_out.append(line.lstrip()[2:])
                 else:
                     status = BLOCK_NONE
                     lines_out = []
@@ -60,7 +62,6 @@ for index, line in enumerate(lines):
     if line.find("{DOCS}") != -1:
         # new_lines[index] = new_lines[index].replace('{DOCS}', '{DOCS1}')
         del new_lines[index + offset]
-        # offset -= 1
         for blocks in all_blocks:
             for line in blocks:
                 new_lines.insert(index + offset, line)
@@ -72,4 +73,7 @@ for index, line in enumerate(lines):
 with open(root_dir + md_file, mode='w',newline='\n', encoding='UTF-8') as fhndl:
     fhndl.writelines(new_lines)
 
-print(root_dir)
+cont = markdown_toclify(input_file=root_dir + md_file)
+
+with open(root_dir + md_file, mode='w',newline='\n', encoding='UTF-8') as fhndl:
+    fhndl.write(cont)
