@@ -15,8 +15,8 @@ def find_files_by_pattern(pattern, path='.'):
     paths.sort()
     return paths
 
-root_dir = 'D:/jing.tang/TEST/SW/nn1/ovxlib/src/ops'
-text_file = 'D:/jing.tang/TEST/SW/nn1/ovxlib/src/Android.mk'
+root_dir = '/home/1'
+text_file = '/home/2'
 
 with open(text_file) as fhndl:
     content = fhndl.read()
