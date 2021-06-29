@@ -43,6 +43,3 @@ with tf.Session() as sess:
     out_mean2 = tf.transpose(out_mean1, perm=[2, 0, 1])
     sess.run(out_mean2)
     np.savetxt("out_mean2.tensor", out_mean2.eval().flatten(), fmt='%f')
-
-
-

@@ -40,18 +40,28 @@ def output_img(img, color):
             out[j][i][0] = color[pixel_class][0]
             out[j][i][1] = color[pixel_class][1]
             out[j][i][2] = color[pixel_class][2]
-    cv2.imwrite('./2.jpg', out)
+    return out
 
-path='./'
-filename='deconv6_0_0_209_out0.tensor'
+path='/home/ubuser/my/work/pic/'
+filename='ref_output.txt'
+origin_img = 'city_513x513.jpg'
+out_img = 'out.jpg'
+combine_img = 'ref_combine.jpg'
 
-color = generate_color(19)
+color = generate_color(21)
 
 #img = cv2.imread("./1.jpg")
 
 n1 = np.loadtxt(path + filename, dtype=np.float32)
-n2 = n1.reshape((19,512,1024))
+n2 = n1.reshape((513, 513))
 
-n3 = find_max_class(n2)
-output_img(n3, color)
+#n2 = n1.reshape((21, 513, 513))
+#n3 = find_max_class(n2)
 
+out = output_img(n2, color)
+cv2.imwrite(path + out_img, out)
+ 
+img1 = cv2.imread(path + origin_img)
+img2 = cv2.imread(path + out_img)
+combine = cv2.addWeighted(img1, 0.5, img2, 0.5, 0)
+cv2.imwrite(path + combine_img, combine)
