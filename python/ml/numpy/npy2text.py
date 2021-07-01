@@ -1,7 +1,6 @@
 import os
 import numpy as np
 
-
 def npy2text():
     src_path = "/home/ubuser/my/work/onnx_models/onnx_q_ops_test/q_linear_conv/"
     for src_file in os.listdir(src_path):
