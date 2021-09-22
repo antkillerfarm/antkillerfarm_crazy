@@ -5,10 +5,12 @@ https://tensorflow.google.cn/xla/tutorials/autoclustering_xla
 
 import os
 input("pid: " + str(os.getpid()) +", press enter after attached")
+import numpy as np
 import tensorflow as tf
 #input("pid: " + str(os.getpid()) +", press enter after set breakpoints")
 tf.keras.backend.clear_session()
-tf.config.optimizer.set_jit(False)
+tf.config.optimizer.set_jit(True) # Start with XLA disabled.
+tf.debugging.set_log_device_placement(True)
 
 MODEL_FILE = "cifar.json"
 MODEL_DATA_FILE = "cifar.h5"
@@ -33,37 +35,38 @@ y_test = y_test[0:1,:]
 
 def generate_model():
   return tf.keras.models.Sequential([
-    tf.keras.layers.Conv2D(32, (3, 3), padding='same', input_shape=x_train.shape[1:]),
+    tf.keras.layers.Conv2D(16, (3, 3), padding='same', input_shape=x_train.shape[1:]),
     tf.keras.layers.Activation('relu'),
-    tf.keras.layers.Conv2D(32, (3, 3)),
-    tf.keras.layers.Activation('relu'),
-    tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
-    #tf.keras.layers.Dropout(0.25),
+    tf.keras.layers.Conv2D(8, (3, 3)),
+    # tf.keras.layers.Activation('relu'),
+    # tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+    # tf.keras.layers.Dropout(0.25),
 
-    tf.keras.layers.Conv2D(64, (3, 3), padding='same'),
-    tf.keras.layers.Activation('relu'),
-    tf.keras.layers.Conv2D(64, (3, 3)),
-    tf.keras.layers.Activation('relu'),
-    tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
-    #tf.keras.layers.Dropout(0.25),
+    # tf.keras.layers.Conv2D(64, (3, 3), padding='same'),
+    # tf.keras.layers.Activation('relu'),
+    # tf.keras.layers.Conv2D(64, (3, 3)),
+    # tf.keras.layers.Activation('relu'),
+    # tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+    # tf.keras.layers.Dropout(0.25),
 
     tf.keras.layers.Flatten(),
-    tf.keras.layers.Dense(512),
-    tf.keras.layers.Activation('relu'),
-    #tf.keras.layers.Dropout(0.5),
+    # tf.keras.layers.Dense(512),
+    # tf.keras.layers.Activation('relu'),
+    # tf.keras.layers.Dropout(0.5),
     tf.keras.layers.Dense(10),
     tf.keras.layers.Activation('softmax')
   ])
 
 def compile_model(model):
   opt = tf.keras.optimizers.SGD(lr=0.0001)
+  # opt = tf.keras.optimizers.RMSprop(lr=0.0001, decay=1e-6)
   model.compile(loss='categorical_crossentropy',
                 optimizer=opt,
-                metrics=['mse'])
+                metrics=['accuracy'])
   return model
 
 def train_model(model, x_train, y_train, x_test, y_test, epochs=1):
-  model.fit(x_train, y_train, batch_size=1, epochs=epochs, validation_data=(x_test, y_test), shuffle=False)
+  model.fit(x_train, y_train, batch_size=1, epochs=epochs, validation_data=(x_test, y_test), shuffle=True)
 
 def warmup(model, x_train, y_train, x_test, y_test):
   # Warm up the JIT, we do not wish to measure the compilation time.
@@ -79,12 +82,23 @@ else:
   model = generate_model()
 
 model = compile_model(model)
+model.summary()
 
-# warmup(model, x_train, y_train, x_test, y_test)
-# initial_weights = model.get_weights()
-# train_model(model, x_train, y_train, x_test, y_test)
-# model.set_weights(initial_weights)
-train_model(model, x_test, y_test, x_test, y_test)
+DUMP_DIR = "2"
+
+def dump_weights(model, prefix):
+  if not os.path.isdir(DUMP_DIR): os.makedirs(DUMP_DIR)
+  if not os.path.isdir(DUMP_DIR + "/" + prefix): os.makedirs(DUMP_DIR + "/" + prefix)
+  for layer in model.layers:
+    for weight in layer.weights:
+      file_name = DUMP_DIR + "/" + prefix + "/weight_" + weight.name.replace("/", "_").replace(":", "_") + ".txt"
+      print(weight.name, weight.shape, " saved in: ", file_name)
+      # print(weight)
+      np.savetxt(file_name, weight.numpy().flatten(), fmt='%.8f')
+
+dump_weights(model, "before")
+#warmup(model, x_train, y_train, x_test, y_test)
+train_model(model, x_train, y_train, x_test, y_test, epochs=1)
 
 if not os.path.exists(MODEL_FILE):
   json_string = model.to_json()
@@ -93,3 +107,4 @@ if not os.path.exists(MODEL_FILE):
   print("RRR : save model.")
 
 print("RRR : job finish.")
+dump_weights(model, "after")
