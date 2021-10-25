@@ -12,7 +12,7 @@ EPOCH = 1
 BATCH_SIZE = 50
 LR = 0.001
 DOWNLOAD_MNIST = True
-if_use_gpu = True
+if_use_gpu = False
 
 # 获取训练集dataset
 training_data = torchvision.datasets.MNIST(
@@ -112,3 +112,8 @@ test_output = cnn(test_x)
 pred_y = torch.max(test_output, 1)[1].data.squeeze()
 accuracy = sum(pred_y == test_y) / (test_y.size(0) * 1.0)
 print('Test Acc: %.4f' % accuracy)
+
+PATH = './lenet.pth'
+torch.save(cnn.state_dict(), PATH) # save data only
+PATH = './lenet_all.pth'
+torch.save(cnn, PATH) # save both model and data
