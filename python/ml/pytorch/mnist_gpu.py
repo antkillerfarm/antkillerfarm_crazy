@@ -116,4 +116,6 @@ print('Test Acc: %.4f' % accuracy)
 PATH = './lenet.pth'
 torch.save(cnn.state_dict(), PATH) # save data only
 PATH = './lenet_all.pth'
-torch.save(cnn, PATH) # save both model and data
+dummy_input = torch.rand(1, 1, 28, 28)
+scripted_model = torch.jit.trace(cnn, dummy_input)
+scripted_model.save(PATH) # save both model and data
