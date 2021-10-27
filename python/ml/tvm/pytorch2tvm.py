@@ -27,19 +27,20 @@ class CNN(nn.Module):
         output = self.out(x)
         return output
 
-# model_quantized = torchvision.models.quantization.resnet18(pretrained=True, quantize=True)
-# dummy_input = torch.rand(1, 3, 224, 224)
-model_quantized = CNN()
-dummy_input = torch.rand(1, 1, 28, 28)
+model_quantized = torchvision.models.quantization.mobilenet_v2(pretrained=True, quantize=True)
+dummy_input = torch.rand(1, 3, 224, 224)
+# model_quantized = CNN()
+# dummy_input = torch.rand(1, 1, 28, 28)
 scripted_model = torch.jit.trace(model_quantized, dummy_input).eval()
 print(scripted_model)
 mod, params = relay.frontend.from_pytorch(scripted_model, [('input', dummy_input.shape)])
+print(mod.astext())
 
 target_string = "llvm -mtriple=x86_64-linux-gnu"              # linux host-triple
 with tvm.transform.PassContext(opt_level=3, disabled_pass=None):
     lib = relay.build(mod, target_string, params=params)      # no error #
 
-is_local = False
+is_local = True
 if is_local:
     ctx = tvm.cpu()
     mod = tvm.contrib.graph_executor.GraphModule(lib["default"](ctx))
