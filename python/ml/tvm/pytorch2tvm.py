@@ -46,7 +46,7 @@ else:
         model, shape_dict={"input": (1, 224, 224, 3)}
     )
 
-print(mod.astext())
+print(mod.astext(show_meta_data=False))
 
 target_string = "llvm -mtriple=x86_64-linux-gnu"              # linux host-triple
 with tvm.transform.PassContext(opt_level=3, disabled_pass=None):
