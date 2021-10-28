@@ -3,6 +3,7 @@ import torch.nn as nn
 import torchvision
 import tvm
 from tvm import relay
+import tflite
 
 class CNN(nn.Module):
     def __init__(self):
@@ -27,13 +28,24 @@ class CNN(nn.Module):
         output = self.out(x)
         return output
 
-model_quantized = torchvision.models.quantization.mobilenet_v2(pretrained=True, quantize=True)
-dummy_input = torch.rand(1, 3, 224, 224)
-# model_quantized = CNN()
-# dummy_input = torch.rand(1, 1, 28, 28)
-scripted_model = torch.jit.trace(model_quantized, dummy_input).eval()
-print(scripted_model)
-mod, params = relay.frontend.from_pytorch(scripted_model, [('input', dummy_input.shape)])
+is_pytorch = True
+if is_pytorch:
+    model_quantized = torchvision.models.quantization.mobilenet_v2(pretrained=True, quantize=True)
+    dummy_input = torch.rand(1, 3, 224, 224)
+    # model_quantized = CNN()
+    # dummy_input = torch.rand(1, 1, 28, 28)
+    scripted_model = torch.jit.trace(model_quantized, dummy_input)
+    # scripted_model.save("mobilenet_v2.pth")
+    scripted_model = scripted_model.eval()
+    # print(scripted_model)
+    mod, params = relay.frontend.from_pytorch(scripted_model, [('input', dummy_input.shape)])
+else:
+    tflite_model_buf = open("./mobilenet_v1_0.25_224_quant.tflite", "rb").read()
+    model = tflite.Model.GetRootAsModel(tflite_model_buf, 0)
+    mod, params = relay.frontend.from_tflite(
+        model, shape_dict={"input": (1, 224, 224, 3)}
+    )
+
 print(mod.astext())
 
 target_string = "llvm -mtriple=x86_64-linux-gnu"              # linux host-triple
