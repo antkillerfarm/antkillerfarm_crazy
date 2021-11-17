@@ -35,9 +35,9 @@ y_test = y_test[0:1,:]
 
 def generate_model():
   return tf.keras.models.Sequential([
-    tf.keras.layers.Conv2D(16, (3, 3), padding='same', input_shape=x_train.shape[1:]),
-    tf.keras.layers.Activation('relu'),
-    tf.keras.layers.Conv2D(8, (3, 3)),
+    tf.keras.layers.Conv2D(16, (3, 3), padding='same', input_shape=x_train.shape[1:], use_bias=False),
+    # tf.keras.layers.Activation('relu'),
+    # tf.keras.layers.Conv2D(8, (3, 3), use_bias=False),
     # tf.keras.layers.Activation('relu'),
     # tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
     # tf.keras.layers.Dropout(0.25),
@@ -53,7 +53,7 @@ def generate_model():
     # tf.keras.layers.Dense(512),
     # tf.keras.layers.Activation('relu'),
     # tf.keras.layers.Dropout(0.5),
-    tf.keras.layers.Dense(10),
+    tf.keras.layers.Dense(10, use_bias=False),
     tf.keras.layers.Activation('softmax')
   ])
 
@@ -62,6 +62,7 @@ def compile_model(model):
   # opt = tf.keras.optimizers.RMSprop(lr=0.0001, decay=1e-6)
   model.compile(loss='categorical_crossentropy',
                 optimizer=opt,
+                # run_eagerly=True,
                 metrics=['accuracy'])
   return model
 
@@ -82,23 +83,42 @@ else:
   model = generate_model()
 
 model = compile_model(model)
-model.summary()
 
-DUMP_DIR = "2"
+DUMP_DIR = "3"
 
-def dump_weights(model, prefix):
+def dump_tensors(tensors, prefix, tensors_name=None):
   if not os.path.isdir(DUMP_DIR): os.makedirs(DUMP_DIR)
   if not os.path.isdir(DUMP_DIR + "/" + prefix): os.makedirs(DUMP_DIR + "/" + prefix)
-  for layer in model.layers:
-    for weight in layer.weights:
-      file_name = DUMP_DIR + "/" + prefix + "/weight_" + weight.name.replace("/", "_").replace(":", "_") + ".txt"
-      print(weight.name, weight.shape, " saved in: ", file_name)
-      # print(weight)
-      np.savetxt(file_name, weight.numpy().flatten(), fmt='%.8f')
+  if (tensors_name == None):
+    ts_zip = zip(tensors, tensors)
+  else:
+    ts_zip = zip(tensors, tensors_name)
+  for tensor in ts_zip:
+    file_name = DUMP_DIR + "/" + prefix + "/" + tensor[1].name.replace("/", "_").replace(":", "_") + ".txt"
+    print(tensor[1].name, tensor[1].shape, " saved in: ", file_name)
+    if hasattr(tensor[0], "numpy"):
+      num = tensor[0].numpy()
+    else:
+      num = tensor[0]
+    np.savetxt(file_name, num.flatten(), fmt='%.8f')
 
-dump_weights(model, "before")
+weights = [weight for layer in model.layers for weight in layer.weights]
+dump_tensors(weights, "before")
+
+def get_weight_grad(model, inputs, outputs):
+  with tf.GradientTape() as tape:
+    pred = model(inputs)
+    loss = model.compiled_loss(tf.convert_to_tensor(outputs), pred, None,
+                                   regularization_losses=model.losses)
+  grad = tape.gradient(loss, model.trainable_weights)
+  return grad
+
 #warmup(model, x_train, y_train, x_test, y_test)
 train_model(model, x_train, y_train, x_test, y_test, epochs=1)
+model.summary()
+
+weight_grads = get_weight_grad(model, x_train, y_train)
+dump_tensors(weight_grads, "grads", model.trainable_weights)
 
 if not os.path.exists(MODEL_FILE):
   json_string = model.to_json()
@@ -106,5 +126,11 @@ if not os.path.exists(MODEL_FILE):
   model.save_weights(MODEL_DATA_FILE)
   print("RRR : save model.")
 
+dump_tensors(weights, "after")
+
+# outputs = [layer.output for layer in model.layers][1:] # all layer outputs except first (input) layer
+# functor = tf.keras.backend.function([model.input], outputs)
+# layer_outs = functor([x_train])
+# dump_tensors(layer_outs, "output", outputs)
+
 print("RRR : job finish.")
-dump_weights(model, "after")

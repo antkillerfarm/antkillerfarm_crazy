@@ -22,8 +22,17 @@ def run_subprocess(args, cwd=None, capture=False, shell=False, env={}):
     return completed_process
 
 def main():
-    args = ["ls -al ."]
-    run_subprocess(args, cwd=script_dir, shell=True)
+    # args = ["ls -al ."]
+    # run_subprocess(args, cwd=script_dir, shell=True)
+
+    # args = ["ls", "-al", "."]
+    # run_subprocess(args, cwd=script_dir, shell=False)
+
+    # args = ["ls -al . && ls"]
+    # run_subprocess(args, cwd=script_dir, shell=True)
+
+    args = ["ls -al .>1.txt"]
+    subprocess.call(args, cwd=script_dir, shell=True)
 
 if __name__ == "__main__":
     sys.exit(main())
