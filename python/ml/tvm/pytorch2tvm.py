@@ -1,3 +1,6 @@
+import os
+input("pid: " + str(os.getpid()) +", press enter after attached")
+
 import torch
 import torch.nn as nn
 import torchvision
