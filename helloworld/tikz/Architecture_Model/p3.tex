@@ -1,0 +1,67 @@
+\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{chains}
+\begin{document}
+
+\pgfdeclarelayer{background}
+\pgfsetlayers{background,main}
+
+\begin{tikzpicture}[
+	scale=0.75,
+	start chain=1 going below,
+	node distance=1mm,
+	host/.style={
+		scale=0.75,
+		on chain=1,
+		rectangle,
+		rounded corners,
+		draw=black, 
+		very thick,
+		text centered,
+		text width=6cm,
+		minimum height=12mm,
+		fill=blue!30
+		},
+	level/.style={
+		scale=1,
+		on chain=1,
+		minimum height=8mm,
+		text width=4.5cm,
+		text centered
+	},
+	every node/.style={font=\sffamily}
+]
+
+
+% Host Level
+\node [host] (Model) {ML Model(tflite, pytorch, ...)};
+\node [host] (Frontend) {TVM Frontend};
+\node [host] (Relay) {Relay Graph};
+\node [host] (Partition) {Graph Partition Passes(BYOC)};
+\node [host] (TIMVX) {TIM-VX};
+\node [host] (OpenVX) {VSI NPU Driver};
+\node [host] (Client) {TVM RPC Client};
+\node [level] (Host) {TVM Host};
+
+% Target Level
+\node [level, xshift=4cm, continue chain=going right] (Runtime) {TVM Runtime};
+\node [host, continue chain=going above] (Server) {TVM RPC Server};
+\node [host] (NBG) {VSI NBG Driver};
+
+\draw[->] (Client) -- node[above, scale=0.75] {NBG files} (Server);
+
+\begin{pgfonlayer}{background}
+    \path (Model.west |- Model.north)+(-0.5,0.3) node (a) {};
+    \path (Host.south -| Host.east)+(+0.5,-0.0) node (b) {};
+    \path[fill=yellow!20,rounded corners, draw=black!50, dashed]
+        (a) rectangle (b);
+
+    \path (NBG.west |- NBG.north)+(-0.5,0.3) node (a) {};
+    \path (Runtime.south -| Runtime.east)+(+0.5,-0.0) node (b) {};
+    \path[fill=yellow!20,rounded corners, draw=black!50, dashed]
+        (a) rectangle (b);
+\end{pgfonlayer}
+
+\end{tikzpicture}
+
+\end{document}

@@ -9,4 +9,4 @@ all: $(OBJS)
 	xelatex --enable-write18 --shell-escape $^
 
 clean:
-	rm *.aux *.log
+	rm *.aux *.log *.out *.nav *.snm *.toc
