@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass[convert=pdf2svg, multi=false]{standalone}
 \usepackage{tikz}
 \usetikzlibrary{chains}
 \begin{document}
@@ -7,11 +7,11 @@
 \pgfsetlayers{background,main}
 
 \begin{tikzpicture}[
-	scale=0.75,
+	scale=1.5,
 	start chain=1 going below,
 	node distance=1mm,
 	host/.style={
-		scale=0.75,
+		scale=1.5,
 		on chain=1,
 		rectangle,
 		rounded corners,
@@ -20,14 +20,31 @@
 		text centered,
 		text width=6cm,
 		minimum height=12mm,
-		fill=blue!30
+		fill=gray!30
 		},
 	level/.style={
-		scale=1,
+		scale=2,
 		on chain=1,
 		minimum height=8mm,
 		text width=4.5cm,
 		text centered
+	},
+	domain0/.style={
+		scale=1.5,
+		on chain=1,
+		rectangle,
+		rounded corners,
+		draw=black, 
+		very thick,
+		text centered,
+		text width=3cm,
+		minimum height=12mm,
+	},
+	vsi/.style={
+		fill=pink
+	},
+	tvm/.style={
+		fill=blue!30
 	},
 	every node/.style={font=\sffamily}
 ]
@@ -35,20 +52,20 @@
 
 % Host Level
 \node [host] (Model) {ML Model(tflite, pytorch, ...)};
-\node [host] (Frontend) {TVM Frontend};
-\node [host] (Relay) {Relay Graph};
-\node [host] (Partition) {Graph Partition Passes(BYOC)};
-\node [host] (TIMVX) {TIM-VX};
-\node [host] (OpenVX) {VSI NPU Driver};
-\node [host] (Client) {TVM RPC Client};
+\node [host, tvm] (Frontend) {TVM Frontend};
+\node [host, tvm] (Relay) {Relay Graph};
+\node [host, tvm] (Partition) {Graph Partition Passes(BYOC)};
+\node [host, vsi] (TIMVX) {TIM-VX};
+\node [host, vsi] (OpenVX) {VSI NPU Driver};
+\node [host, tvm] (Client) {TVM RPC Client};
 \node [level] (Host) {TVM Host};
 
 % Target Level
 \node [level, xshift=4cm, continue chain=going right] (Runtime) {TVM Runtime};
-\node [host, continue chain=going above] (Server) {TVM RPC Server};
-\node [host] (NBG) {VSI NBG Driver};
+\node [host, tvm, continue chain=going above] (Server) {TVM RPC Server};
+\node [host, vsi] (NBG) {VSI NBG Driver};
 
-\draw[->] (Client) -- node[above, scale=0.75] {NBG files} (Server);
+\draw[->] (Client) -- node[above, scale=1.5] {NBG files} (Server);
 
 \begin{pgfonlayer}{background}
     \path (Model.west |- Model.north)+(-0.5,0.3) node (a) {};
@@ -61,6 +78,10 @@
     \path[fill=yellow!20,rounded corners, draw=black!50, dashed]
         (a) rectangle (b);
 \end{pgfonlayer}
+
+\chainin (Model);
+\node [domain0, tvm, xshift=8cm, continue chain=going right] (TVM_Domain) {TVM Domain};
+\node [domain0, vsi, continue chain=going below] (VSI_Domain) {VSI Domain};
 
 \end{tikzpicture}
 
