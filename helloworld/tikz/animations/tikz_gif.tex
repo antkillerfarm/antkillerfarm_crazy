@@ -1,0 +1,61 @@
+% arara: pdflatex
+% arara: animate: {density: 160, delay: 8, loop: 0, options: ['-alpha', 'remove']}
+\documentclass[tikz, border=3.14mm]{standalone}
+\usetikzlibrary{arrows.meta,decorations.markings}
+
+\begin{document}
+\foreach \X in {0,0.05,...,1}
+{\begin{tikzpicture}
+ %
+ \path[use as bounding box](-0.2,-2) rectangle (4.2,3.1);
+ \draw[line width=4mm,line cap=round,green!80!black!70!blue] (0,2) -- (0,3);
+ \draw[line width=4mm,green!20!black,
+ dash pattern=on 8pt off 7pt on 3pt off 8pt] (0,2.2) -- (0,2.8);
+ %
+ \draw[line width=4mm,line cap=round,green!20!black,Butt Cap-] (0,0) --
+ (0,1.6);
+ \draw[line width=4mm,green!80!black!70!blue,
+ dash pattern=on 8pt off 7pt on 3pt off 8pt] (0,0) -- (0,1.4);
+ %
+ \draw[line width=4mm,line cap=round,red,Butt Cap-] (1,1.1) --
+ (1,1.6);
+ \draw[line width=4mm,orange] (1,1.1) -- (1,1.3);
+ %
+ \draw[line width=1.5mm,orange!50!yellow,rounded corners=5mm,-Triangle,
+ postaction={decorate,decoration={markings, mark=at position \X with {%
+ \coordinate (first);
+ }}},shorten >=10mm] 
+ (0,0) -- (0,-1.5) -- (4,-1.5) --  (4,1.8);
+ %
+ \draw[line width=1.5mm,orange!50!yellow,rounded corners=5mm,-Triangle,
+ postaction={decorate,decoration={markings, mark=at position \X with {%
+ \coordinate (second);
+ }}},shorten >=5mm] 
+ (1,1) -- (1,0) --  (3.14,0);
+ %
+ \begin{scope}[xshift=3cm]
+  \draw[line width=4mm,line cap=round,green!20!black,Butt Cap-] (0,0) --
+ (0,1.6);
+ \draw[line width=4mm,green!80!black!70!blue,
+ dash pattern=on 8pt off 7pt on 3pt off 8pt] (0,0) -- (0,1.4);
+ %
+ \draw[line width=4mm,line cap=round,red,Butt Cap-] (1,1.1) --
+ (1,1.6);
+ \draw[line width=4mm,orange] (1,1.1) -- (1,1.3);
+ \end{scope}
+ %
+ \begin{scope}[shift={(first)}]
+  \draw[line width=4mm,line cap=round,cyan,-Butt Cap] (0,-0.6) --
+ (0,0);
+ \draw[line width=4mm,orange] (0,-0.15) -- (0,0);
+ \draw[line width=4mm,green!20!black] (0,-0.25) -- (0,-0.15);
+ \end{scope}
+ %
+ \begin{scope}[shift={(second)}]
+  \draw[line width=4mm,red,line cap=round,red,Butt Cap-] (0,0.1) -- (0,-1);
+  \draw[line width=4mm,red!50!black,
+  dash pattern=on 3pt off 7pt on 8pt off 5pt on 3pt] (0,0) -- (0,-0.9);
+ \end{scope}
+\end{tikzpicture}
+}   
+\end{document}
