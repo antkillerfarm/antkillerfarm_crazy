@@ -1,20 +1,24 @@
-\documentclass{article}
-
-\usepackage{tikz}
+% arara: pdflatex
+% arara: animate: {density: 240, delay: 60, loop: 0, options: ['-alpha', 'remove']}
+\documentclass[tikz, border=3.14mm]{standalone}
+\usetikzlibrary{arrows.meta,decorations.markings}
 \usepackage{ifthen}
 \usetikzlibrary{math}
+
 \begin{document}
-\pagestyle{empty}
 
 \pgfdeclarelayer{background}
 \pgfsetlayers{background,main}
 
+\foreach \Y in {1,...,3}
+    \foreach \X in {1,...,3}
+{
 \begin{tikzpicture}[draw=black!50]
 \tikzstyle{neuron}=[rectangle, draw=black, fill=black!25, minimum size=10pt]
 \tikzstyle{input neuron}=[neuron, fill=green!50];
-\tikzstyle{output neuron}=[neuron, fill=blue!50];
+\tikzstyle{output neuron}=[neuron, fill=blue];
 \tikzstyle{kernel neuron}=[neuron, fill=red!50];
-\tikzstyle{kline} = [red, thick]
+\tikzstyle{kline} = [black, thick]
 
 % Draw the input layer nodes
 \tikzmath{
@@ -22,8 +26,8 @@
     \inputsize = 10;
     \outputsize = 8;
     \kernelsize = 3;
-    \xstart = 1;
-    \ystart = 0;
+    \xstart = \X - 1;
+    \ystart = \Y - 1;
     \xend = \xstart + \outputsize + 1;
     \yend = \ystart + \outputsize + 1;
     int \bxstart, \bystart, \bxend, \byend;
@@ -46,12 +50,7 @@
 
 \foreach \x in {1,...,\kernelsize}
     \foreach \y in {1,...,\kernelsize}
-        \node[kernel neuron, xshift=7cm] (K-\x-\y) at (\x * \scalenn, -\y * \scalenn) {};
-
-\draw [kline] (I-\bxstart-\bystart.north west) -- (K-1-1.north west);
-\draw [kline] (I-\bxend-\bystart.north east) -- (K-1-1.north east);
-\draw [kline] (I-\bxstart-\byend.south west) -- (K-1-1.south west);
-\draw [kline] (I-\bxend-\byend.south east) -- (K-1-1.south east);
+        \node[kernel neuron, xshift=7cm, yshift=-1cm] (K-\x-\y) at (\x * \scalenn, -\y * \scalenn) {};
 
 \node [scale=0.5, xshift=13.5cm, yshift=-7cm](LegendTable) {
     \begin{tabular}{l|l} 
@@ -63,14 +62,19 @@
     \end{tabular}
 };
 
+\draw [kline] (I-\bxstart-\bystart.north west) -- (K-\X-\Y.north west);
+\draw [kline] (I-\bxend-\bystart.north east) -- (K-\X-\Y.north east);
+\draw [kline] (I-\bxstart-\byend.south west) -- (K-\X-\Y.south west);
+\draw [kline] (I-\bxend-\byend.south east) -- (K-\X-\Y.south east);
+
 \begin{pgfonlayer}{background}
     % Compute a few helper coordinates
     \path (I-1-1.west |- I-1-1.north)+(-0.3,0.3) node (a) {};
-    \path (I-1-1.west |- I-1-1.north)+(+9,-4.3) node (b) {};
+    \path (I-1-1.west |- I-1-1.north)+(+8.5,-4.3) node (b) {};
     \path[fill=yellow!20,rounded corners, draw=black!50, dashed]
         (a) rectangle (b);
 \end{pgfonlayer}
 
 \end{tikzpicture}
-% End of code
+}
 \end{document}
