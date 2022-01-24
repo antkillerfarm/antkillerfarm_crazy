@@ -86,11 +86,11 @@
 
 \draw [->, kline] (8, -5) -- node[scale=0.5, anchor=north] {Conv2D} (9, -5) ;
 
-\foreach \x in {1,...,\outputsize}
-    \foreach \y in {1,...,\inputsize} {
+\foreach \x in {1,...,\inputsize}
+    \foreach \y in {1,...,\outputsize} {
         \tikzmath{
             real \bshifta;
-            \bshifta = -1 * \x;
+            \bshifta = -1 * \x + 0.5;
         }
         \node[kernel neuron, xshift=10cm, yshift=\bshifta cm] () at (-\y * 0.1, -\y * 0.1) {};
     };
@@ -109,11 +109,11 @@
 
 \draw [->, kline] (15, -5) -- node[scale=0.5, anchor=north] {Transpose} (16, -5) ;
 
-\foreach \x in {1,...,\inputsize}
-    \foreach \y in {1,...,\outputsize} {
+\foreach \x in {1,...,\outputsize}
+    \foreach \y in {1,...,\inputsize} {
         \tikzmath{
             real \bshifta;
-            \bshifta = -1 * \x + 0.5;
+            \bshifta = -1 * \x;
         }
         \node[kernel neuron, xshift=17cm, yshift=\bshifta cm] () at (-\y * 0.1, -\y * 0.1) {};
     };
