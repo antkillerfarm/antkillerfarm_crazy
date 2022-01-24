@@ -41,10 +41,21 @@
             real \bshifta;
             \bshifta = -1 * \x - 4.5;
         }
-        \node[kernel neuron, xshift=2cm, yshift=\bshifta cm] () at (-\y * 0.1, -\y * 0.1) {};
+        \node[kernel neuron, xshift=0cm, yshift=\bshifta cm] () at (-\y * 0.1, -\y * 0.1) {};
     };
 
-\draw [->, kline] (2.5, -6.5) -- node[scale=0.5, anchor=north] {Transpose} (3.5, -6.5);
+\draw [->, kline] (0.5, -6.5) -- node[scale=0.5, anchor=north] {Transpose} (4, -6.5);
+
+\node [scale=0.5, xshift=5cm, yshift=-15cm]() {
+    \begin{tabular}{l|l} 
+     & \textbf{[Output Channel,} \\
+     & \textbf{Input Channel,} \\
+    \textbf{Name} & \textbf{Height, Width]} \\
+    \hline
+    Kernel(red) before Transpose & [3, 4, 3, 3] \\
+    Kernel(red) after Transpose & [4, 3, 3, 3] \\
+    \end{tabular}
+};
 
 \foreach \x in {1,...,\inputsize}
     \foreach \y in {1,...,\outputsize} {
@@ -59,6 +70,17 @@
 
 \node[output neuron, xshift=4cm, yshift=-2.5 cm] () at (0, 0) {};
 
+\node [scale=0.5, xshift=10cm, yshift=-7.5cm]() {
+    \begin{tabular}{l|l} 
+     & \textbf{[Batch, Channel,} \\
+    \textbf{Name} & \textbf{Height, Width]} \\
+    \hline
+    Output Gradient(blue) before Pad & [2, 3, 8, 8] \\
+    Pad([left, right, top, bottom]) & [2, 2, 2, 2] \\
+    Output Gradient(blue) after Pad & [2, 3, 12, 12] \\
+    \end{tabular}
+};
+
 \draw [->, kline] (4.5, -2.5) -- node[scale=0.5, anchor=north] {} (5.5, -2.5);
 
 \node[pad output neuron, xshift=6cm, yshift=-2.5 cm] () at (0, 0) {};
@@ -71,6 +93,14 @@
 \node[kline, scale=0.5, xshift=16cm, yshift=-11 cm] (A) at (0, 0) {Rotate $180^{\circ}$};
 
 \draw [->, kline] (5.5, -6.5) -- node[scale=0.5, anchor=north] {Reverse} (9, -6.5);
+
+\node [scale=0.5, xshift=14.5cm, yshift=-14cm]() {
+    \begin{tabular}{l} 
+    Rotate $180^{\circ}$ equivalent \\
+    Reverse on both Height and Width dims. \\
+    \end{tabular}
+
+};
 
 \foreach \bn in {1,...,\batchsize}
     \foreach \x in {1,...,\outputsize} {
@@ -90,6 +120,20 @@
         \node[kernel neuron, xshift=10cm, yshift=\bshifta cm] () at (-\y * 0.1, -\y * 0.1) {};
     };
 
+\draw [->, kline] (11, -5) -- node[scale=0.5, anchor=north] {Conv2D} (12, -5);
+
+\node [scale=0.5, xshift=27cm, yshift=-14cm]() {
+    \begin{tabular}{l|l} 
+     & \textbf{[Batch, Channel,} \\
+    \textbf{ConvBackpropInput} & \textbf{Height, Width]} \\
+    \hline
+    Output Gradient(blue) as Conv2D's Input & [2, 3, 12, 12] \\
+    Kernel(red) as Conv2D's Kernel & \\
+    ([Output Channel, Input Channel, Height, Width]) & [4, 3, 3, 3] \\
+    Input Gradient(green) as Conv2D's Output & [2, 4, 10, 10] \\
+    \end{tabular}
+};
+
 \foreach \x in {1,...,\batchsize}
     \foreach \bn in {1,...,\inputsize} {
         \tikzmath{
@@ -98,8 +142,6 @@
         }
         \node[input neuron, xshift=14cm, yshift = \bshifta cm] () at (-\bn * 0.2, -\bn * 0.2) {};
     };
-
-\draw [->, kline] (11, -5) -- node[scale=0.5, anchor=north] {Conv2D} (12, -5);
 
 \end{tikzpicture}
 % End of code
