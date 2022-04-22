@@ -9,7 +9,7 @@ License: this software is in the public domain.
 */
 
 #include <gtk/gtk.h>
-#include <libappindicator/app-indicator.h>
+#include <libayatana-appindicator/app-indicator.h>
 #include <glibtop.h>
 #include <glibtop/netload.h>
 #include <glibtop/netlist.h>

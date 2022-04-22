@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-g -Wall -Wfatal-errors -std=c99 $(shell pkg-config --cflags --libs gtk+-3.0 appindicator3-0.1 libgtop-2.0)
+CFLAGS=-g -Wall -Wfatal-errors -std=c99 $(shell pkg-config --cflags --libs gtk+-3.0 ayatana-appindicator3-0.1 libgtop-2.0)
 
 all: indicator-netspeed
 
