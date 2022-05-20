@@ -101,6 +101,7 @@ def test_max_pool_grad_with_overlap():
     scatter = tf.reshape(scatter, [1, 4, 5, 1])
     print(scatter)
 
+
 def test_max_pool_grad_with_overlap2():
     input = tf.constant([7, 2, 5, 3, 8, 3, 8, 9, 3, 4,
                          1, 5, 7, 5, 6, 0, 6, 2, 10, 2]
@@ -122,4 +123,58 @@ def test_max_pool_grad_with_overlap2():
     scatter = tf.reshape(scatter, [1, 4, 5, 1])
     print(scatter)
 
-test_max_pool_grad_with_overlap2()
+
+def test_max_pool_grad_multi_channel():
+    input = tf.constant([7, 2, 5, 3, 8, 3, 8, 9, 3, 4,
+                         1, 5, 7, 5, 6, 0, 6, 2, 10, 2,
+                         7, 2, 5, 3, 8, 3, 8, 9, 3, 4,
+                         1, 5, 7, 5, 6, 0, 6, 2, 10, 2]
+                        )
+    input = tf.reshape(input, [1, 2, 4, 5])
+    input = tf.transpose(input, [0, 2, 3, 1])
+    ksize = [2, 3]
+    strides = [2, 2]
+    padding = "VALID"
+
+    output, argmax = tf.nn.max_pool_with_argmax(
+        input, ksize, strides, padding)
+    print(argmax)
+
+    updates = tf.constant([2, 2, 6, 6, 3, 3, 1, 1])
+    # updates = tf.reshape(updates, [1, 2, 2, 1])
+    argmax = tf.reshape(argmax, [8, 1])
+    shape = tf.constant([40], tf.int64)
+    scatter = tf.scatter_nd(argmax, updates, shape)
+    scatter = tf.reshape(scatter, [1, 4, 5, 2])
+    print(scatter)
+
+
+def test_max_pool_grad_multi_batch():
+    input = tf.constant([7, 2, 5, 3, 8, 3, 8, 9, 3, 4,
+                         1, 5, 7, 5, 6, 0, 6, 2, 10, 2,
+                         7, 2, 5, 3, 8, 3, 8, 9, 3, 4,
+                         1, 5, 7, 5, 6, 0, 6, 2, 10, 2,
+                         7, 2, 5, 3, 8, 3, 8, 9, 3, 4,
+                         1, 5, 7, 5, 6, 0, 6, 2, 10, 2,
+                         7, 2, 5, 3, 8, 3, 8, 9, 3, 4,
+                         1, 5, 7, 5, 6, 0, 6, 2, 10, 2]
+                        )
+    input = tf.reshape(input, [2, 2, 4, 5])
+    input = tf.transpose(input, [0, 2, 3, 1])
+    ksize = [2, 3]
+    strides = [2, 2]
+    padding = "VALID"
+
+    output, argmax = tf.nn.max_pool_with_argmax(
+        input, ksize, strides, padding, include_batch_in_index=True)
+    print(argmax)
+
+    updates = tf.constant([2, 2, 6, 6, 3, 3, 1, 1, 2, 2, 6, 6, 3, 3, 1, 1])
+    # updates = tf.reshape(updates, [1, 2, 2, 1])
+    argmax = tf.reshape(argmax, [16, 1])
+    shape = tf.constant([80], tf.int64)
+    scatter = tf.scatter_nd(argmax, updates, shape)
+    scatter = tf.reshape(scatter, [2, 4, 5, 2])
+    print(scatter)
+
+test_max_pool_grad_multi_batch()
