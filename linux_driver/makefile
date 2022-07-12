@@ -1,6 +1,6 @@
 simple-lkm-module:
-	make -C /usr/src/linux-headers-`uname -r` SUBDIRS=$(PWD)/simple-lkm modules
+	make -C /usr/src/linux-headers-`uname -r` M=`pwd`/simple-lkm modules
 
 simple-vfs-module:
-	make -C /usr/src/linux-headers-`uname -r` SUBDIRS=$(PWD)/simple-vfs modules
+	make -C /usr/src/linux-headers-`uname -r` M=`pwd`/simple-vfs modules
 
