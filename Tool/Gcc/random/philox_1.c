@@ -122,7 +122,7 @@ void uniform_transform()
 
 void gaussian_transform()
 {
-    //Boxer-Muller transform
+    //Box-Muller transform
     uint32_t i;
     const float epsilon = 1.0e-7f;
     float f1, f2;
