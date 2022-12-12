@@ -18,11 +18,13 @@ def find_files_by_pattern(pattern, path='.'):
 root_dir = "/home"
 p1 = "/home/work/tensorflow"
 p2 = "/home/work/xla/tensorflow"
+p3 = "*.bzl"
 
-for path in find_files_by_pattern('BUILD.bazel', path=root_dir):
+for path in find_files_by_pattern(p3, path=root_dir):
     if (os.path.islink(path)):
         link_path = os.readlink(path)
         if (link_path.count(p1) > 0):
+            print(path)
             link_path = link_path.replace(p1, p2)
             os.remove(path)
             os.symlink(link_path, path)
