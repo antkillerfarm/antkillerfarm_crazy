@@ -177,4 +177,4 @@ def test_max_pool_grad_multi_batch():
     scatter = tf.reshape(scatter, [2, 4, 5, 2])
     print(scatter)
 
-test_max_pool_grad_multi_batch()
+test_max_pool_grad_with_overlap2()
