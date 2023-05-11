@@ -5,7 +5,7 @@
 #include <stdarg.h>
 #include <vector>
 
-int MYLOG(const char *fmt, ...)
+int my_log(const char *fmt, const char* func, int line, ...)
 {
     int bytes = 0;
     if (const char *env_p = std::getenv("ENABLE_MYLOG"))
@@ -14,9 +14,9 @@ int MYLOG(const char *fmt, ...)
         {
             va_list arg_ptr;
             char format[256];
-            sprintf(format, "[%s:%d] %s \n", __FUNCTION__, __LINE__, fmt);
+            sprintf(format, "[%s:%d] %s \n", func, line, fmt);
 
-            va_start(arg_ptr, fmt);
+            va_start(arg_ptr, line);
             bytes = vprintf(format, arg_ptr);
             va_end(arg_ptr);
         }
@@ -24,6 +24,9 @@ int MYLOG(const char *fmt, ...)
 
     return bytes;
 }
+
+#define MYLOG(fmt, ...) \
+  my_log("[%s:%d]" fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
 
 std::vector<int> f1() {
     std::vector<int> v;
@@ -51,7 +54,7 @@ std::condition_variable cv;
 
 void t1() {
     {
-        std::lock_guard<std::mutex> lk(mtx);
+        std::unique_lock<std::mutex> lk(mtx);
         std::cout << "t1 0" << std::endl;
     }
     std::cout << "t1 0A" << std::endl;
@@ -63,9 +66,8 @@ void t1() {
         std::cout << "t1 1A" << std::endl;
         cv.wait(lk);
         std::cout << "t1 1" << std::endl;
-        lk.unlock();
-        cv.notify_one();
     }
+    cv.notify_one();
 }
 
 void t2() {
@@ -74,16 +76,13 @@ void t2() {
         std::cout << "t2 0" << std::endl;
         cv.wait(lk);
         std::cout << "t2 1" << std::endl;
-        lk.unlock();
-        cv.notify_one();
     }
-
+    cv.notify_one();
     {
         std::unique_lock<std::mutex> lk(mtx);
         std::cout << "t2 2" << std::endl;
         cv.wait(lk);
         std::cout << "t2 3" << std::endl;
-        lk.unlock();
     }
 }
 
@@ -100,7 +99,7 @@ void test2() {
 
 int main()
 {
-    // test1();
-    test2();
+    test1();
+    // test2();
     return 0;
 }
