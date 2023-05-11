@@ -5,7 +5,7 @@
 #include <stdarg.h>
 #include <vector>
 
-int my_log(const char *fmt, const char* func, int line, ...)
+int my_log(const char* func, int line, const char *fmt, ...)
 {
     int bytes = 0;
     if (const char *env_p = std::getenv("ENABLE_MYLOG"))
@@ -16,7 +16,7 @@ int my_log(const char *fmt, const char* func, int line, ...)
             char format[256];
             sprintf(format, "[%s:%d] %s \n", func, line, fmt);
 
-            va_start(arg_ptr, line);
+            va_start(arg_ptr, fmt);
             bytes = vprintf(format, arg_ptr);
             va_end(arg_ptr);
         }
@@ -26,7 +26,7 @@ int my_log(const char *fmt, const char* func, int line, ...)
 }
 
 #define MYLOG(fmt, ...) \
-  my_log("[%s:%d]" fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
+  my_log(__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
 
 std::vector<int> f1() {
     std::vector<int> v;
