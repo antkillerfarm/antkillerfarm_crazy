@@ -1,11 +1,11 @@
 // This program implements a vector addition using OpenCL
 // System includes
 #include <stdio.h>
-#include <stdlin.h>
+#include <stdlib.h>
 // OpenCL includes
 #include <CL/cl.h>
 // OpenCL kernel to perform an element-wise addition
-const char *programSouce = 
+const char *programSource = 
 "__kernel                                         \n"
 "void vecadd(__global int *A,                     \n"
 "            __global int *B,                     \n"
@@ -20,7 +20,7 @@ const char *programSouce =
 "}                                                \n"
 ;
 
-int main(){
+int main() {
   // This code executes on the OpenCL host
   // Elements in each array
   const int elements = 2048;
@@ -36,18 +36,20 @@ int main(){
     A[i] = i;
     B[i] = i;
   }
+
+  printf("CL program start...\n");
   // Use this to check the output of each API call
   cl_int status;
   // Get the first platforms
   cl_platform_id platform;
-  status = clGetPlatformIDs(1, &perform, NULL);
+  status = clGetPlatformIDs(1, &platform, NULL);
   // Get the first devices
   cl_device_id device;
   status = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
   // Create a context and associate it with the device
   cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, &status);
   // Create a command-queue and associate it with device
-  cl_command_queue cmdQueue = clCreateCommandQUeueWithProperties(context, device, 0, &status);
+  cl_command_queue cmdQueue = clCreateCommandQueueWithProperties(context, device, 0, &status);
   // Allocate two input buffers and one output buffer for the three vectors in the vector addition
   cl_mem bufA = clCreateBuffer(context, CL_MEM_READ_ONLY, datasize, NULL, &status);
   cl_mem bufB = clCreateBuffer(context, CL_MEM_READ_ONLY, datasize, NULL, &status);
@@ -55,6 +57,7 @@ int main(){
   // Write data from the input arrays to the buffers
   status = clEnqueueWriteBuffer(cmdQueue, bufA, CL_FALSE, 0, datasize, A, 0, NULL, NULL);
   status = clEnqueueWriteBuffer(cmdQueue, bufB, CL_FALSE, 0, datasize, B, 0, NULL, NULL);
+
   // Create a program with source code
   cl_program program = clCreateProgramWithSource(context, 1, (const char**)&programSource, NULL, &status);
   // Build(compile) the program for the device
@@ -87,5 +90,6 @@ int main(){
   free(A);
   free(B);
   free(C);
+  printf("CL program end\n");
   return 0;
 }
