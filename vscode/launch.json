@@ -28,6 +28,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
+            "cwd": "${fileDirname}",
             "env": {
                 "TF_CPP_MIN_VLOG_LEVEL": "0",
                 //"TF_XLA_FLAGS": "--tf_xla_enable_xla_devices",
