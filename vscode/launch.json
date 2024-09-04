@@ -35,6 +35,18 @@
                 "TF_XLA_FLAGS": "--tf_xla_auto_jit=2 --tf_xla_cpu_global_jit",
                 "XLA_FLAGS": "--xla_hlo_profile --xla_dump_to=/home/ubuser/my/antkillerfarm_crazy/python/ml/tensorflow/dump --xla_dump_hlo_as_text --xla_dump_hlo_as_dot --xla_dump_hlo_as_html --xla_dump_hlo_as_proto",
             }
+        },
+        {
+            "name": "Python 调试程序: 模块",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "llm_profile.benchmark",
+            "cwd": "${workspaceRoot}",
+            "justMyCode": false,
+            "args": [
+                "--type=diffusion",
+                "--model", "models/stable_diffusion_v1_5"
+            ]
         }
     ]
 }
