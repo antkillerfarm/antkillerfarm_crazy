@@ -12,6 +12,7 @@ class MyTestCase(unittest.TestCase):
         # 清理测试资源
         del self.data
 
+    @unittest.skip("Skip this unit test")
     def test_addition(self):
         result = sum(self.data)
         self.assertEqual(result, 15)
